@@ -1,0 +1,14 @@
+# built application files
+*.apk
+*.ap_
+*.dex
+*.class
+bin/
+gen/
+*.class
+*.o
+*.so
+*.sh
+local.properties
+custom_rules.xml
+ant.properties
