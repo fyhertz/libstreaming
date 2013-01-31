@@ -50,7 +50,6 @@ import android.os.Message;
 import android.os.PowerManager;
 import android.preference.PreferenceManager;
 import android.support.v4.app.NotificationCompat;
-import android.text.Layout;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -167,8 +166,8 @@ public class SpydroidActivity extends Activity implements OnSharedPreferenceChan
         		videoQuality);
 
         Session.setHandler(handler);
-        Session.setDefaultAudioEncoder(audioEncoder);
-        Session.setDefaultVideoEncoder(videoEncoder);
+        Session.setDefaultAudioEncoder(!settings.getBoolean("stream_video", true)?0:audioEncoder);
+        Session.setDefaultVideoEncoder(!settings.getBoolean("stream_audio", false)?0:videoEncoder);
         Session.setDefaultVideoQuality(videoQuality);
         H264Stream.setPreferences(settings);
 
@@ -229,19 +228,15 @@ public class SpydroidActivity extends Activity implements OnSharedPreferenceChan
     	else if (key.equals("video_bitrate")) {
     		videoQuality.bitrate = Integer.parseInt(sharedPreferences.getString("video_bitrate", "0"))*1000;
     	}
-    	else if (key.equals("stream_audio")) {
-    		if (!sharedPreferences.getBoolean("stream_audio", true)) Session.setDefaultAudioEncoder(0);
-    	}
-    	else if (key.equals("audio_encoder")) { 
+    	else if (key.equals("audio_encoder") || key.equals("stream_audio")) { 
     		audioEncoder = Integer.parseInt(sharedPreferences.getString("audio_encoder", "0"));
     		Session.setDefaultAudioEncoder( audioEncoder );
+    		if (!sharedPreferences.getBoolean("stream_audio", false)) Session.setDefaultAudioEncoder(0);
     	}
-    	else if (key.equals("stream_video")) {
-    		if (!sharedPreferences.getBoolean("stream_video", true)) Session.setDefaultVideoEncoder(0);
-    	}
-    	else if (key.equals("video_encoder")) {
+    	else if (key.equals("stream_video") || key.equals("video_encoder")) {
     		videoEncoder = Integer.parseInt(sharedPreferences.getString("video_encoder", "0"));
     		Session.setDefaultVideoEncoder( videoEncoder );
+    		if (!sharedPreferences.getBoolean("stream_video", true)) Session.setDefaultVideoEncoder(0);
     	}
     	else if (key.equals("enable_http")) {
     		if (sharedPreferences.getBoolean("enable_http", true)) {

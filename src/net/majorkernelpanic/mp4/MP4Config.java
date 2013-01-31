@@ -19,13 +19,11 @@
  */
 
 package net.majorkernelpanic.mp4;
-import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.RandomAccessFile;
 
 /**
- * Finds SPS & PPS parameters in mp4 file
+ * Finds SPS & PPS parameters in mp4 file.
  */
 public class MP4Config {
 
@@ -33,7 +31,7 @@ public class MP4Config {
 	private final MP4Parser mp4Parser;
 	
 	/**
-	 * Finds sps & pps parameters inside a .mp4
+	 * Finds sps & pps parameters inside a .mp4.
 	 * @param path Path to the file to analyze
 	 * @throws IOException
 	 * @throws FileNotFoundException

@@ -23,6 +23,9 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
+import net.majorkernelpanic.streaming.rtp.AbstractPacketizer.Statistics;
+
+import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -48,6 +51,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
     private static final int[] sFrameBits = {95, 103, 118, 134, 148, 159, 204, 244};
 	
     private Thread t;
+    private Statistics stats = new Statistics();
     
 	public AMRNBPacketizer() throws IOException {
 		super();
@@ -75,7 +79,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 	public void run() {
 	
 		int frameLength, frameType;
-		long ts = 0;
+		long ts=0, oldtime = SystemClock.elapsedRealtime(), now = oldtime;
 		
 		try {
 			
@@ -99,9 +103,13 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 				//Log.d(TAG,"Frame length: "+frameLength+" frameType: "+frameType);
 
 				// RFC 3267 Page 14: 
-				// "For AMR, the sampling frequency is 8 kHz, corresponding to
-				// 160 encoded speech samples per frame from each channel."
-				socket.updateTimestamp(ts); ts+=160;
+				// "For AMR, the sampling frequency is 8 kHz"
+				now = SystemClock.elapsedRealtime();
+				stats.push(now-oldtime);
+				oldtime = now;
+				ts += stats.average()*8;
+				oldtime = now;
+				socket.updateTimestamp(ts);
 				socket.markNextPacket();
 
 				socket.send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);

@@ -172,7 +172,7 @@ public class UriParser {
 		// Uri has no parameters: the default behavior is to only add one video track
 		else {
 			session.addVideoTrack();
-			//session.addAudioTrack();
+			session.addAudioTrack();
 		}
 	}
 	

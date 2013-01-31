@@ -29,11 +29,11 @@ import android.util.Base64;
 import android.util.Log;
 
 /**
- * Parse an mp4 file
- * An mp4 file contains a tree where each node has a name and a size
- * This class is used by H264Stream.java to determine the SPS and PPS parameters of a short video recorded by the phone
+ * Parse an mp4 file.
+ * An mp4 file contains a tree where each node has a name and a size.
+ * This class is used by H264Stream.java to determine the SPS and PPS parameters of a short video recorded by the phone.
  */
-public class MP4Parser {
+class MP4Parser {
 
 	private static final String TAG = "MP4Parser";
 	
@@ -46,7 +46,7 @@ public class MP4Parser {
 		this.file = new RandomAccessFile(new File(path), "r");
 	}
 	
-	/** Parses the mp4 file **/
+	/** Parses the mp4 file. **/
 	public void parse() throws IOException {
 		long length = 0;
 		try {
@@ -62,7 +62,7 @@ public class MP4Parser {
 		}		
 	}
 	
-	/** Close the file opened when creating the MP4Parser **/
+	/** Close the file opened when creating the MP4Parser. **/
 	public void close() {
 		try {
 			file.close();

@@ -75,4 +75,20 @@ abstract public class AbstractPacketizer {
     	return str;
     }
 	
+	protected static class Statistics {
+		
+		public final static int COUNT=50;
+		private float m = 0, q = 0;
+		
+		public void push(long duration) {
+			m = (m*q+duration)/(q+1);
+			if (q<COUNT) q++;
+		}
+
+		public long average() {
+			return (long)m;
+		}
+
+	}
+    
 }

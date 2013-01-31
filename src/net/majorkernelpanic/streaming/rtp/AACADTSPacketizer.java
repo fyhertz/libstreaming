@@ -22,6 +22,7 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
+import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -39,6 +40,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	private final static String TAG = "AACADTSPacketizer";
 	
 	private Thread t;
+	private Statistics stats = new Statistics();
 	
 	public AACADTSPacketizer() throws IOException {
 		super();
@@ -67,7 +69,8 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		
 		// Adts header fields that we need to parse
 		boolean protection;
-		int frameLength, ts=0;
+		int frameLength;
+		long ts=0, oldtime = SystemClock.elapsedRealtime(), now = oldtime;
 
 		try {
 			while (running) {
@@ -112,7 +115,12 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				buffer[rtphl+3] |= 0x00;
 				
 				socket.markNextPacket();
-				ts += 1024;
+				
+				now = SystemClock.elapsedRealtime();
+				stats.push(now-oldtime);
+				oldtime = now;
+				ts += stats.average()*90;
+				oldtime = now;
 				socket.updateTimestamp(ts);
 				socket.send(rtphl+frameLength+4);
 
@@ -126,5 +134,5 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		}
 		
 	}
-
+	
 }
