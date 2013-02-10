@@ -8,7 +8,7 @@ This streaming stack is available under two licenses, the GPL and a commercial l
 
 # Use example: Spydroid-ipcamera
 
-Visit [https://github.com/fyhertz/spydroid-ipcamera this github page] to see how this streaming stack can be used and how it performs.
-Further information about Spydroid can be found the google page of the project [spydroid-ipcamera.googlecode.com here].
-The app. is available on google play [https://play.google.com/store/apps/details?id=net.majorkernelpanic.spydroid here].
+Visit [this github page https://github.com/fyhertz/spydroid-ipcamera] to see how this streaming stack can be used and how it performs.
+Further information about Spydroid can be found the google page of the project [here https://spydroid-ipcamera.googlecode.com].
+The app. is available on google play [here https://play.google.com/store/apps/details?id=net.majorkernelpanic.spydroid].
 
