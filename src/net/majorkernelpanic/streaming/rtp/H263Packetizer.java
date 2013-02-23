@@ -39,13 +39,13 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 	public final static String TAG = "H263Packetizer";
 	private final static int MAXPACKETSIZE = 1400;
 	private Statistics stats = new Statistics();
-	
+
 	private Thread t;
-	
+
 	public H263Packetizer() throws IOException {
 		super();
 	}
-	
+
 	public void start() throws IOException {
 		if (!running) {
 			running = true;
@@ -69,7 +69,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 		long time, duration = 0, ts = 0;
 		int i = 0, j = 0, tr;
 		boolean firstFragment = true;
-		
+
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
 			skipHeader();
@@ -77,11 +77,11 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 			Log.e(TAG,"Couldn't skip mp4 header :/");
 			return;
 		}	
-		
+
 		// Each packet we send has a two byte long header (See section 5.1 of RFC 4629)
 		buffer[rtphl] = 0;
 		buffer[rtphl+1] = 0;
-		
+
 		try { 
 			while (running) {
 				time = SystemClock.elapsedRealtime();
@@ -129,15 +129,15 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 			Log.e(TAG,"IOException: "+e.getMessage());
 			e.printStackTrace();
 		}
-		
+
 		Log.d(TAG,"H263 Packetizer stopped !");
-			
+
 	}
 
 	private int fill(int offset,int length) throws IOException {
-		
+
 		int sum = 0, len;
-		
+
 		while (sum<length) {
 			len = is.read(buffer, offset+sum, length-sum);
 			if (len<0) {
@@ -145,11 +145,11 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 			}
 			else sum+=len;
 		}
-		
+
 		return sum;
-			
+
 	}
-	
+
 	// The InputStream may start with a header that we need to skip
 	private void skipHeader() throws IOException {
 		// Skip all atoms preceding mdat atom
@@ -159,5 +159,5 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 			if (buffer[rtphl] == 'd' && buffer[rtphl+1] == 'a' && buffer[rtphl+2] == 't') break;
 		}
 	}
-	
+
 }

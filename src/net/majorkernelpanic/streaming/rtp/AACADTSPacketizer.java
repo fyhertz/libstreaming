@@ -38,10 +38,10 @@ import android.util.Log;
 public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 	private final static String TAG = "AACADTSPacketizer";
-	
+
 	private Thread t;
 	private Statistics stats = new Statistics();
-	
+
 	public AACADTSPacketizer() throws IOException {
 		super();
 	}
@@ -66,7 +66,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	}
 
 	public void run() {
-		
+
 		// Adts header fields that we need to parse
 		boolean protection;
 		int frameLength;
@@ -82,40 +82,40 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 						if ( (buffer[rtphl+1]&0xF0) == 0xF0) break;
 					}
 				}
-				
+
 				// Parse adts header (ADTS packets start with a 7 or 9 byte long header)
 				is.read(buffer,rtphl+2,5);
 				// The protection bit indicates whether or not the header contains the two extra bytes
 				protection = (buffer[rtphl+1]&0x01)>0 ? true : false;
 				frameLength = (buffer[rtphl+3]&0x03) << 11 | 
-							  (buffer[rtphl+4]&0xFF) << 3 | 
-							  (buffer[rtphl+5]&0xFF) >> 5 ;
+						(buffer[rtphl+4]&0xFF) << 3 | 
+						(buffer[rtphl+5]&0xFF) >> 5 ;
 				frameLength -= (protection ? 7 : 9);
-				
+
 				//Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection);
-				
+
 				// Read CRS if any
 				if (!protection) is.read(buffer,rtphl,2);
-				
+
 				// Read frame
 				is.read(buffer,rtphl+4,frameLength);
-				
+
 				// AU-headers-length field: contains the size in bits of a AU-header
 				// 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta 
 				// 13 bits will be enough because ADTS uses 13 bits for frame length
 				buffer[rtphl] = 0;
 				buffer[rtphl+1] = 0x10; 
-				
+
 				// AU-size
 				buffer[rtphl+2] = (byte) (frameLength>>5);
 				buffer[rtphl+3] = (byte) (frameLength<<3);
-				
+
 				// AU-Index
 				buffer[rtphl+3] &= 0xF8;
 				buffer[rtphl+3] |= 0x00;
-				
+
 				socket.markNextPacket();
-				
+
 				now = SystemClock.elapsedRealtime();
 				stats.push(now-oldtime);
 				oldtime = now;
@@ -132,7 +132,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		} finally {
 			running = false;
 		}
-		
+
 	}
-	
+
 }

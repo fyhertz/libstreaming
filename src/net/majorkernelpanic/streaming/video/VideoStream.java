@@ -38,12 +38,12 @@ public abstract class VideoStream extends MediaStream {
 
 	protected final static String TAG = "VideoStream";
 
-	protected VideoQuality quality = VideoQuality.defaultVideoQualiy.clone();
-	protected SurfaceHolder.Callback surfaceHolderCallback = null;
-	protected Surface surface = null;
-	protected boolean flashState = false,  qualityHasChanged = false;
-	protected int videoEncoder, cameraId = 0;
-	protected Camera camera;
+	protected VideoQuality mQuality = VideoQuality.defaultVideoQualiy.clone();
+	protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
+	protected Surface mSurface = null;
+	protected boolean mFlashState = false,  mQualityHasChanged = false;
+	protected int mVideoEncoder, mCameraId = 0;
+	protected Camera mCamera;
 
 	/** 
 	 * Don't use this class directly
@@ -56,117 +56,117 @@ public abstract class VideoStream extends MediaStream {
 		for (int i=0;i<numberOfCameras;i++) {
 			Camera.getCameraInfo(i, cameraInfo);
 			if (cameraInfo.facing == camera) {
-				this.cameraId = i;
+				this.mCameraId = i;
 				break;
 			}
 		}
 	}
-	
+
 	/**
 	 * Sets a Surface to show a preview of recorded media (video). 
-	 * You can call this method at any time and changes will take effect next time you call prepare()
+	 * You can call this method at any time and changes will take effect next time you call {@link #prepare()}.
 	 */
 	public void setPreviewDisplay(Surface surface) {
-		this.surface = surface;
+		this.mSurface = surface;
 	}
-	
+
 	/** Turn flash on or off if phone has one */
 	public void setFlashState(boolean state) {
-		flashState = state;
+		mFlashState = state;
 	}
-	
+
 	/** 
 	 * Modifies the resolution of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call prepare()
-	 * setVideoQuality() may be more convenient 
+	 * and changes will take effect next time you call {@link #prepare()}.
+	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
 	 * @param width Width of the stream
 	 * @param height height of the stream
 	 */
 	public void setVideoSize(int width, int height) {
-		if (quality.resX != width || quality.resY != height) {
-			quality.resX = width;
-			quality.resY = height;
-			qualityHasChanged = true;
+		if (mQuality.resX != width || mQuality.resY != height) {
+			mQuality.resX = width;
+			mQuality.resY = height;
+			mQualityHasChanged = true;
 		}
 	}
-	
+
 	/** 
 	 * Modifies the framerate of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call prepare()
-	 * setVideoQuality() may be more convenient
+	 * and changes will take effect next time you call {@link #prepare()}.
+	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
 	 * @param rate Framerate of the stream
 	 */	
 	public void setVideoFramerate(int rate) {
-		if (quality.framerate != rate) {
-			quality.framerate = rate;
-			qualityHasChanged = true;
+		if (mQuality.framerate != rate) {
+			mQuality.framerate = rate;
+			mQualityHasChanged = true;
 		}
 	}
-	
+
 	/** 
 	 * Modifies the bitrate of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call prepare()
-	 * setVideoQuality() may be more convenient
+	 * and changes will take effect next time you call {@link #prepare()}.
+	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
 	 * @param bitrate Bitrate of the stream in bit per second
 	 */	
 	public void setVideoEncodingBitrate(int bitrate) {
-		if (quality.bitrate != bitrate) {
-			quality.bitrate = bitrate;
-			qualityHasChanged = true;
+		if (mQuality.bitrate != bitrate) {
+			mQuality.bitrate = bitrate;
+			mQualityHasChanged = true;
 		}
 	}
-	
+
 	/** 
 	 * Modifies the quality of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call prepare()
+	 * and changes will take effect next time you call {@link #prepare()}.
 	 * @param videoQuality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality videoQuality) {
-		if (!quality.equals(videoQuality)) {
-			quality = videoQuality;
-			qualityHasChanged = true;
+		if (!mQuality.equals(videoQuality)) {
+			mQuality = videoQuality;
+			mQualityHasChanged = true;
 		}
 	}
-	
+
 	/** 
 	 * Modifies the videoEncoder of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call prepare()
+	 * and changes will take effect next time you call {@link #prepare()}.
 	 * @param videoEncoder Encoder of the stream
 	 */
 	public void setVideoEncoder(int videoEncoder) {
-		this.videoEncoder = videoEncoder;
+		this.mVideoEncoder = videoEncoder;
 	}
-	
+
 	/**
 	 * Stops the stream
 	 */
 	public synchronized void stop() {
 		super.stop();
-		if (camera != null) {
+		if (mCamera != null) {
 			try {
-				camera.reconnect();
+				mCamera.reconnect();
 			} catch (Exception e) {
 				Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
 			}
-			camera.stopPreview();
+			mCamera.stopPreview();
 			try {
-				camera.release();
+				mCamera.release();
 			} catch (Exception e) {
 				Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
 			}
-			camera = null;
+			mCamera = null;
 		}
 	}
 
 	/**
-	 * Prepare the VideoStream, you can then call start()
+	 * Prepare the VideoStream, you can then call {@link #start()}.
 	 * The underlying Camera will be opened and configured whaen you call this method so don't forget to deal with the RuntimeExceptions !
 	 * Camera.open, Camera.setParameter, Camera.unlock may throw one !
 	 */
 	public void prepare() throws IllegalStateException, IOException, RuntimeException {
-		if (camera == null) {
-			camera = Camera.open(cameraId);
-			camera.setErrorCallback(new Camera.ErrorCallback() {
+		if (mCamera == null) {
+			mCamera = Camera.open(mCameraId);
+			mCamera.setErrorCallback(new Camera.ErrorCallback() {
 				@Override
 				public void onError(int error, Camera camera) {
 					// On some phones when trying to use the camera facing front the media server will die
@@ -176,6 +176,8 @@ public abstract class VideoStream extends MediaStream {
 						Log.e(TAG,"Media server died !");
 						// We don't know in what thread we are so stop needs to be synchronized
 						stop();
+					} else {
+						Log.e(TAG,"Error unknown with the camera: "+error);
 					}	
 				}
 			});
@@ -183,21 +185,21 @@ public abstract class VideoStream extends MediaStream {
 
 		// If an exception is thrown after the camera was open, we must absolutly release it !
 		try {
-		
+
 			// We reconnect to camera to change flash state if needed
-			Parameters parameters = camera.getParameters();
-			if (flashState) {
+			Parameters parameters = mCamera.getParameters();
+			if (mFlashState) {
 				if (parameters.getFlashMode()==null) {
 					// The phone has no flash or the choosen camera can not toggle the flash
 					throw new IllegalStateException("Can't turn the flash on !");
 				} else {
-					parameters.setFlashMode(flashState?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
-					camera.setParameters(parameters);
+					parameters.setFlashMode(mFlashState?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
+					mCamera.setParameters(parameters);
 				}
 			}
-			camera.setDisplayOrientation(quality.orientation);
-			camera.unlock();
-			super.setCamera(camera);
+			mCamera.setDisplayOrientation(mQuality.orientation);
+			mCamera.unlock();
+			super.setCamera(mCamera);
 
 			// MediaRecorder should have been like this according to me:
 			// all configuration methods can be called at any time and
@@ -207,7 +209,7 @@ public abstract class VideoStream extends MediaStream {
 			if (mode==MODE_DEFAULT) {
 				super.setMaxDuration(1000);
 				super.setMaxFileSize(Integer.MAX_VALUE);
-			} else if (modeDefaultWasUsed) {
+			} else if (mModeDefaultWasUsed) {
 				// On some phones a RuntimeException might be thrown :/
 				try {
 					super.setMaxDuration(0);
@@ -216,37 +218,41 @@ public abstract class VideoStream extends MediaStream {
 					Log.e(TAG,"setMaxDuration or setMaxFileSize failed !");
 				}
 			}
-			super.setVideoEncoder(videoEncoder);
-			super.setPreviewDisplay(surface);
-			super.setVideoSize(quality.resX,quality.resY);
-			super.setVideoFrameRate(quality.framerate);
-			super.setVideoEncodingBitRate(quality.bitrate);
+			super.setVideoEncoder(mVideoEncoder);
+			super.setPreviewDisplay(mSurface);
+			super.setVideoSize(mQuality.resX,mQuality.resY);
+			super.setVideoFrameRate(mQuality.framerate);
+			super.setVideoEncodingBitRate(mQuality.bitrate);
 
 			super.prepare();
 
 			// Reset flash state to ensure that default behavior is to turn it off
-			flashState = false;
+			mFlashState = false;
 
 			// Quality has been updated
-			qualityHasChanged = false;
-		
+			mQualityHasChanged = false;
+
 		} catch (RuntimeException e) {
-			camera.release();
-			camera = null;
+			mCamera.release();
+			mCamera = null;
 			throw e;
 		} catch (IOException e) {
-			camera.release();
-			camera = null;
+			mCamera.release();
+			mCamera = null;
 			throw e;
 		}
 
 	}
-	
+
 	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
 
+	/** 
+	 * Releases ressources associated with the {@link VideoStream}. 
+	 * The object can't be reused once this function has been called. 
+	 **/
 	public void release() {
 		stop();
 		super.release();
 	}
-	
+
 }

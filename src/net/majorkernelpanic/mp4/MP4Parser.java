@@ -36,16 +36,16 @@ import android.util.Log;
 class MP4Parser {
 
 	private static final String TAG = "MP4Parser";
-	
+
 	private HashMap<String, Long> boxes = new HashMap<String, Long>();
 	private final RandomAccessFile file;
 	private long pos = 0;
 	private byte[] buffer = new byte[8];
-	
+
 	public MP4Parser(final String path) throws IOException, FileNotFoundException {
 		this.file = new RandomAccessFile(new File(path), "r");
 	}
-	
+
 	/** Parses the mp4 file. **/
 	public void parse() throws IOException {
 		long length = 0;
@@ -54,28 +54,28 @@ class MP4Parser {
 		} catch (IOException e) {
 			throw new IOException("Wrong size");
 		}
-		
+
 		try {
 			parse("",length);
 		} catch (IOException e) {
 			throw new IOException("Parse error: malformed mp4 file");
 		}		
 	}
-	
+
 	/** Close the file opened when creating the MP4Parser. **/
 	public void close() {
 		try {
 			file.close();
 		} catch (IOException ignore) {}
 	}
-	
+
 	public long getBoxPos(String box) throws IOException {
 		Long r = boxes.get(box);
-		
+
 		if (r==null) throw new IOException("Box not found: "+box);
 		return boxes.get(box);
 	}
-	
+
 	public StsdBox getStsdBox() throws IOException {
 		try {
 			return new StsdBox(file,getBoxPos("/moov/trak/mdia/minf/stbl/stsd"));
@@ -83,13 +83,13 @@ class MP4Parser {
 			throw new IOException("stsd box could not be found");
 		}
 	}
-	
+
 	private void parse(String path, long len) throws IOException {
 		String name="";
 		long sum = 0, newlen = 0;
 
 		boxes.put(path, pos-8);
-		
+
 
 		while (sum<len) {
 
@@ -111,7 +111,7 @@ class MP4Parser {
 					sum += len-8;
 				} else {
 					if (file.skipBytes((int) (len-8))<len-8) {
-						 throw new IOException();
+						throw new IOException();
 					}
 					pos += len-8;
 					sum += len-8;
@@ -126,7 +126,7 @@ class MP4Parser {
 		}
 		return true;
 	}
-	
+
 }
 
 class StsdBox {
@@ -134,11 +134,11 @@ class StsdBox {
 	private RandomAccessFile fis;
 	private byte[] buffer = new byte[4];
 	private long pos = 0;
-	
+
 	private byte[] pps;
 	private byte[] sps;
 	private int spsLength, ppsLength;
-	
+
 	/** Parse the sdsd box in an mp4 file
 	 * fis: proper mp4 file
 	 * pos: stsd box's position in the file
@@ -147,24 +147,24 @@ class StsdBox {
 
 		this.fis = fis;
 		this.pos = pos;
-		
+
 		findBoxAvcc();
 		findSPSandPPS();
-		
+
 	}
-	
+
 	public String getProfileLevel() {
 		return toHexString(sps,1,3);
 	}
-	
+
 	public String getB64PPS() {
 		return Base64.encodeToString(pps, 0, ppsLength, Base64.NO_WRAP);
 	}
-	
+
 	public String getB64SPS() {
 		return Base64.encodeToString(sps, 0, spsLength, Base64.NO_WRAP);
 	}
-	
+
 	private boolean findSPSandPPS() {
 		/*
 		 *  SPS and PPS parameters are stored in the avcC box
@@ -196,7 +196,7 @@ class StsdBox {
 		 *  
 		 */
 		try {
-			
+
 			// TODO: Here we assume that numOfSequenceParameterSets = 1, numOfPictureParameterSets = 1 !
 			// Here we extract the SPS parameter
 			fis.skipBytes(7);
@@ -208,14 +208,14 @@ class StsdBox {
 			ppsLength = 0xFF&fis.readByte();
 			pps = new byte[ppsLength];
 			fis.read(pps,0,ppsLength);
-			
+
 		} catch (IOException e) {
 			return false;
 		}
-		
+
 		return true;
 	}
-	
+
 	private boolean findBoxAvcc() {
 		try {
 			fis.seek(pos+8);
@@ -228,9 +228,9 @@ class StsdBox {
 			return false;
 		}
 		return true;
-		
+
 	}
-	
+
 	static private String toHexString(byte[] buffer,int start, int len) {
 		String c;
 		StringBuilder s = new StringBuilder();
@@ -240,5 +240,5 @@ class StsdBox {
 		}
 		return s.toString();
 	}
-	
+
 }

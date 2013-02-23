@@ -44,8 +44,8 @@ public class H264Stream extends VideoStream {
 
 	static private SharedPreferences settings = null;
 	
-	private Semaphore lock = new Semaphore(0);
-	private MP4Config mp4Config;
+	private Semaphore mLock = new Semaphore(0);
+	private MP4Config mMp4Config;
 	
 	/**
 	 * Constructs the H.264 stream.
@@ -55,7 +55,7 @@ public class H264Stream extends VideoStream {
 	public H264Stream(int cameraId) throws IOException {
 		super(cameraId);
 		setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-		this.packetizer = new H264Packetizer();
+		this.mPacketizer = new H264Packetizer();
 	}
 	
 	/**
@@ -69,7 +69,7 @@ public class H264Stream extends VideoStream {
 	
 	// Should not be called by the UI thread
 	private MP4Config testH264() throws IllegalStateException, IOException {
-		if (!qualityHasChanged && mp4Config!=null) return mp4Config;
+		if (!mQualityHasChanged && mMp4Config!=null) return mMp4Config;
 		
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");
@@ -80,8 +80,8 @@ public class H264Stream extends VideoStream {
 		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
 		
 		// Save flash state & set it to false so that led remains off while testing h264
-		boolean savedFlashState = flashState;
-		flashState = false;
+		boolean savedFlashState = mFlashState;
+		mFlashState = false;
 		
 		// That means the H264Stream will behave as a regular MediaRecorder object
 		// it will not start the packetizer thread and can be used to save video in a file
@@ -102,7 +102,7 @@ public class H264Stream extends VideoStream {
 				} else {
 					Log.d(TAG,"WTF ?");
 				}
-				lock.release();
+				mLock.release();
 			}
 		});
 		
@@ -111,7 +111,7 @@ public class H264Stream extends VideoStream {
 		start();
 		
 		try {
-			if (lock.tryAcquire(6,TimeUnit.SECONDS)) {
+			if (mLock.tryAcquire(6,TimeUnit.SECONDS)) {
 				Log.d(TAG,"MediaRecorder callback was called :)");
 				Thread.sleep(400);
 			} else {
@@ -130,24 +130,24 @@ public class H264Stream extends VideoStream {
 		} catch (Exception ignore) {}
 		
 		// Retrieve SPS & PPS & ProfileId with MP4Config
-		mp4Config = new MP4Config(TESTFILE);
+		mMp4Config = new MP4Config(TESTFILE);
 
 		// Delete dummy video
 		File file = new File(TESTFILE);
 		if (!file.delete()) Log.e(TAG,"Temp file could not be erased");
 		
 		// Restore flash state
-		flashState = savedFlashState;
+		mFlashState = savedFlashState;
 		
 		Log.i(TAG,"H264 Test succeded...");
 		
 		// Save test result
 		if (settings != null) {
 			Editor editor = settings.edit();
-			editor.putString(quality.framerate+","+quality.resX+","+quality.resY, mp4Config.getProfileLevel()+","+mp4Config.getB64SPS()+","+mp4Config.getB64PPS());
+			editor.putString(mQuality.framerate+","+mQuality.resX+","+mQuality.resY, mMp4Config.getProfileLevel()+","+mMp4Config.getB64SPS()+","+mMp4Config.getB64PPS());
 			editor.commit();
 		}
-		return mp4Config;
+		return mMp4Config;
 		
 	}
 	
@@ -159,22 +159,22 @@ public class H264Stream extends VideoStream {
 		String profile,sps,pps;
 		
 		if (settings != null) {
-			if (!settings.contains(quality.framerate+","+quality.resX+","+quality.resY)) {
+			if (!settings.contains(mQuality.framerate+","+mQuality.resX+","+mQuality.resY)) {
 				testH264();
-				profile = mp4Config.getProfileLevel();
-				pps = mp4Config.getB64PPS();
-				sps = mp4Config.getB64SPS();
+				profile = mMp4Config.getProfileLevel();
+				pps = mMp4Config.getB64PPS();
+				sps = mMp4Config.getB64SPS();
 			} else {
-				String[] s = settings.getString(quality.framerate+","+quality.resX+","+quality.resY, "").split(",");
+				String[] s = settings.getString(mQuality.framerate+","+mQuality.resX+","+mQuality.resY, "").split(",");
 				profile = s[0];
 				sps = s[1];
 				pps = s[2];
 			}
 		} else {
 			testH264();
-			profile = mp4Config.getProfileLevel();
-			pps = mp4Config.getB64PPS();
-			sps = mp4Config.getB64SPS();
+			profile = mMp4Config.getProfileLevel();
+			pps = mMp4Config.getB64PPS();
+			sps = mMp4Config.getB64SPS();
 		}
 
 		return "m=video "+String.valueOf(getDestinationPort())+" RTP/AVP 96\r\n" +

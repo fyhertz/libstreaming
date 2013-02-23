@@ -36,9 +36,9 @@ public class AMRNBStream extends MediaStream {
 
 	public AMRNBStream() throws IOException {
 		super();
-		
-		this.packetizer = new AMRNBPacketizer();
-		
+
+		mPacketizer = new AMRNBPacketizer();
+
 	}
 
 	@Override
@@ -49,16 +49,16 @@ public class AMRNBStream extends MediaStream {
 		setAudioChannels(1);
 		super.prepare();
 	}
-	
+
 	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */	
 	public String generateSessionDescription() {
 		return "m=audio "+String.valueOf(getDestinationPort())+" RTP/AVP 96\r\n" +
-				   "b=AS:128\r\n" +
-				   "b=RR:0\r\n" +
-				   "a=rtpmap:96 AMR/8000\r\n" +
-				   "a=fmtp:96 octet-align=1;\r\n";
+				"b=AS:128\r\n" +
+				"b=RR:0\r\n" +
+				"a=rtpmap:96 AMR/8000\r\n" +
+				"a=fmtp:96 octet-align=1;\r\n";
 	}
-	
+
 }

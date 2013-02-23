@@ -31,16 +31,16 @@ import android.util.Log;
  *   
  *   H.264 streaming over RTP.
  *   
- *   Must be fed with an InputStream containing H.264. NAL units must be preceded by their length (4 bytes).
+ *   Must be fed with an InputStream containing H.264 NAL units preceded by their length (4 bytes).
  *   The stream must start with mpeg4 or 3gpp header, it will be skipped.
  *   
  */
 public class H264Packetizer extends AbstractPacketizer implements Runnable{
-	
+
 	public final static String TAG = "H264Packetizer";
-	
+
 	private final static int MAXPACKETSIZE = 1400;
-	
+
 	private Thread t = null;
 	private int naluLength = 0;
 	private long ts = 0, delay = 0;
@@ -49,14 +49,14 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 	public H264Packetizer() throws IOException {
 		super();
 	}
-	
+
 	public void start() throws IOException {
 		if (t == null) {
 			t = new Thread(this);
 			t.start();
 		}
 	}
-	
+
 	public void stop() {
 		try {
 			is.close();
@@ -68,11 +68,11 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 		} catch (InterruptedException e) {}
 		t = null;
 	}
-	
+
 	public void run() {
-		
+
 		long duration = 0, oldtime = 0;
-		
+
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
 			byte buffer[] = new byte[4];
@@ -86,11 +86,11 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 			Log.e(TAG,"Couldn't skip mp4 header :/");
 			return;
 		}
-		
+
 		// Here we read a NAL unit in the input stream and we send it
 		try {
 			while (!Thread.interrupted()) {
-				
+
 				// We measure how long it takes to receive the NAL unit from the phone
 				oldtime = SystemClock.elapsedRealtime();
 				send();
@@ -99,15 +99,15 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 				// Calculates the average duration of a NAL unit
 				stats.push(duration);
 				delay = stats.average();
-				
+
 			}
 		} catch (IOException e) {
 		} catch (InterruptedException e) {}
-		
+
 		Log.d(TAG,"H264 packetizer stopped !");
-		
+
 	}
-	
+
 	// Reads a NAL unit in the FIFO and sends it
 	// If it is too big, we split it in FU-A units (RFC 3984)
 	private void send() throws IOException, InterruptedException {
@@ -121,7 +121,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 		fill(rtphl, 1);
 		// NAL unit type
 		type = buffer[rtphl]&0x1F;
-		
+
 		ts += delay;
 		socket.updateTimestamp(ts*90);
 
@@ -161,9 +161,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 	}
 
 	private int fill(int offset,int length) throws IOException {
-		
+
 		int sum = 0, len;
-		
+
 		while (sum<length) {
 			len = is.read(buffer, offset+sum, length-sum);
 			if (len<0) {
@@ -171,9 +171,9 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 			}
 			else sum+=len;
 		}
-		
+
 		return sum;
-			
+
 	}
-	
+
 }

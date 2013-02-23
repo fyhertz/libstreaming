@@ -39,20 +39,20 @@ import android.util.Log;
  *   
  */
 public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
-	
-	public final static String TAG = "AMRNBPacketizer";
-	
-	private final int AMR_HEADER_LENGTH = 6; // "#!AMR\n"
-    private static final int AMR_FRAME_HEADER_LENGTH = 1; // Each frame has a short header
 
-    private static final int[] sBitrates = {
-        4750, 5150, 5900, 6700, 7400, 7950, 1020, 1220
-    };
-    private static final int[] sFrameBits = {95, 103, 118, 134, 148, 159, 204, 244};
-	
-    private Thread t;
-    private Statistics stats = new Statistics();
-    
+	public final static String TAG = "AMRNBPacketizer";
+
+	private final int AMR_HEADER_LENGTH = 6; // "#!AMR\n"
+	private static final int AMR_FRAME_HEADER_LENGTH = 1; // Each frame has a short header
+
+	private static final int[] sBitrates = {
+		4750, 5150, 5900, 6700, 7400, 7950, 1020, 1220
+	};
+	private static final int[] sFrameBits = {95, 103, 118, 134, 148, 159, 204, 244};
+
+	private Thread t;
+	private Statistics stats = new Statistics();
+
 	public AMRNBPacketizer() throws IOException {
 		super();
 	}
@@ -75,19 +75,19 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 			t.join();
 		} catch (InterruptedException e) {}
 	}
-	
+
 	public void run() {
-	
+
 		int frameLength, frameType;
 		long ts=0, oldtime = SystemClock.elapsedRealtime(), now = oldtime;
-		
+
 		try {
-			
+
 			// Skip raw amr header
 			fill(rtphl,AMR_HEADER_LENGTH);
-			
+
 			buffer[rtphl] = (byte) 0xF0;
-			
+
 			while (running) {
 
 				// First we read the frame header
@@ -114,21 +114,21 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 				socket.send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
 			}
-			
+
 		} catch (IOException e) {
 			running = false;
 			Log.d(TAG,"IOException: "+(e.getMessage()!=null?e.getMessage():"unknown error"));
 		}
-		
+
 		Log.d(TAG,"Packetizer stopped !");
-		
+
 	}
 
-	
+
 	private int fill(int offset,int length) throws IOException {
-		
+
 		int sum = 0, len;
-		
+
 		while (sum<length) {
 			len = is.read(buffer, offset+sum, length-sum);
 			if (len<0) {
@@ -138,8 +138,8 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 		}
 
 		return sum;
-			
+
 	}
-	
-	
+
+
 }

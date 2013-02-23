@@ -106,244 +106,244 @@ import android.util.Log;
 public class BasicHttpServer {
 
 	public static final String TAG = "HttpServer";
-	
+
 	private final int port;
 	private RequestListenerThread requestListenerThread;
-    private HttpRequestHandlerRegistry registry = new HttpRequestHandlerRegistry();
+	private HttpRequestHandlerRegistry registry = new HttpRequestHandlerRegistry();
 	private boolean running = false;
-    
-    public BasicHttpServer(final int port, final AssetManager assetManager) {
-        this.port = port;
-        addRequestHandler("*", new HttpFileHandler(assetManager));
-    }
 
-    /** 
-     * You may add some HttpRequestHandlers before calling start()
-     * All HttpRequestHandlers added after start() will be ignored
-     * @param pattern Patterns may have three formats: * or *<uri> or <uri>*
-     * @param handler A request handler
-     */ 
-    public void addRequestHandler(String pattern, HttpRequestHandler handler) {
-    	registry.register(pattern, handler);
-    }
-    
-    public void start() throws IOException {
-    	if (running) return;
-    	requestListenerThread = new RequestListenerThread(port, registry);
-    	requestListenerThread.start();
-    	running = true;
-    }
-    
-    public void stop() {
-    	if (!running) return;
-        try {
-        	requestListenerThread.serversocket.close();
-        	requestListenerThread = null;
+	public BasicHttpServer(final int port, final AssetManager assetManager) {
+		this.port = port;
+		addRequestHandler("*", new HttpFileHandler(assetManager));
+	}
+
+	/** 
+	 * You may add some HttpRequestHandlers before calling start()
+	 * All HttpRequestHandlers added after start() will be ignored
+	 * @param pattern Patterns may have three formats: * or *<uri> or <uri>*
+	 * @param handler A request handler
+	 */ 
+	public void addRequestHandler(String pattern, HttpRequestHandler handler) {
+		registry.register(pattern, handler);
+	}
+
+	public void start() throws IOException {
+		if (running) return;
+		requestListenerThread = new RequestListenerThread(port, registry);
+		requestListenerThread.start();
+		running = true;
+	}
+
+	public void stop() {
+		if (!running) return;
+		try {
+			requestListenerThread.serversocket.close();
+			requestListenerThread = null;
 		} catch (Exception e) {
 			Log.e(TAG,"Error when close was called on serversocket: "+e.getMessage());
 		}
-        running = false;
-    }
-    
-    private static class RequestListenerThread extends Thread {
+		running = false;
+	}
 
-        private final ServerSocket serversocket;
-        private final HttpParams params; 
-        private final HttpService httpService;
-        
-        public RequestListenerThread(int port, HttpRequestHandlerRegistry registry) throws IOException {
-            this.serversocket = new ServerSocket(port);
-            this.params = new BasicHttpParams();
-            this.params
-                .setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
-                .setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
-                .setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK, false)
-                .setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
-                .setParameter(CoreProtocolPNames.ORIGIN_SERVER, "MajorKernelPanic HTTP Server");
+	private static class RequestListenerThread extends Thread {
 
-            // Set up the HTTP protocol processor
-            BasicHttpProcessor httpproc = new BasicHttpProcessor();
-            httpproc.addInterceptor(new ResponseDate());
-            httpproc.addInterceptor(new ResponseServer());
-            httpproc.addInterceptor(new ResponseContent());
-            httpproc.addInterceptor(new ResponseConnControl());
-            
-            // Set up the HTTP service
-            this.httpService = new HttpService(
-                    httpproc, 
-                    new DefaultConnectionReuseStrategy(), 
-                    new DefaultHttpResponseFactory());
-            this.httpService.setHandlerResolver(registry);
-            this.httpService.setParams(params);
-        }
-        
-        public void run() {
-            Log.i(TAG,"Listening on port " + this.serversocket.getLocalPort());
-            while (!Thread.interrupted()) {
-                try {
-                    // Set up HTTP connection
-                    Socket socket = this.serversocket.accept();
-                    DefaultHttpServerConnection conn = new DefaultHttpServerConnection();
-                    Log.d(TAG,"Incoming connection from " + socket.getInetAddress());
-                    conn.bind(socket, this.params);
+		private final ServerSocket serversocket;
+		private final HttpParams params; 
+		private final HttpService httpService;
 
-                    // Start worker thread
-                    Thread t = new WorkerThread(this.httpService, conn, socket);
-                    t.setDaemon(true);
-                    t.start();
+		public RequestListenerThread(int port, HttpRequestHandlerRegistry registry) throws IOException {
+			this.serversocket = new ServerSocket(port);
+			this.params = new BasicHttpParams();
+			this.params
+			.setIntParameter(CoreConnectionPNames.SO_TIMEOUT, 5000)
+			.setIntParameter(CoreConnectionPNames.SOCKET_BUFFER_SIZE, 8 * 1024)
+			.setBooleanParameter(CoreConnectionPNames.STALE_CONNECTION_CHECK, false)
+			.setBooleanParameter(CoreConnectionPNames.TCP_NODELAY, true)
+			.setParameter(CoreProtocolPNames.ORIGIN_SERVER, "MajorKernelPanic HTTP Server");
+
+			// Set up the HTTP protocol processor
+			BasicHttpProcessor httpproc = new BasicHttpProcessor();
+			httpproc.addInterceptor(new ResponseDate());
+			httpproc.addInterceptor(new ResponseServer());
+			httpproc.addInterceptor(new ResponseContent());
+			httpproc.addInterceptor(new ResponseConnControl());
+
+			// Set up the HTTP service
+			this.httpService = new HttpService(
+					httpproc, 
+					new DefaultConnectionReuseStrategy(), 
+					new DefaultHttpResponseFactory());
+			this.httpService.setHandlerResolver(registry);
+			this.httpService.setParams(params);
+		}
+
+		public void run() {
+			Log.i(TAG,"Listening on port " + this.serversocket.getLocalPort());
+			while (!Thread.interrupted()) {
+				try {
+					// Set up HTTP connection
+					Socket socket = this.serversocket.accept();
+					DefaultHttpServerConnection conn = new DefaultHttpServerConnection();
+					Log.d(TAG,"Incoming connection from " + socket.getInetAddress());
+					conn.bind(socket, this.params);
+
+					// Start worker thread
+					Thread t = new WorkerThread(this.httpService, conn, socket);
+					t.setDaemon(true);
+					t.start();
 				} catch (SocketException e) {
 					break;
-                } catch (InterruptedIOException ex) {
-                	Log.e(TAG,"Interrupted !");
-                	break;
-                } catch (IOException e) {
-                    Log.d(TAG,"I/O error initialising connection thread: " 
-                            + e.getMessage());
-                    break;
-                }
-            }
-            Log.i(TAG,"RequestListener stopped !");
-        }
-    }
-    
-    static class HttpFileHandler implements HttpRequestHandler  {
-        
-    	private final static  String[] extensions = new String[] {
-    		"htm", "html", "gif", "jpg", "png", "js", "css",
-    	};
+				} catch (InterruptedIOException ex) {
+					Log.e(TAG,"Interrupted !");
+					break;
+				} catch (IOException e) {
+					Log.d(TAG,"I/O error initialising connection thread: " 
+							+ e.getMessage());
+					break;
+				}
+			}
+			Log.i(TAG,"RequestListener stopped !");
+		}
+	}
 
-    	private final static String[] mimeMediaTypes = new String[] {
-    		"text/html", "text/html", "image/gif", "image/jpeg",
-    		"image/png", "text/javascript", "text/css"
-    	};
+	static class HttpFileHandler implements HttpRequestHandler  {
 
-    	private final AssetManager assetManager;
-    	
-        public HttpFileHandler(final AssetManager assetManager) {
-            super();
-            this.assetManager = assetManager;
-        }
-        
-        public void handle(
-                final HttpRequest request, 
-                final HttpResponse response,
-                final HttpContext context) throws HttpException, IOException {
-        	AbstractHttpEntity body = null;
-        	
-            final String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
-            if (!method.equals("GET") && !method.equals("HEAD") && !method.equals("POST")) {
-                throw new MethodNotSupportedException(method + " method not supported"); 
-            }
+		private final static  String[] extensions = new String[] {
+			"htm", "html", "gif", "jpg", "png", "js", "css",
+		};
 
-            final String url = URLDecoder.decode(request.getRequestLine().getUri());
-            if (request instanceof HttpEntityEnclosingRequest) {
-                HttpEntity entity = ((HttpEntityEnclosingRequest) request).getEntity();
-                byte[] entityContent = EntityUtils.toByteArray(entity);
-                Log.d(TAG,"Incoming entity content (bytes): " + entityContent.length);
-            }
-            
-            final String location = "www"+(url.equals("/")?"/index.htm":url);
-            response.setStatusCode(HttpStatus.SC_OK);
-            
-            try {
-            	Log.i(TAG,"Requested: \""+url+"\"");
-            	
-            	// We determine if the asset is compressed
-            	try {
-            		AssetFileDescriptor afd = assetManager.openFd(location);
+		private final static String[] mimeMediaTypes = new String[] {
+			"text/html", "text/html", "image/gif", "image/jpeg",
+			"image/png", "text/javascript", "text/css"
+		};
 
-            		// The asset is not compressed
-            		FileInputStream fis = new FileInputStream(afd.getFileDescriptor());
-            		fis.skip(afd.getStartOffset());
-            		body = new InputStreamEntity(fis, afd.getDeclaredLength());
-            		
-            		Log.d(TAG,"Serving uncompressed file " + "www" + url);
-            		
-            	} catch (FileNotFoundException e) {
-            		
-            		// The asset may be compressed
-            		// AAPT compresses assets so first we need to uncompress them to determine their length
-            		InputStream stream =  assetManager.open(location,AssetManager.ACCESS_STREAMING);
-                	ByteArrayOutputStream buffer = new ByteArrayOutputStream(64000);
-                	byte[] tmp = new byte[4096]; int length = 0;
-                    while ((length = stream.read(tmp)) != -1) buffer.write(tmp, 0, length);
-                    body = new InputStreamEntity(new ByteArrayInputStream(buffer.toByteArray()), buffer.size());
-                    stream.close();
-                    
-                    Log.d(TAG,"Serving compressed file " + "www" + url);
-                    
-            	}
-            	
-            } catch (IOException e) {
-            	// File does not exist
-            	response.setStatusCode(HttpStatus.SC_NOT_FOUND);
-            	body = new EntityTemplate(new ContentProducer() {
-            		public void writeTo(final OutputStream outstream) throws IOException {
-            			OutputStreamWriter writer = new OutputStreamWriter(outstream, "UTF-8"); 
-            			writer.write("<html><body><h1>");
-            			writer.write("File ");
-            			writer.write("www"+url);
-            			writer.write(" not found");
-            			writer.write("</h1></body></html>");
-            			writer.flush();
-            		}
-            	});
-            	Log.d(TAG,"File " + "www" + url + " not found");
+		private final AssetManager assetManager;
 
-            }
-            
-        	body.setContentType(getMimeMediaType(url)+"; charset=UTF-8");
-        	response.setEntity(body);
+		public HttpFileHandler(final AssetManager assetManager) {
+			super();
+			this.assetManager = assetManager;
+		}
 
-        }
-        
-        private String getMimeMediaType(String fileName) {
-        	String extension = fileName.substring(fileName.lastIndexOf(".")+1, fileName.length());
-        	for (int i=0;i<extensions.length;i++) {
-        		if (extensions[i].equals(extension)) 
-        			return mimeMediaTypes[i];
-        	}
-        	return mimeMediaTypes[0];
-        }
-        
-    }
-    
-    static class WorkerThread extends Thread {
+		public void handle(
+				final HttpRequest request, 
+				final HttpResponse response,
+				final HttpContext context) throws HttpException, IOException {
+			AbstractHttpEntity body = null;
 
-        private final HttpService httpservice;
-        private final HttpServerConnection conn;
-        private final Socket socket;
-        
-        public WorkerThread(
-                final HttpService httpservice, 
-                final HttpServerConnection conn,
-                final Socket socket) {
-            super();
-            this.httpservice = httpservice;
-            this.conn = conn;
-            this.socket = socket;
-        }
-        
-        public void run() {
-            Log.d(TAG,"New connection thread");
-            HttpContext context = new ModifiedHttpContext(socket);
-            try {
-                while (!Thread.interrupted() && this.conn.isOpen()) {
-                    this.httpservice.handleRequest(this.conn, context);
-                }
-            } catch (ConnectionClosedException ex) {
-                Log.e(TAG,"Client closed connection");
-            } catch (SocketTimeoutException ex) {
-            	Log.e(TAG,"Socket timeout");
-            } catch (IOException ex) {
-                Log.e(TAG,"I/O error: " + ex.getMessage());
-            } catch (HttpException ex) {
-                Log.e(TAG,"Unrecoverable HTTP protocol violation: " + ex.getMessage());
-            } finally {
-                try {
-                    this.conn.shutdown();
-                } catch (IOException ignore) {}
-            }
-        }
-    }
+			final String method = request.getRequestLine().getMethod().toUpperCase(Locale.ENGLISH);
+			if (!method.equals("GET") && !method.equals("HEAD") && !method.equals("POST")) {
+				throw new MethodNotSupportedException(method + " method not supported"); 
+			}
+
+			final String url = URLDecoder.decode(request.getRequestLine().getUri());
+			if (request instanceof HttpEntityEnclosingRequest) {
+				HttpEntity entity = ((HttpEntityEnclosingRequest) request).getEntity();
+				byte[] entityContent = EntityUtils.toByteArray(entity);
+				Log.d(TAG,"Incoming entity content (bytes): " + entityContent.length);
+			}
+
+			final String location = "www"+(url.equals("/")?"/index.htm":url);
+			response.setStatusCode(HttpStatus.SC_OK);
+
+			try {
+				Log.i(TAG,"Requested: \""+url+"\"");
+
+				// We determine if the asset is compressed
+				try {
+					AssetFileDescriptor afd = assetManager.openFd(location);
+
+					// The asset is not compressed
+					FileInputStream fis = new FileInputStream(afd.getFileDescriptor());
+					fis.skip(afd.getStartOffset());
+					body = new InputStreamEntity(fis, afd.getDeclaredLength());
+
+					Log.d(TAG,"Serving uncompressed file " + "www" + url);
+
+				} catch (FileNotFoundException e) {
+
+					// The asset may be compressed
+					// AAPT compresses assets so first we need to uncompress them to determine their length
+					InputStream stream =  assetManager.open(location,AssetManager.ACCESS_STREAMING);
+					ByteArrayOutputStream buffer = new ByteArrayOutputStream(64000);
+					byte[] tmp = new byte[4096]; int length = 0;
+					while ((length = stream.read(tmp)) != -1) buffer.write(tmp, 0, length);
+					body = new InputStreamEntity(new ByteArrayInputStream(buffer.toByteArray()), buffer.size());
+					stream.close();
+
+					Log.d(TAG,"Serving compressed file " + "www" + url);
+
+				}
+
+			} catch (IOException e) {
+				// File does not exist
+				response.setStatusCode(HttpStatus.SC_NOT_FOUND);
+				body = new EntityTemplate(new ContentProducer() {
+					public void writeTo(final OutputStream outstream) throws IOException {
+						OutputStreamWriter writer = new OutputStreamWriter(outstream, "UTF-8"); 
+						writer.write("<html><body><h1>");
+						writer.write("File ");
+						writer.write("www"+url);
+						writer.write(" not found");
+						writer.write("</h1></body></html>");
+						writer.flush();
+					}
+				});
+				Log.d(TAG,"File " + "www" + url + " not found");
+
+			}
+
+			body.setContentType(getMimeMediaType(url)+"; charset=UTF-8");
+			response.setEntity(body);
+
+		}
+
+		private String getMimeMediaType(String fileName) {
+			String extension = fileName.substring(fileName.lastIndexOf(".")+1, fileName.length());
+			for (int i=0;i<extensions.length;i++) {
+				if (extensions[i].equals(extension)) 
+					return mimeMediaTypes[i];
+			}
+			return mimeMediaTypes[0];
+		}
+
+	}
+
+	static class WorkerThread extends Thread {
+
+		private final HttpService httpservice;
+		private final HttpServerConnection conn;
+		private final Socket socket;
+
+		public WorkerThread(
+				final HttpService httpservice, 
+				final HttpServerConnection conn,
+				final Socket socket) {
+			super();
+			this.httpservice = httpservice;
+			this.conn = conn;
+			this.socket = socket;
+		}
+
+		public void run() {
+			Log.d(TAG,"New connection thread");
+			HttpContext context = new ModifiedHttpContext(socket);
+			try {
+				while (!Thread.interrupted() && this.conn.isOpen()) {
+					this.httpservice.handleRequest(this.conn, context);
+				}
+			} catch (ConnectionClosedException ex) {
+				Log.e(TAG,"Client closed connection");
+			} catch (SocketTimeoutException ex) {
+				Log.e(TAG,"Socket timeout");
+			} catch (IOException ex) {
+				Log.e(TAG,"I/O error: " + ex.getMessage());
+			} catch (HttpException ex) {
+				Log.e(TAG,"Unrecoverable HTTP protocol violation: " + ex.getMessage());
+			} finally {
+				try {
+					this.conn.shutdown();
+				} catch (IOException ignore) {}
+			}
+		}
+	}
 }

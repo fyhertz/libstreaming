@@ -51,28 +51,28 @@ public class RtspServer {
 	public static final int MESSAGE_LOG = 2;
 	public static final int MESSAGE_ERROR = 6;
 
-	private final Handler handler;
-	private final int port;
-	private boolean running = false;
+	private final Handler mHandler;
+	private final int mPort;
+	private boolean mRunning = false;
 	private RequestListenerThread listenerThread;
 	
 	public RtspServer(int port, Handler handler) {
-		this.handler = handler;
-		this.port = port;
+		this.mHandler = handler;
+		this.mPort = port;
 	}
 	
 	public void start() throws IOException {
-		if (running) return;
-		running = true;
-		listenerThread = new RequestListenerThread(port,handler);
+		if (mRunning) return;
+		mRunning = true;
+		listenerThread = new RequestListenerThread(mPort,mHandler);
 		listenerThread.start();
 	}
 	
 	public void stop() {
-		if (!running) return;
-		running = false;
+		if (!mRunning) return;
+		mRunning = false;
 		try {
-			listenerThread.server.close();
+			listenerThread.mServer.close();
 			listenerThread = null;
 		} catch (Exception e) {
 			Log.e(TAG,"Error when close was called on serversocket: "+e.getMessage());
@@ -81,19 +81,19 @@ public class RtspServer {
 	
 	static class RequestListenerThread extends Thread implements Runnable {
 		
-		private final ServerSocket server;
-		private final Handler handler;
+		private final ServerSocket mServer;
+		private final Handler mHandler;
 		
 		public RequestListenerThread(final int port, final Handler handler) throws IOException {
-			this.server = new ServerSocket(port);
-			this.handler = handler;
+			mServer = new ServerSocket(port);
+			mHandler = handler;
 		}
 		
 		public void run() {
-			Log.i(TAG,"Listening on port "+server.getLocalPort());
+			Log.i(TAG,"Listening on port "+mServer.getLocalPort());
 			while (!Thread.interrupted()) {
 				try {
-					new WorkerThread(server.accept(), handler).start();
+					new WorkerThread(mServer.accept(), mHandler).start();
 				} catch (SocketException e) {
 					break;
 				} catch (IOException e) {
@@ -109,27 +109,27 @@ public class RtspServer {
 	// One thread per client
 	static class WorkerThread extends Thread implements Runnable {
 		
-		private final Socket client;
-		private final OutputStream output;
-		private final BufferedReader input;
-		private final Handler handler;
+		private final Socket mClient;
+		private final OutputStream mOutput;
+		private final BufferedReader mInput;
+		private final Handler mHandler;
 		
 		// Each client has an associated session
-		private Session session;
+		private Session mSession;
 		
 		public WorkerThread(final Socket client, final Handler handler) throws IOException {
-			this.input = new BufferedReader(new InputStreamReader(client.getInputStream()));
-			this.output = client.getOutputStream();
-			this.session = new Session(client.getLocalAddress(),client.getInetAddress());
-			this.client = client;
-			this.handler = handler;
+			mInput = new BufferedReader(new InputStreamReader(client.getInputStream()));
+			mOutput = client.getOutputStream();
+			mSession = new Session(client.getLocalAddress(),client.getInetAddress());
+			mClient = client;
+			mHandler = handler;
 		}
 		
 		public void run() {
 			Request request;
 			Response response;
 			
-			log("Connection from "+client.getInetAddress().getHostAddress());
+			log("Connection from "+mClient.getInetAddress().getHostAddress());
 
 			while (!Thread.interrupted()) {
 
@@ -138,7 +138,7 @@ public class RtspServer {
 				
 				// Parse the request
 				try {
-					request = Request.parseRequest(input);
+					request = Request.parseRequest(mInput);
 				} catch (SocketException e) {
 					// Client has left
 					break;
@@ -155,7 +155,7 @@ public class RtspServer {
 					}
 					catch (Exception e) {
 						// This alerts the main thread that something has gone wrong in this thread
-						handler.obtainMessage(MESSAGE_ERROR, e).sendToTarget();
+						mHandler.obtainMessage(MESSAGE_ERROR, e).sendToTarget();
 						Log.e(TAG,e.getMessage()!=null?e.getMessage():"An error occurred");
 						e.printStackTrace();
 						response = new Response(request);
@@ -165,7 +165,7 @@ public class RtspServer {
 				// We always send a response
 				// The client will receive an "INTERNAL SERVER ERROR" if an exception has been thrown at some point
 				try {
-					response.send(output);
+					response.send(mOutput);
 				} catch (IOException e) {
 					Log.e(TAG,"Response was not sent properly");
 					break;
@@ -174,11 +174,11 @@ public class RtspServer {
 			}
 
 			// Streaming stops when client disconnects
-			session.stopAll();
-			session.flush();
+			mSession.stopAll();
+			mSession.flush();
 
 			try {
-				client.close();
+				mClient.close();
 			} catch (IOException ignore) {}
 			
 			log("Client disconnected");
@@ -194,10 +194,10 @@ public class RtspServer {
 			if (request.method.toUpperCase().equals("DESCRIBE")) {
 				
 					// Parse the requested URI and configure the session
-					UriParser.parse(request.uri,session);
-					String requestContent = session.getSessionDescription();
+					UriParser.parse(request.uri,mSession);
+					String requestContent = mSession.getSessionDescription();
 					String requestAttributes = 
-							"Content-Base: "+client.getLocalAddress().getHostAddress()+":"+client.getLocalPort()+"/\r\n" +
+							"Content-Base: "+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/\r\n" +
 							"Content-Type: application/sdp\r\n";
 					
 					response.attributes = requestAttributes;
@@ -234,7 +234,7 @@ public class RtspServer {
 				
 				trackId = Integer.parseInt(m.group(1));
 				
-				if (!session.trackExists(trackId)) {
+				if (!mSession.trackExists(trackId)) {
 					response.status = Response.STATUS_NOT_FOUND;
 					return response;
 				}
@@ -243,7 +243,7 @@ public class RtspServer {
 				m = p.matcher(request.headers.get("transport"));
 				
 				if (!m.find()) {
-					int port = session.getTrackDestinationPort(trackId);
+					int port = mSession.getTrackDestinationPort(trackId);
 					p1 = port;
 					p2 = port+1;
 				}
@@ -252,12 +252,12 @@ public class RtspServer {
 					p2 = Integer.parseInt(m.group(2));
 				}
 				
-				ssrc = session.getTrackSSRC(trackId);
-				src = session.getTrackLocalPort(trackId);
-				session.setTrackDestinationPort(trackId, p1);
+				ssrc = mSession.getTrackSSRC(trackId);
+				src = mSession.getTrackLocalPort(trackId);
+				mSession.setTrackDestinationPort(trackId, p1);
 
-				session.start(trackId);
-				response.attributes = "Transport: RTP/AVP/UDP;"+session.getRoutingScheme()+";destination="+session.getDestination().getHostAddress()+";client_port="+p1+"-"+p2+";server_port="+src+"-"+(src+1)+";ssrc="+Integer.toHexString(ssrc)+";mode=play\r\n" +
+				mSession.start(trackId);
+				response.attributes = "Transport: RTP/AVP/UDP;"+mSession.getRoutingScheme()+";destination="+mSession.getDestination().getHostAddress()+";client_port="+p1+"-"+p2+";server_port="+src+"-"+(src+1)+";ssrc="+Integer.toHexString(ssrc)+";mode=play\r\n" +
 						"Session: "+ "1185d20035702ca" + "\r\n" +
 						"Cache-Control: no-cache\r\n";
 				response.status = Response.STATUS_OK;
@@ -272,8 +272,8 @@ public class RtspServer {
 			/* ********************************************************************************** */
 			else if (request.method.toUpperCase().equals("PLAY")) {
 				String requestAttributes = "RTP-Info: ";
-				if (session.trackExists(0)) requestAttributes += "url=rtsp://"+client.getLocalAddress().getHostAddress()+":"+client.getLocalPort()+"/trackID="+0+";seq=0,";
-				if (session.trackExists(1)) requestAttributes += "url=rtsp://"+client.getLocalAddress().getHostAddress()+":"+client.getLocalPort()+"/trackID="+1+";seq=0,";
+				if (mSession.trackExists(0)) requestAttributes += "url=rtsp://"+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/trackID="+0+";seq=0,";
+				if (mSession.trackExists(1)) requestAttributes += "url=rtsp://"+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/trackID="+1+";seq=0,";
 				requestAttributes = requestAttributes.substring(0, requestAttributes.length()-1) + "\r\nSession: 1185d20035702ca\r\n";
 				
 				response.attributes = requestAttributes;
@@ -310,7 +310,7 @@ public class RtspServer {
 		}
 		
 		private void log(String message) {
-			handler.obtainMessage(MESSAGE_LOG, message).sendToTarget();
+			mHandler.obtainMessage(MESSAGE_LOG, message).sendToTarget();
 			Log.v(TAG,message);
 		}
 		
@@ -366,22 +366,23 @@ public class RtspServer {
 		public String status = STATUS_INTERNAL_SERVER_ERROR;
 		public String content = "";
 		public String attributes = "";
-		private final Request request;
+		
+		private final Request mRequest;
 		
 		public Response(Request request) {
-			this.request = request;
+			this.mRequest = request;
 		}
 		
 		public Response() {
 			// Be carefull if you modify the send() method because request might be null !
-			request = null;
+			mRequest = null;
 		}
 		
 		public void send(OutputStream output) throws IOException {
 			int seqid = -1;
 			
 			try {
-				seqid = Integer.parseInt(request.headers.get("cseq").replace(" ",""));
+				seqid = Integer.parseInt(mRequest.headers.get("cseq").replace(" ",""));
 			} catch (Exception e) {
 				Log.e(TAG,"Error parsing CSeq: "+(e.getMessage()!=null?e.getMessage():""));
 			}

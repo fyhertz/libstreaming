@@ -74,10 +74,10 @@ public class HttpServer extends BasicHttpServer{
 	public void stop() {
 		super.stop();
 		// If user has started a session with the HTTP Server, we need to stop it
-		for (int i=0;i<DescriptionRequestHandler.session.length;i++) {
-			if (DescriptionRequestHandler.session[i] != null) {
-				DescriptionRequestHandler.session[i].stopAll();
-				DescriptionRequestHandler.session[i].flush();
+		for (int i=0;i<DescriptionRequestHandler.sSessionList.length;i++) {
+			if (DescriptionRequestHandler.sSessionList[i] != null) {
+				DescriptionRequestHandler.sSessionList[i].stopAll();
+				DescriptionRequestHandler.sSessionList[i].flush();
 			}
 		}
 		
@@ -89,11 +89,11 @@ public class HttpServer extends BasicHttpServer{
 	 **/
 	static class DescriptionRequestHandler implements HttpRequestHandler {
 
-		private static Session[] session = new Session[MAX_STREAM_NUM];
-		private final Handler handler;
+		private static Session[] sSessionList = new Session[MAX_STREAM_NUM];
+		private final Handler mHandler;
 		
 		public DescriptionRequestHandler(final Handler handler) {
-			this.handler = handler;
+			mHandler = handler;
 		}
 		
 		public synchronized void handle(HttpRequest request, HttpResponse response, HttpContext context) throws HttpException {
@@ -121,21 +121,21 @@ public class HttpServer extends BasicHttpServer{
 				uri = "http://c?" + URLEncodedUtils.format(params, "UTF-8");
 				
 				// Stop all streams if a Session already exists
-				if (session[id] != null) {
-					if (session[id].getRoutingScheme()=="unicast") {
-						session[id].stopAll();
-						session[id].flush();
-						session[id] = null;
+				if (sSessionList[id] != null) {
+					if (sSessionList[id].getRoutingScheme()=="unicast") {
+						sSessionList[id].stopAll();
+						sSessionList[id].flush();
+						sSessionList[id] = null;
 					}
 				}
 
 				// Create new Session
-				session[id] = new Session(socket.getLocalAddress(), socket.getInetAddress());
+				sSessionList[id] = new Session(socket.getLocalAddress(), socket.getInetAddress());
 
 				// Parse URI and configure the Session accordingly 
-				UriParser.parse(uri, session[id]);
+				UriParser.parse(uri, sSessionList[id]);
 
-				final String sessionDescriptor = session[id].getSessionDescription().replace("Unnamed", "Stream-"+id);
+				final String sessionDescriptor = sSessionList[id].getSessionDescription().replace("Unnamed", "Stream-"+id);
 
 				response.setStatusCode(HttpStatus.SC_OK);
 				EntityTemplate body = new EntityTemplate(new ContentProducer() {
@@ -149,13 +149,13 @@ public class HttpServer extends BasicHttpServer{
 				response.setEntity(body);
 
 				// Start all streams associated to the Session
-				session[id].startAll();
+				sSessionList[id].startAll();
 
 			} catch (Exception e) {
 				response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 				Log.e(TAG,e.getMessage()!=null?e.getMessage():"An unknown error occurred");
 				e.printStackTrace();
-				handler.obtainMessage(MESSAGE_ERROR, e);
+				mHandler.obtainMessage(MESSAGE_ERROR, e);
 			}
 
 		}

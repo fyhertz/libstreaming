@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
  * 
@@ -37,92 +37,113 @@ import android.util.Log;
 public abstract class MediaStream extends MediaRecorder implements Stream {
 
 	protected static final String TAG = "MediaStream";
-	
+
 	// If you mode==MODE_DEFAULT the MediaStream will just act as a regular MediaRecorder
 	// By default: mode = MODE_STREAMING and MediaStream forwards data to the packetizer
 	public static final int MODE_STREAMING = 0;
 	public static final int MODE_DEFAULT = 1;
-	
-	private static int id = 0;
-	private int socketId;
-	private LocalServerSocket lss = null;
-	private LocalSocket receiver, sender = null;
-	protected AbstractPacketizer packetizer = null;
-	protected boolean streaming = false, modeDefaultWasUsed = false;
-	protected String sdpDescriptor;
+
+	private static int sId = 0;
+	private int mSocketId;
+
+	protected AbstractPacketizer mPacketizer = null;
+
+	protected boolean mStreaming = false, mModeDefaultWasUsed = false;
 	protected int mode = MODE_STREAMING;
-	
+
+	private LocalServerSocket mLss = null;
+	private LocalSocket mReceiver, mSender = null;
+
 	public MediaStream() {
 		super();
-		
+
 		try {
-			lss = new LocalServerSocket("net.majorkernelpanic.librtp-"+id);
+			mLss = new LocalServerSocket("net.majorkernelpanic.librtp-"+sId);
 		} catch (IOException e1) {
 			//throw new IOException("Can't create local socket !");
 		}
-		socketId = id;
-		id++;
-		
+		mSocketId = sId;
+		sId++;
+
 	}
 
-	/** The stream will be sent to the address specified by this function **/
+	/** Sets the destination UDP packets will be sent to. **/
 	public void setDestination(InetAddress dest, int dport) {
-		this.packetizer.setDestination(dest, dport);
+		this.mPacketizer.setDestination(dest, dport);
 	}
-	
-	/** Set the Time To Live of the underlying RtpSocket 
+
+	/** Sets the Time To Live of the underlying {@link net.majorkernelpanic.streaming.rtp.RtpSocket}. 
 	 * @throws IOException **/
 	public void setTimeToLive(int ttl) throws IOException {
-		this.packetizer.setTimeToLive(ttl);
+		this.mPacketizer.setTimeToLive(ttl);
 	}
-	
+
+	/** Gets the destination port of the stream. */
 	public int getDestinationPort() {
-		return this.packetizer.getRtpSocket().getPort();
+		return this.mPacketizer.getRtpSocket().getPort();
 	}
-	
+
+	/** Gets the source port of UDP packets. */
 	public int getLocalPort() {
-		return this.packetizer.getRtpSocket().getLocalPort();
+		return this.mPacketizer.getRtpSocket().getLocalPort();
 	}
-	
+
+	/**
+	 * Sets the mode of the {@link MediaStreame}.
+	 * If the mode is set to {@link #MODE_STREAMING}, video is forwarded to a UDP socket,
+	 * and if the mode is {@link #MODE_DEFAULT}, video is recorded in a file.
+	 * @param mode Either {@link #MODE_STREAMING} or {@link #MODE_DEFAULT} 
+	 * @throws IllegalStateException
+	 */
 	public void setMode(int mode) throws IllegalStateException {
-		if (!streaming) {
+		if (!mStreaming) {
 			this.mode = mode;
-			if (mode == MODE_DEFAULT) modeDefaultWasUsed = true;
+			if (mode == MODE_DEFAULT) mModeDefaultWasUsed = true;
 		}
 		else {
 			throw new IllegalStateException("You can't call setMode() while streaming !");
 		}
 	}
-	
+
+	/**
+	 * Returns the packetizer associated with the {@link MediaStream}.
+	 * @return The packetizer
+	 */
 	public AbstractPacketizer getPacketizer() { 
-		return packetizer;
+		return mPacketizer;
 	}
-	
+
+	/**
+	 * Indicates if the {@link MediaStream} is streaming.
+	 * @return A boolean indicating if the {@link MediaStream} is streaming
+	 */
 	public boolean isStreaming() {
-		return streaming;
+		return mStreaming;
 	}
-	
+
+	/** Prepares the stream. */
 	public void prepare() throws IllegalStateException,IOException {
 		if (mode==MODE_STREAMING) {
 			createSockets();
 			// We write the ouput of the camera in a local socket instead of a file !			
 			// This one little trick makes streaming feasible quiet simply: data from the camera
 			// can then be manipulated at the other end of the socket
-			setOutputFile(sender.getFileDescriptor());
+			setOutputFile(mSender.getFileDescriptor());
 		}
 		super.prepare();
 	}
-	
+
+	/** Starts the stream. */
 	public void start() throws IllegalStateException {
 		super.start();
 		try {
 			if (mode==MODE_STREAMING) {
 				// receiver.getInputStream contains the data from the camera
 				// the packetizer encapsulates this stream in an RTP stream and send it over the network
-				packetizer.setInputStream(receiver.getInputStream());
-				packetizer.start();
+				mPacketizer.setInputStream(mReceiver.getInputStream());
+				mPacketizer.start();
 			}
-			streaming = true;
+			mStreaming = true;
 		} catch (IOException e) {
 			super.stop();
 			throw new IllegalStateException("Something happened with the local sockets :/ Start failed");
@@ -131,9 +152,10 @@ public abstract class MediaStream extends MediaRecorder implements Stream {
 			throw new IllegalStateException("setPacketizer() should be called before start(). Start failed");
 		}
 	}
-	
+
+	/** Stops the stream. */
 	public void stop() {
-		if (streaming) {
+		if (mStreaming) {
 			try {
 				super.stop();
 			}
@@ -141,40 +163,48 @@ public abstract class MediaStream extends MediaRecorder implements Stream {
 			finally {
 				super.reset();
 				closeSockets();
-				if (mode==MODE_STREAMING) packetizer.stop();
-				streaming = false;
+				if (mode==MODE_STREAMING) mPacketizer.stop();
+				mStreaming = false;
 			}
 		}
 	}
-	
+
+	/**
+	 * Returns the SSRC of the underlying {@link net.majorkernelpanic.streaming.rtp.RtpSocket}.
+	 * @return the SSRC of underlying RTP socket
+	 */
 	public int getSSRC() {
 		return getPacketizer().getRtpSocket().getSSRC();
 	}
-	
+
 	public abstract String generateSessionDescription()  throws IllegalStateException, IOException;
-	
+
 	private void createSockets() throws IOException {
-		receiver = new LocalSocket();
-		receiver.connect( new LocalSocketAddress("net.majorkernelpanic.librtp-" + socketId ) );
-		receiver.setReceiveBufferSize(500000);
-		sender = lss.accept();
-		sender.setSendBufferSize(500000); 
+		mReceiver = new LocalSocket();
+		mReceiver.connect( new LocalSocketAddress("net.majorkernelpanic.librtp-" + mSocketId ) );
+		mReceiver.setReceiveBufferSize(500000);
+		mSender = mLss.accept();
+		mSender.setSendBufferSize(500000); 
 	}
-	
+
 	private void closeSockets() {
 		try {
-			sender.close();
-			receiver.close();
+			mSender.close();
+			mReceiver.close();
 		} catch (Exception ignore) {}
 	}
-	
+
+	/** 
+	 * Releases ressources associated with the stream. 
+	 * The object can not be used anymore when this function is called. 
+	 **/
 	public void release() {
 		stop();
 		try {
-			lss.close();
+			mLss.close();
 		}
 		catch (Exception ignore) {}
 		super.release();
 	}
-	
+
 }

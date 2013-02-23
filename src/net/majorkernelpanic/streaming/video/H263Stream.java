@@ -37,23 +37,23 @@ import android.util.Log;
  * You don't need to call reset().
  */
 public class H263Stream extends VideoStream {
-	
+
 	public H263Stream(int cameraId) throws IOException {
 		super(cameraId);
 		setVideoEncoder(MediaRecorder.VideoEncoder.H263);
-		this.packetizer = new H263Packetizer();
+		this.mPacketizer = new H263Packetizer();
 	}
 
 	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */
 	public String generateSessionDescription() throws IllegalStateException,
-			IOException {
+	IOException {
 
 		return "m=video "+String.valueOf(getDestinationPort())+" RTP/AVP 96\r\n" +
-				   "b=RR:0\r\n" +
-				   "a=rtpmap:96 H263-1998/90000\r\n";
-		
+				"b=RR:0\r\n" +
+				"a=rtpmap:96 H263-1998/90000\r\n";
+
 	}
 
 }
