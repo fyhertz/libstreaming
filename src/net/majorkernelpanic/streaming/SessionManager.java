@@ -28,7 +28,7 @@ import android.util.Log;
 import android.view.SurfaceHolder;
 
 /**
- * Call {@link net.majorkernelpanic.streaming.SessionManager#getManager()} to get access to the SessionManager.
+ * Call {@link #getManager()} to get access to the SessionManager.
  * The SessionManager has a number of utility methods to create and manage Sessions.
  */
 public class SessionManager {
@@ -67,6 +67,14 @@ public class SessionManager {
 		}
 		return sInstance;
 	}
+	
+	/**
+	 * Creates a new {@link Session}.
+	 * @return The new Session
+	 */
+	public Session createSession() {
+		return new Session();
+	}	
 	
 	/**
 	 * Creates a new {@link Session}.

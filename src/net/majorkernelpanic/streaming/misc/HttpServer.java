@@ -29,8 +29,7 @@ import java.net.URI;
 import java.util.Iterator;
 import java.util.List;
 
-import net.majorkernelpanic.http.BasicHttpServer;
-import net.majorkernelpanic.http.ModifiedHttpContext;
+import net.majorkernelpanic.http.TinyHttpServer;
 import net.majorkernelpanic.streaming.Session;
 
 import org.apache.http.HttpException;
@@ -44,8 +43,7 @@ import org.apache.http.entity.EntityTemplate;
 import org.apache.http.protocol.HttpContext;
 import org.apache.http.protocol.HttpRequestHandler;
 
-import android.content.Context;
-import android.os.Handler;
+import android.os.Binder;
 import android.util.Log;
 
 /**
@@ -58,26 +56,31 @@ import android.util.Log;
  * All the option supported by the HTTP server are described in UriParser.java
  *
  */
-public class HttpServer extends BasicHttpServer{
+public class HttpServer extends TinyHttpServer {
 
-	/** This messsage will be sent to the handler if an error occurs. **/
-	public static final int MESSAGE_ERROR = 0x07;
+	public final static int ERROR_START_FAILED = 0xFE;
 	
 	/** Maximal number of streams that you can start from the HTTP server. **/
 	protected static final int MAX_STREAM_NUM = 2;
 	
-	public HttpServer(int port, Context context, Handler handler) {
-		super(port, context.getAssets());
-		addRequestHandler("/spydroid.sdp*", new DescriptionRequestHandler(handler));
+	private DescriptionRequestHandler mDescriptionRequestHandler;
+	
+	@Override
+	public void onCreate() {
+		super.onCreate();
+		mDescriptionRequestHandler = new DescriptionRequestHandler();
+		addRequestHandler("/spydroid.sdp*", mDescriptionRequestHandler);
+		
 	} 
 	
+	@Override
 	public void stop() {
 		super.stop();
 		// If user has started a session with the HTTP Server, we need to stop it
-		for (int i=0;i<DescriptionRequestHandler.sSessionList.length;i++) {
-			if (DescriptionRequestHandler.sSessionList[i] != null) {
-				DescriptionRequestHandler.sSessionList[i].stopAll();
-				DescriptionRequestHandler.sSessionList[i].flush();
+		for (int i=0;i<mDescriptionRequestHandler.sSessionList.length;i++) {
+			if (mDescriptionRequestHandler.sSessionList[i] != null) {
+				mDescriptionRequestHandler.sSessionList[i].stopAll();
+				mDescriptionRequestHandler.sSessionList[i].flush();
 			}
 		}
 		
@@ -87,17 +90,15 @@ public class HttpServer extends BasicHttpServer{
 	 * Allow user to start streams (a session contains one or more streams) from the HTTP server by requesting 
 	 * this URL: http://ip/spydroid.sdp (the RTSP server is not needed here). 
 	 **/
-	static class DescriptionRequestHandler implements HttpRequestHandler {
+	class DescriptionRequestHandler implements HttpRequestHandler {
 
-		private static Session[] sSessionList = new Session[MAX_STREAM_NUM];
-		private final Handler mHandler;
+		private final Session[] sSessionList = new Session[MAX_STREAM_NUM];
 		
-		public DescriptionRequestHandler(final Handler handler) {
-			mHandler = handler;
+		public DescriptionRequestHandler() {
 		}
 		
 		public synchronized void handle(HttpRequest request, HttpResponse response, HttpContext context) throws HttpException {
-			Socket socket = ((ModifiedHttpContext)context).getSocket();
+			Socket socket = ((TinyHttpServer.MHttpContext)context).getSocket();
 			String uri = request.getRequestLine().getUri();
 			int id = 0;
 			
@@ -148,14 +149,14 @@ public class HttpServer extends BasicHttpServer{
 				body.setContentType("text/plain; charset=UTF-8");
 				response.setEntity(body);
 
-				// Start all streams associated to the Session
+				// Starts all streams associated to the Session
 				sSessionList[id].startAll();
 
 			} catch (Exception e) {
 				response.setStatusCode(HttpStatus.SC_INTERNAL_SERVER_ERROR);
 				Log.e(TAG,e.getMessage()!=null?e.getMessage():"An unknown error occurred");
 				e.printStackTrace();
-				mHandler.obtainMessage(MESSAGE_ERROR, e);
+				mListener.onError(HttpServer.this, e, ERROR_START_FAILED);
 			}
 
 		}

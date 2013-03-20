@@ -57,10 +57,13 @@ public abstract class MediaStream extends MediaRecorder implements Stream {
 	public MediaStream() {
 		super();
 
-		try {
-			mLss = new LocalServerSocket("net.majorkernelpanic.librtp-"+sId);
-		} catch (IOException e1) {
-			//throw new IOException("Can't create local socket !");
+		for (int i=0;i<5;i++) {
+			try {
+				mLss = new LocalServerSocket("net.majorkernelpanic.librtp-"+sId);
+				break;
+			} catch (IOException e1) {
+				sId++;
+			}
 		}
 		mSocketId = sId;
 		sId++;

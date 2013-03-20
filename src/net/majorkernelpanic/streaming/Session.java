@@ -22,6 +22,7 @@ package net.majorkernelpanic.streaming;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 import net.majorkernelpanic.streaming.audio.AACStream;
 import net.majorkernelpanic.streaming.audio.AMRNBStream;
@@ -82,8 +83,18 @@ public class Session {
 
 	/** 
 	 * Creates a streaming session that can be customized by adding tracks.
+	 */
+	public Session() {
+		this(null, null);
+		try {
+			mOrigin = InetAddress.getLocalHost();
+		} catch (UnknownHostException ignore) {}
+	}		
+
+	/** 
+	 * Creates a streaming session that can be customized by adding tracks.
 	 * @param destination The destination address of the streams
-	 * @param origin The origin address of the streams
+	 * @param origin The origin address of the streams (appears in the session description)
 	 */
 	public Session(InetAddress origin, InetAddress destination) {
 		this.mDestination = destination;
@@ -91,15 +102,35 @@ public class Session {
 		// This timestamp is used in the session descriptor for the Origin parameter "o="
 		this.mTimestamp = System.currentTimeMillis();
 		this.mManager = SessionManager.getManager();
+	}
+
+	/** 
+	 * The origin address of the session.
+	 * It appears in the sessionn description.
+	 * @param origin The origin address
+	 */
+	public void setOrigin(InetAddress origin) {
+		this.mOrigin =  origin;
 	}	
 
 	/** 
 	 * The destination address for all the streams of the session.
-	 * This method will have no effect on already existing tracks
+	 * You must stop all tracks before calling this method
 	 * @param destination The destination address
 	 */
-	public void setDestination(InetAddress destination) {
+	public void setDestination(InetAddress destination) throws IllegalStateException {
 		this.mDestination =  destination;
+		synchronized (sLock) {
+			for (int i=0;i<mStreamList.length;i++) {
+				if (mStreamList[i] != null && mStreamList[i].isStreaming()) throw new IllegalStateException("You must first stop all tracks !");
+			}
+			// We are now sure that no tracks are running
+			for (int i=0;i<mStreamList.length;i++) {
+				if (mStreamList[i] != null) {
+					mStreamList[i].setDestination(destination, mStreamList[i].getDestinationPort());
+				}
+			}
+		}		
 	}
 
 	/** 
@@ -297,6 +328,14 @@ public class Session {
 		return mStreamList[id].getSSRC();
 	}
 
+	/** Indicates if a track is currently running. */
+	public boolean isStreaming() {
+		for (int i=0;i<mStreamList.length;i++) {
+			if (mStreamList[i] != null && mStreamList[i].isStreaming()) return true;
+		}
+		return false;
+	}
+	
 	/** Starts stream with id trackId. */
 	public void start(int trackId) throws IllegalStateException, IOException {
 		synchronized (sLock) {

@@ -32,15 +32,15 @@ import android.util.Log;
 
 /**
  * A class for streaming AAC from the microphone of an android device using RTP.
- * Call setDestination(), prepare() & start() and that's it !
- * Call stop() to stop the stream.
- * You don't need to call reset().
+ * Call {@link #setDestination(java.net.InetAddress, int)}, {@link #prepare()} & {@link #start()} and that's it !
+ * Call {@link #stop()} to stop the stream.
+ * You don't need to call {@link #reset()}.
  */
 public class AACStream extends MediaStream {
 
 	public final static String TAG = "AACStream";
 
-	/** MPEG-4 Audio Object Types supported by ADTS **/
+	/** MPEG-4 Audio Object Types supported by ADTS. **/
 	private static final String[] sAudioObjectTypes = {
 		"NULL",							  // 0
 		"AAC Main",						  // 1
@@ -49,7 +49,7 @@ public class AACStream extends MediaStream {
 		"AAC LTP (Long Term Prediction)"  // 4	
 	};
 
-	/** There are 13 supported frequencies by ADTS **/
+	/** There are 13 supported frequencies by ADTS. **/
 	private static final int[] sADTSSamplingRates = {
 		96000, // 0
 		88200, // 1
@@ -69,8 +69,9 @@ public class AACStream extends MediaStream {
 		-1,   // 15
 	};
 
-	/** Default sampling rate **/
+	/** Default sampling rate. **/
 	private int mRequestedSamplingRate = 16000;
+	private int mActualSamplingRate = 16000;
 
 	private int mProfile, mSamplingRateIndex, mChannel, mConfig;
 
@@ -88,6 +89,8 @@ public class AACStream extends MediaStream {
 
 	public void prepare() throws IllegalStateException, IOException {
 
+		((AACADTSPacketizer)mPacketizer).setSamplingRate(mActualSamplingRate);
+		
 		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
 
 		// This is completely experimental: AAC_ADTS is not yet visible in the android developer documentation
@@ -115,7 +118,7 @@ public class AACStream extends MediaStream {
 
 		return "m=audio "+String.valueOf(getDestinationPort())+" RTP/AVP 96\r\n" +
 		"b=RR:0\r\n" +
-		"a=rtpmap:96 mpeg4-generic/"+90000+"\r\n" + //ADTSSamplingRates[samplingRateIndex]
+		"a=rtpmap:96 mpeg4-generic/"+90000+"\r\n" + // sADTSSamplingRates[mSamplingRateIndex]
 		"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
 	}
 
@@ -168,14 +171,15 @@ public class AACStream extends MediaStream {
 		mSamplingRateIndex = (buffer[1]&0x3C) >> 2;
 		mProfile = ( (buffer[1]&0xC0) >> 6 ) + 1 ;
 		mChannel = (buffer[1]&0x01) << 2 | (buffer[2]&0xC0) >> 6 ;
-
+		mActualSamplingRate = sADTSSamplingRates[mSamplingRateIndex];
+		
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
 		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
 
 		Log.i(TAG,"MPEG VERSION: " + ( (buffer[0]&0x08) >> 3 ) );
 		Log.i(TAG,"PROTECTION: " + (buffer[0]&0x01) );
 		Log.i(TAG,"PROFILE: " + sAudioObjectTypes[ mProfile ] );
-		Log.i(TAG,"SAMPLING FREQUENCY: " + sADTSSamplingRates[mSamplingRateIndex] );
+		Log.i(TAG,"SAMPLING FREQUENCY: " + mActualSamplingRate );
 		Log.i(TAG,"CHANNEL: " + mChannel );
 
 		raf.close();

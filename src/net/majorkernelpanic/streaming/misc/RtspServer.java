@@ -42,6 +42,8 @@ import android.util.Log;
  * For each connected client, a Session is instantiated.
  * The Session will start or stop streams according to what the client wants.
  * 
+ * Will soon be converted to an Android Service !
+ * 
  */
 public class RtspServer {
 	
