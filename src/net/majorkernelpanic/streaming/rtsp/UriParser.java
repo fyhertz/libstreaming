@@ -18,7 +18,14 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming.misc;
+package net.majorkernelpanic.streaming.rtsp;
+
+import static net.majorkernelpanic.streaming.SessionBuilder.AUDIO_AAC;
+import static net.majorkernelpanic.streaming.SessionBuilder.AUDIO_AMRNB;
+import static net.majorkernelpanic.streaming.SessionBuilder.AUDIO_NONE;
+import static net.majorkernelpanic.streaming.SessionBuilder.VIDEO_H263;
+import static net.majorkernelpanic.streaming.SessionBuilder.VIDEO_H264;
+import static net.majorkernelpanic.streaming.SessionBuilder.VIDEO_NONE;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -27,7 +34,8 @@ import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.List;
 
-import net.majorkernelpanic.streaming.Session;
+import net.majorkernelpanic.streaming.SessionBuilder;
+import net.majorkernelpanic.streaming.sdp.Session;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 
 import org.apache.http.NameValuePair;
@@ -53,128 +61,114 @@ public class UriParser {
 	 * @throws IllegalStateException
 	 * @throws IOException
 	 */
-	public static void parse(String uri, Session session) throws IllegalStateException, IOException {
-		boolean flash = false;
-		int camera = CameraInfo.CAMERA_FACING_BACK;
-		
+	public static Session parse(String uri) throws IllegalStateException, IOException {		
+		SessionBuilder builder = SessionBuilder.getInstance().clone();
+
 		List<NameValuePair> params = URLEncodedUtils.parse(URI.create(uri),"UTF-8");
 		if (params.size()>0) {
+
+			builder.setAudioEncoder(AUDIO_NONE).setVideoEncoder(VIDEO_NONE);
 			
 			// Those parameters must be parsed first or else they won't necessarily be taken into account
 			for (Iterator<NameValuePair> it = params.iterator();it.hasNext();) {
 				NameValuePair param = it.next();
-				
+
 				// FLASH ON/OFF
-				if (param.getName().equals("flash")) {
-					if (param.getValue().equals("on")) flash = true;
-					else flash = false;
+				if (param.getName().equalsIgnoreCase("flash")) {
+					if (param.getValue().equalsIgnoreCase("on")) 
+						builder.setFlashEnabled(true);
+					else 
+						builder.setFlashEnabled(false);
 				}
-				
+
 				// CAMERA -> the client can choose between the front facing camera and the back facing camera
-				else if (param.getName().equals("camera")) {
-					if (param.getValue().equals("back")) camera = CameraInfo.CAMERA_FACING_BACK;
-					else if (param.getValue().equals("front")) camera = CameraInfo.CAMERA_FACING_FRONT;
+				else if (param.getName().equalsIgnoreCase("camera")) {
+					if (param.getValue().equalsIgnoreCase("back")) 
+						builder.setCamera(CameraInfo.CAMERA_FACING_BACK);
+					else if (param.getValue().equalsIgnoreCase("front")) 
+						builder.setCamera(CameraInfo.CAMERA_FACING_FRONT);
 				}
-				
+
 				// MULTICAST -> the stream will be sent to a multicast group
 				// The default mutlicast address is 228.5.6.7, but the client can specify one 
-				else if (param.getName().equals("multicast")) {
-					session.setRoutingScheme(Session.MULTICAST);
+				else if (param.getName().equalsIgnoreCase("multicast")) {
 					if (param.getValue()!=null) {
 						try {
 							InetAddress addr = InetAddress.getByName(param.getValue());
 							if (!addr.isMulticastAddress()) {
 								throw new IllegalStateException("Invalid multicast address !");
 							}
-							session.setDestination(addr);
+							builder.setDestination(addr);
 						} catch (UnknownHostException e) {
 							throw new IllegalStateException("Invalid multicast address !");
 						}
 					}
 					else {
 						// Default multicast address
-						session.setDestination(InetAddress.getByName("228.5.6.7"));
+						builder.setDestination(InetAddress.getByName("228.5.6.7"));
 					}
 				}
-				
+
 				// UNICAST -> the client can use this so specify where he wants the stream to be sent
-				else if (param.getName().equals("unicast")) {
+				else if (param.getName().equalsIgnoreCase("unicast")) {
 					if (param.getValue()!=null) {
 						try {
 							InetAddress addr = InetAddress.getByName(param.getValue());
-							session.setDestination(addr);
+							builder.setDestination(addr);
 						} catch (UnknownHostException e) {
 							throw new IllegalStateException("Invalid destination address !");
 						}
 					}					
 				}
-				
+
 				// TTL -> the client can modify the time to live of packets
 				// By default ttl=64
-				else if (param.getName().equals("ttl")) {
+				else if (param.getName().equalsIgnoreCase("ttl")) {
 					if (param.getValue()!=null) {
 						try {
 							int ttl = Integer.parseInt(param.getValue());
-							if (ttl<0) throw new IllegalStateException("The TTL must be a positive integer !");
-							session.setTimeToLive(ttl);
+							if (ttl<0) throw new IllegalStateException();
+							builder.setTimeToLive(ttl);
 						} catch (Exception e) {
 							throw new IllegalStateException("The TTL must be a positive integer !");
 						}
 					}
 				}
-				
-				// No tracks will be added to the session
-				else if (param.getName().equals("stop")) {
-					return;
-				}
-				
-			}
-			
-			for (Iterator<NameValuePair> it = params.iterator();it.hasNext();) {
-				NameValuePair param = it.next();
-				
-				// H264
-				if (param.getName().equals("h264")) {
+
+				// H.264
+				else if (param.getName().equalsIgnoreCase("h264")) {
 					VideoQuality quality = VideoQuality.parseQuality(param.getValue());
-					session.addVideoTrack(Session.VIDEO_H264, camera, quality, flash);
+					builder.setVideoQuality(quality).setVideoEncoder(VIDEO_H264);
 				}
-				
-				// H263
-				else if (param.getName().equals("h263")) {
+
+				// H.263
+				else if (param.getName().equalsIgnoreCase("h263")) {
 					VideoQuality quality = VideoQuality.parseQuality(param.getValue());
-					session.addVideoTrack(Session.VIDEO_H263, camera, quality, flash);
+					builder.setVideoQuality(quality).setVideoEncoder(VIDEO_H263);
 				}
-				
-				// AMRNB
-				else if (param.getName().equals("amrnb") || param.getName().equals("amr")) {
-					session.addAudioTrack(Session.AUDIO_AMRNB);
+
+				// AMR
+				else if (param.getName().equalsIgnoreCase("amrnb") || param.getName().equalsIgnoreCase("amr")) {
+					builder.setAudioEncoder(AUDIO_AMRNB);
 				}
-				
+
 				// AAC
-				else if (param.getName().equals("aac")) {
-					session.addAudioTrack(Session.AUDIO_AAC);
-				}
-				
-				// Generic Audio Stream -> make use of api level 12
-				// TODO: Doesn't work :/
-				else if (param.getName().equals("testnewapi")) {
-					session.addAudioTrack(Session.AUDIO_ANDROID_AMR);
+				else if (param.getName().equalsIgnoreCase("aac")) {
+					builder.setAudioEncoder(AUDIO_AAC);
 				}
 				
 			}
-			
-			// The default behavior is to only add one video track
-			if (session.getTrackCount()==0) {
-				session.addVideoTrack();
-				session.addAudioTrack();
-			}
-			
-		} 
-		// Uri has no parameters: the default behavior is to only add one video track
-		else {
-			session.addVideoTrack();
-			session.addAudioTrack();
+
 		}
+
+		if (builder.getVideoEncoder()==VIDEO_NONE && builder.getAudioEncoder()==AUDIO_NONE) {
+			SessionBuilder b = SessionBuilder.getInstance();
+			builder.setVideoEncoder(b.getVideoEncoder());
+			builder.setAudioEncoder(b.getAudioEncoder());
+		}
+		
+		return builder.build();
+		
 	}
-	
+
 }

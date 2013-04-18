@@ -43,7 +43,6 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	private final static int MAXPACKETSIZE = 1400;
 	
 	private Thread t;
-	private Statistics stats = new Statistics();
 	private int samplingRate = 8000;
 
 	public AACADTSPacketizer() throws IOException {
@@ -51,8 +50,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	}
 
 	public void start() {
-		if (!running) {
-			running = true;
+		if (t==null) {
 			t = new Thread(this);
 			t.start();
 		}
@@ -62,11 +60,8 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		try {
 			is.close();
 		} catch (IOException ignore) {}
-		running = false;
-		// We wait until the packetizer thread returns
-		try {
-			t.join();
-		} catch (InterruptedException e) {}
+		t.interrupt();
+		t = null;
 	}
 
 	public void setSamplingRate(int samplingRate) {
@@ -84,10 +79,10 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		// Adts header fields that we need to parse
 		boolean protection;
 		int frameLength, sum, length, nbau, nbpk;
-		long ts=0, oldtime = SystemClock.elapsedRealtime(), now = oldtime;
+		long oldtime = SystemClock.elapsedRealtime(), now = oldtime, delta = 5000, measured, lastmeasured = 5000, expected;
 
 		try {
-			while (running) {
+			while (!Thread.interrupted()) {
 
 				// Synchronisation: ADTS packet starts with 12bits set to 1
 				while (true) {
@@ -99,6 +94,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 				// Parse adts header (ADTS packets start with a 7 or 9 byte long header)
 				is.read(buffer,rtphl+2,5);
+				
 				// The protection bit indicates whether or not the header contains the two extra bytes
 				protection = (buffer[rtphl+1]&0x01)>0 ? true : false;
 				frameLength = (buffer[rtphl+3]&0x03) << 11 | 
@@ -115,12 +111,17 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				// Read CRS if any
 				if (!protection) is.read(buffer,rtphl,2);
 
-				now = SystemClock.elapsedRealtime();
-				stats.push(now-oldtime);
-				oldtime = now;
-				ts +=  (nbau*1024*1000 / samplingRate )*90; // FIXME: 1024 seems to work better on certain players...
-				oldtime = now;
+				// We update the RTP timestamp
+				ts +=  1024; // FIXME: 1024 seems to work better on certain players...
 				socket.updateTimestamp(ts);
+				
+				// We send one RTCP Sender Report every 5 secs
+				if (delta>5000) {
+					delta = 0;
+					report.setRtpTimestamp(ts);
+					report.setNtpTimestamp(SystemClock.elapsedRealtime());
+					report.send();
+				}
 				
 				sum = 0;
 				while (sum<frameLength) {
@@ -152,12 +153,21 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 					//Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection+ " length: "+length);
 										
-					// We wait before calling send() so that we won't send too many packets at once
-					//Log.d(TAG,"SLEEP: "+ ( 2*nbau*1024*1000 / (3*nbpk*samplingRate) ) );
-					Thread.sleep( ( 2*nbau*1024*1000 / (3*nbpk*samplingRate) ) );
-					
-					socket.send(rtphl+4+length);
+					send(rtphl+4+length);
 
+				}
+
+				// We wait a little to avoid sending to many packets too quickly
+				now = SystemClock.elapsedRealtime();
+				measured = now-oldtime;
+				delta += measured;
+				oldtime = now;
+				expected = nbau*1024*1000 / (nbpk*samplingRate);
+				//Log.d(TAG,"expected: "+ expected + " measured: "+measured);
+				measured -= lastmeasured<2*expected/3 ? 2*expected/3-lastmeasured : 0;
+				lastmeasured = measured;
+				if (measured<2*expected/3) {
+					Thread.sleep( 2*expected/3-measured );
 				}
 
 			}
@@ -168,8 +178,6 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 			e.printStackTrace();
 		} catch (InterruptedException e) {
 			// Ignore
-		} finally {
-			running = false;
 		}
 
 		Log.d(TAG,"AAC packetizer stopped !");

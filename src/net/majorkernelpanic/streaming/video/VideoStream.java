@@ -28,11 +28,11 @@ import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
 import android.media.MediaRecorder;
 import android.util.Log;
-import android.view.Surface;
 import android.view.SurfaceHolder;
+import android.view.SurfaceHolder.Callback;
 
 /** 
- * Don't use this class directly
+ * Don't use this class directly.
  */
 public abstract class VideoStream extends MediaStream {
 
@@ -40,17 +40,34 @@ public abstract class VideoStream extends MediaStream {
 
 	protected VideoQuality mQuality = VideoQuality.defaultVideoQualiy.clone();
 	protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
-	protected Surface mSurface = null;
+	protected SurfaceHolder mSurfaceHolder = null;
 	protected boolean mFlashState = false,  mQualityHasChanged = false;
 	protected int mVideoEncoder, mCameraId = 0;
 	protected Camera mCamera;
 
+	/** 
+	 * Don't use this class directly.
+	 * Uses CAMERA_FACING_BACK by default.
+	 */
+	public VideoStream() {
+		this(CameraInfo.CAMERA_FACING_BACK);
+	}	
+	
 	/** 
 	 * Don't use this class directly
 	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
 	 */
 	public VideoStream(int camera) {
 		super();
+		setCamera(camera);
+	}
+
+	/**
+	 * Sets the camera that will be used to capture video.
+	 * You can call this method at any time and changes will take effect next time you call {@link #prepare()}.
+	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
+	 */	
+	public void setCamera(int camera) {
 		CameraInfo cameraInfo = new CameraInfo();
 		int numberOfCameras = Camera.getNumberOfCameras();
 		for (int i=0;i<numberOfCameras;i++) {
@@ -61,20 +78,41 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 	}
-
+	
 	/**
 	 * Sets a Surface to show a preview of recorded media (video). 
 	 * You can call this method at any time and changes will take effect next time you call {@link #prepare()}.
 	 */
-	public void setPreviewDisplay(Surface surface) {
-		this.mSurface = surface;
+	public void setPreviewDisplay(SurfaceHolder surfaceHolder) {
+		if (mSurfaceHolderCallback != null && mSurfaceHolder != null) {
+			mSurfaceHolder.removeCallback(mSurfaceHolderCallback);
+		}
+		mSurfaceHolderCallback = new Callback() {
+			@Override
+			public void surfaceDestroyed(SurfaceHolder holder) {
+				if (VideoStream.this.isStreaming()) {
+					VideoStream.this.stop();
+					Log.d(TAG,"Surface destroyed: video streaming stopped.");
+				}
+			}
+			@Override
+			public void surfaceCreated(SurfaceHolder holder) {
+				
+			}
+			@Override
+			public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+				
+			}
+		};
+		mSurfaceHolder = surfaceHolder;
+		mSurfaceHolder.addCallback(mSurfaceHolderCallback);
 	}
 
-	/** Turn flash on or off if phone has one */
+	/** Turns the LED on or off if phone has one. */
 	public void setFlashState(boolean state) {
 		mFlashState = state;
 	}
-
+	
 	/** 
 	 * Modifies the resolution of the stream. You can call this method at any time 
 	 * and changes will take effect next time you call {@link #prepare()}.
@@ -133,13 +171,11 @@ public abstract class VideoStream extends MediaStream {
 	 * and changes will take effect next time you call {@link #prepare()}.
 	 * @param videoEncoder Encoder of the stream
 	 */
-	public void setVideoEncoder(int videoEncoder) {
+	protected void setVideoEncoder(int videoEncoder) {
 		this.mVideoEncoder = videoEncoder;
 	}
-
-	/**
-	 * Stops the stream
-	 */
+	
+	/** Stops the stream. */
 	public synchronized void stop() {
 		super.stop();
 		if (mCamera != null) {
@@ -163,7 +199,14 @@ public abstract class VideoStream extends MediaStream {
 	 * The underlying Camera will be opened and configured whaen you call this method so don't forget to deal with the RuntimeExceptions !
 	 * Camera.open, Camera.setParameter, Camera.unlock may throw one !
 	 */
-	public void prepare() throws IllegalStateException, IOException, RuntimeException {
+	public void prepare() throws IllegalStateException, IOException {
+		
+		// Resets the recorder in case it is in a bad state
+		mMediaRecorder.reset();
+		
+		if (mSurfaceHolder == null) 
+			throw new IllegalStateException("Invalid surface holder !");
+		
 		if (mCamera == null) {
 			mCamera = Camera.open(mCameraId);
 			mCamera.setErrorCallback(new Camera.ErrorCallback() {
@@ -186,7 +229,6 @@ public abstract class VideoStream extends MediaStream {
 		// If an exception is thrown after the camera was open, we must absolutly release it !
 		try {
 
-			// We reconnect to camera to change flash state if needed
 			Parameters parameters = mCamera.getParameters();
 			if (mFlashState) {
 				if (parameters.getFlashMode()==null) {
@@ -199,35 +241,31 @@ public abstract class VideoStream extends MediaStream {
 			}
 			mCamera.setDisplayOrientation(mQuality.orientation);
 			mCamera.unlock();
-			super.setCamera(mCamera);
-
-			// MediaRecorder should have been like this according to me:
-			// all configuration methods can be called at any time and
-			// changes take effects when prepare() is called
-			super.setVideoSource(MediaRecorder.VideoSource.CAMERA);
-			super.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+			
+			mMediaRecorder.setCamera(mCamera);
+			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+			
 			if (mode==MODE_DEFAULT) {
-				super.setMaxDuration(1000);
-				super.setMaxFileSize(Integer.MAX_VALUE);
+				mMediaRecorder.setMaxDuration(1000);
+				mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
 			} else if (mModeDefaultWasUsed) {
 				// On some phones a RuntimeException might be thrown :/
 				try {
-					super.setMaxDuration(0);
-					super.setMaxFileSize(Integer.MAX_VALUE); 
+					mMediaRecorder.setMaxDuration(0);
+					mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE); 
 				} catch (RuntimeException e) {
 					Log.e(TAG,"setMaxDuration or setMaxFileSize failed !");
 				}
 			}
-			super.setVideoEncoder(mVideoEncoder);
-			super.setPreviewDisplay(mSurface);
-			super.setVideoSize(mQuality.resX,mQuality.resY);
-			super.setVideoFrameRate(mQuality.framerate);
-			super.setVideoEncodingBitRate(mQuality.bitrate);
+			
+			mMediaRecorder.setVideoEncoder(mVideoEncoder);
+			mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+			mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
+			mMediaRecorder.setVideoFrameRate(mQuality.framerate);
+			mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
 
 			super.prepare();
-
-			// Reset flash state to ensure that default behavior is to turn it off
-			mFlashState = false;
 
 			// Quality has been updated
 			mQualityHasChanged = false;

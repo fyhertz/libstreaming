@@ -18,7 +18,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.mp4;
+package net.majorkernelpanic.streaming.mp4;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
@@ -27,9 +27,15 @@ import java.io.IOException;
  */
 public class MP4Config {
 
-	private final StsdBox stsdBox; 
-	private final MP4Parser mp4Parser;
+	private MP4Parser mp4Parser;
+	private String mProfilLevel, mPPS, mSPS;
 
+	public MP4Config(String profil, String pps, String sps) {
+		mProfilLevel = profil; 
+		mPPS = pps; 
+		mSPS = sps;
+	}
+	
 	/**
 	 * Finds sps & pps parameters inside a .mp4.
 	 * @param path Path to the file to analyze
@@ -38,6 +44,8 @@ public class MP4Config {
 	 */
 	public MP4Config (String path) throws IOException, FileNotFoundException {
 
+		StsdBox stsdBox; 
+		
 		// We open the mp4 file
 		mp4Parser = new MP4Parser(path);
 
@@ -50,22 +58,25 @@ public class MP4Config {
 
 		// We find the stsdBox
 		stsdBox = mp4Parser.getStsdBox();
-
+		mPPS = stsdBox.getB64PPS();
+		mSPS = stsdBox.getB64SPS();
+		mProfilLevel = stsdBox.getProfileLevel();
+		
 		// We're done !
 		mp4Parser.close();
 
 	}
 
 	public String getProfileLevel() {
-		return stsdBox.getProfileLevel();
+		return mProfilLevel;
 	}
 
 	public String getB64PPS() {
-		return stsdBox.getB64PPS();
+		return mPPS;
 	}
 
 	public String getB64SPS() {
-		return stsdBox.getB64SPS();
+		return mSPS;
 	}
 
 }

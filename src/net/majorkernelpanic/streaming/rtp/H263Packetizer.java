@@ -47,8 +47,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 	}
 
 	public void start() throws IOException {
-		if (!running) {
-			running = true;
+		if (t==null) {
 			t = new Thread(this);
 			t.start();
 		}
@@ -58,16 +57,14 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 		try {
 			is.close();
 		} catch (IOException ignore) {}
-		running = false;
-		// We wait until the packetizer thread returns
-		try {
-			t.join();
-		} catch (InterruptedException e) {}
+		t.interrupt();
+		t = null;
+
 	}
 
 	public void run() {
-		long time, duration = 0, ts = 0;
-		int i = 0, j = 0, tr;
+		long time, duration = 0;
+		int i = 0, j = 0, tr, delta = 10000;
 		boolean firstFragment = true;
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
@@ -83,7 +80,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 		buffer[rtphl+1] = 0;
 
 		try { 
-			while (running) {
+			while (!Thread.interrupted()) {
 				time = SystemClock.elapsedRealtime();
 				if (fill(rtphl+j+2,MAXPACKETSIZE-rtphl-j-2)<0) return;
 				duration += SystemClock.elapsedRealtime() - time;
@@ -107,28 +104,32 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 					buffer[rtphl] = 0;
 				}
 				if (j>0) {
+					// We send one RTCP Sender Report every 5 secs
+					delta += duration;
+					if (delta>5000 && duration>10) {
+						delta = 0;
+						report.setRtpTimestamp(ts*90);
+						report.setNtpTimestamp(SystemClock.elapsedRealtime());
+						report.send();
+					}
 					// We have found the end of the frame
 					stats.push(duration);
 					ts+= stats.average(); duration = 0;
 					//Log.d(TAG,"End of frame ! duration: "+stats.average());
 					// The last fragment of a frame has to be marked
 					socket.markNextPacket();
-					socket.send(j);
+					send(j);
 					socket.updateTimestamp(ts*90);
-					System.arraycopy(buffer,j+2,buffer,rtphl+2,MAXPACKETSIZE-j-2); 
+					System.arraycopy(buffer,j+2,buffer,rtphl+2,MAXPACKETSIZE-j-2);
 					j = MAXPACKETSIZE-j-2;
 					firstFragment = true;
 				} else {
 					// We have not found the beginning of another frame
 					// The whole packet is a fragment of a frame
-					socket.send(MAXPACKETSIZE);
+					send(MAXPACKETSIZE);
 				}
 			}
-		} catch (IOException e) {
-			running = false;
-			Log.e(TAG,"IOException: "+e.getMessage());
-			e.printStackTrace();
-		}
+		} catch (IOException e) {}
 
 		Log.d(TAG,"H263 Packetizer stopped !");
 

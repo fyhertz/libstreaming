@@ -24,13 +24,15 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
-import java.util.Random;
 
 /**
  * A basic implementation of an RTP socket.
  */
 public class RtpSocket {
 
+	public static final int RTP_HEADER_LENGTH = 12;
+	public static final int MTU = 1500;
+	
 	private MulticastSocket usock;
 	private DatagramPacket upack;
 
@@ -39,10 +41,6 @@ public class RtpSocket {
 	private boolean upts = false;
 	private int ssrc;
 	private int port = -1;
-
-	public static final int RTP_HEADER_LENGTH = 12;
-	public static final int MTU = 1500;
-
 
 	public RtpSocket() throws IOException {
 
@@ -61,7 +59,6 @@ public class RtpSocket {
 		/* Byte 2,3        ->  Sequence Number                   */
 		/* Byte 4,5,6,7    ->  Timestamp                         */
 		/* Byte 8,9,10,11  ->  Sync Source Identifier            */
-		setLong((ssrc=(new Random()).nextInt()),8,12);
 
 		usock = new MulticastSocket();
 		upack = new DatagramPacket(buffer, 1);

@@ -1,7 +1,9 @@
-net.majorkernelpanic.http
-net.majorkernelpanic.mp4
 net.majorkernelpanic.streaming
 net.majorkernelpanic.streaming.audio
-net.majorkernelpanic.streaming.misc
+net.majorkernelpanic.streaming.exceptions
+net.majorkernelpanic.streaming.mp4
+net.majorkernelpanic.streaming.rtcp
 net.majorkernelpanic.streaming.rtp
+net.majorkernelpanic.streaming.rtsp
+net.majorkernelpanic.streaming.sdp
 net.majorkernelpanic.streaming.video

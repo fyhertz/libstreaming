@@ -43,7 +43,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 
 	private Thread t = null;
 	private int naluLength = 0;
-	private long ts = 0, delay = 0;
+	private long delay = 0;
 	private Statistics stats = new Statistics();
 
 	public H264Packetizer() throws IOException {
@@ -62,16 +62,12 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 			is.close();
 		} catch (IOException ignore) {}
 		t.interrupt();
-		// We wait until the packetizer thread returns
-		try {
-			t.join();
-		} catch (InterruptedException e) {}
 		t = null;
 	}
 
 	public void run() {
 
-		long duration = 0, oldtime = 0;
+		long duration = 0, oldtime = 0, delta = 10000;
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
@@ -87,7 +83,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 			return;
 		}
 
-		// Here we read a NAL unit in the input stream and we send it
+		// We read a NAL units from the input stream and we send them
 		try {
 			while (!Thread.interrupted()) {
 
@@ -96,13 +92,24 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 				send();
 				duration = SystemClock.elapsedRealtime() - oldtime;
 
+				// We send one RTCP Sender Report every 5 secs
+				delta += duration;
+				if (delta>5000) {
+					delta = 0;
+					report.setNtpTimestamp(SystemClock.elapsedRealtime());
+					report.setRtpTimestamp(ts*90);
+					report.send();
+				}
+				
 				// Calculates the average duration of a NAL unit
 				stats.push(duration);
 				delay = stats.average();
 
 			}
 		} catch (IOException e) {
-		} catch (InterruptedException e) {}
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 
 		Log.d(TAG,"H264 packetizer stopped !");
 
@@ -131,7 +138,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 		if (naluLength<=MAXPACKETSIZE-rtphl-2) {
 			len = fill(rtphl+1,  naluLength-1  );
 			socket.markNextPacket();
-			socket.send(naluLength+rtphl);
+			super.send(naluLength+rtphl);
 			//Log.d(TAG,"----- Single NAL unit - len:"+len+" header:"+printBuffer(rtphl,rtphl+3)+" delay: "+delay+" newDelay: "+newDelay);
 		}
 		// Large NAL unit => Split nal unit 
@@ -152,7 +159,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 					buffer[rtphl+1] += 0x40;
 					socket.markNextPacket();
 				}
-				socket.send(len+rtphl+2);
+				super.send(len+rtphl+2);
 				// Switch start bit
 				buffer[rtphl+1] = (byte) (buffer[rtphl+1] & 0x7F); 
 				//Log.d(TAG,"----- FU-A unit, sum:"+sum);
@@ -161,7 +168,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 	}
 
 	private int fill(int offset,int length) throws IOException {
-
 		int sum = 0, len;
 
 		while (sum<length) {

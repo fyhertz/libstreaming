@@ -23,8 +23,6 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
-import net.majorkernelpanic.streaming.rtp.AbstractPacketizer.Statistics;
-
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -44,22 +42,16 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 	private final int AMR_HEADER_LENGTH = 6; // "#!AMR\n"
 	private static final int AMR_FRAME_HEADER_LENGTH = 1; // Each frame has a short header
-
-	private static final int[] sBitrates = {
-		4750, 5150, 5900, 6700, 7400, 7950, 1020, 1220
-	};
 	private static final int[] sFrameBits = {95, 103, 118, 134, 148, 159, 204, 244};
 
 	private Thread t;
-	private Statistics stats = new Statistics();
 
 	public AMRNBPacketizer() throws IOException {
 		super();
 	}
 
 	public void start() {
-		if (!running) {
-			running = true;
+		if (t==null) {
 			t = new Thread(this);
 			t.start();
 		}
@@ -69,26 +61,29 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 		try {
 			is.close();
 		} catch (IOException ignore) {}
-		running = false;
-		// We wait until the packetizer thread returns
-		try {
-			t.join();
-		} catch (InterruptedException e) {}
+		t.interrupt();
+		t = null;
 	}
 
 	public void run() {
 
-		int frameLength, frameType;
-		long ts=0, oldtime = SystemClock.elapsedRealtime(), now = oldtime;
+		int frameLength, frameType, delta = 10000;
+		long now = SystemClock.elapsedRealtime(), oldtime = now, measured;
+		long expected = 20, lastmeasured = 10000;
 
 		try {
 
 			// Skip raw amr header
 			fill(rtphl,AMR_HEADER_LENGTH);
+			
+			if (buffer[rtphl+5] != '\n') {
+				Log.e(TAG,"Bad header ! AMR not correcty supported by the phone !");
+				return;
+			}
 
 			buffer[rtphl] = (byte) 0xF0;
 
-			while (running) {
+			while (!Thread.interrupted()) {
 
 				// First we read the frame header
 				fill(rtphl+1,AMR_FRAME_HEADER_LENGTH);
@@ -102,25 +97,39 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 				//Log.d(TAG,"Frame length: "+frameLength+" frameType: "+frameType);
 
-				// RFC 3267 Page 14: 
-				// "For AMR, the sampling frequency is 8 kHz"
-				now = SystemClock.elapsedRealtime();
-				stats.push(now-oldtime);
-				oldtime = now;
-				ts += stats.average()*8;
-				oldtime = now;
+				// RFC 3267 Page 14: "For AMR, the sampling frequency is 8 kHz"
+				// FIXME: Is this really always the case ??
+				ts += 160; 
 				socket.updateTimestamp(ts);
 				socket.markNextPacket();
 
-				socket.send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
+				// We wait a little to avoid sending to many packets too quickly
+				now = SystemClock.elapsedRealtime();
+				measured = now-oldtime;
+				delta += measured;
+				oldtime = now;
+				//Log.d(TAG,"expected: "+ expected + " measured: "+measured);
+				measured -= lastmeasured<2*expected/3 ? 2*expected/3-lastmeasured : 0;
+				lastmeasured = measured;
+				if (measured<2*expected/3) {
+					Thread.sleep( 2*expected/3-measured );
+				}
+				
+				if (delta>5000) {
+					delta = 0;
+					report.setNtpTimestamp(now);
+					report.setRtpTimestamp(ts);
+					report.send();
+				}
+				
+				send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
+				
 			}
 
-		} catch (IOException e) {
-			running = false;
-			Log.d(TAG,"IOException: "+(e.getMessage()!=null?e.getMessage():"unknown error"));
-		}
+		} catch (IOException e) { 
+		} catch (InterruptedException e) {}
 
-		Log.d(TAG,"Packetizer stopped !");
+		Log.d(TAG,"AMR packetizer stopped !");
 
 	}
 

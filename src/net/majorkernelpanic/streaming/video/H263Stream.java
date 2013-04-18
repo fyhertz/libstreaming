@@ -22,26 +22,38 @@ package net.majorkernelpanic.streaming.video;
 
 import java.io.IOException;
 
-import net.majorkernelpanic.streaming.MediaStream;
 import net.majorkernelpanic.streaming.rtp.H263Packetizer;
-import net.majorkernelpanic.streaming.rtp.H264Packetizer;
-import android.content.Context;
+import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
-import android.util.Log;
 
 /**
  * A class for streaming H.263 from the camera of an android device using RTP.
- * Call setDestination() & setVideoSize() & setVideoFrameRate() & setVideoEncodingBitRate() and you're good to go.
- * You can then call prepare() & start().
- * Call stop() to stop the stream.
- * You don't need to call reset().
+ * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #setDestinationPorts(int)}, 
+ * {@link #setVideoSize(int, int)}, {@link #setVideoFramerate(int)} and {@link #setVideoEncodingBitrate(int)} and you're good to go.
+ * You can then call {@link #prepare()} & {@link #start()}.
+ * Call {@link #stop()} to stop the stream.
+ * Finally, do not forget to call {@link #release()} when you're done.
  */
 public class H263Stream extends VideoStream {
 
+	/**
+	 * Constructs the H.263 stream.
+	 * Uses CAMERA_FACING_BACK by default.
+	 * @throws IOException
+	 */
+	public H263Stream() throws IOException {
+		this(CameraInfo.CAMERA_FACING_BACK);
+	}	
+		
+	/**
+	 * Constructs the H.263 stream.
+	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT 
+	 * @throws IOException
+	 */	
 	public H263Stream(int cameraId) throws IOException {
 		super(cameraId);
 		setVideoEncoder(MediaRecorder.VideoEncoder.H263);
-		this.mPacketizer = new H263Packetizer();
+		mPacketizer = new H263Packetizer();
 	}
 
 	/**
@@ -50,8 +62,7 @@ public class H263Stream extends VideoStream {
 	public String generateSessionDescription() throws IllegalStateException,
 	IOException {
 
-		return "m=video "+String.valueOf(getDestinationPort())+" RTP/AVP 96\r\n" +
-				"b=RR:0\r\n" +
+		return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 				"a=rtpmap:96 H263-1998/90000\r\n";
 
 	}

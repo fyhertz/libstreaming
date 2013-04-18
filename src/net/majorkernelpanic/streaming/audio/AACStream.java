@@ -23,9 +23,12 @@ package net.majorkernelpanic.streaming.audio;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.lang.reflect.Field;
 
-import net.majorkernelpanic.streaming.MediaStream;
+import net.majorkernelpanic.streaming.exceptions.AACNotSupportedException;
 import net.majorkernelpanic.streaming.rtp.AACADTSPacketizer;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.util.Log;
@@ -34,9 +37,9 @@ import android.util.Log;
  * A class for streaming AAC from the microphone of an android device using RTP.
  * Call {@link #setDestination(java.net.InetAddress, int)}, {@link #prepare()} & {@link #start()} and that's it !
  * Call {@link #stop()} to stop the stream.
- * You don't need to call {@link #reset()}.
+ * Do not forget to call {@link #release()} when you're done. 
  */
-public class AACStream extends MediaStream {
+public class AACStream extends AudioStream {
 
 	public final static String TAG = "AACStream";
 
@@ -69,43 +72,47 @@ public class AACStream extends MediaStream {
 		-1,   // 15
 	};
 
-	/** Default sampling rate. **/
-	private int mRequestedSamplingRate = 16000;
-	private int mActualSamplingRate = 16000;
-
+	private int mActualSamplingRate;
 	private int mProfile, mSamplingRateIndex, mChannel, mConfig;
+	private SharedPreferences mSettings = null;
 
 	public AACStream() throws IOException {
 		super();
 
-		AACADTSPacketizer packetizer = new AACADTSPacketizer();
-		mPacketizer = packetizer;
+		mPacketizer  = new AACADTSPacketizer();
+
+		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+
+		try {
+			Field deprecatedName = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
+			setOutputFormat(deprecatedName.getInt(null));
+		} catch (Exception e) {
+			throw new AACNotSupportedException();
+		}
+
+		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+		setAudioSamplingRate(16000);
 
 	}
 
-	public void setAudioSamplingRate(int samplingRate) {
-		mRequestedSamplingRate = samplingRate;
+	/**
+	 * Some data (the actual sampling rate) needs to be stored once {@link #generateSessionDescription()} is called.
+	 * @param prefs The SharedPreferences that will be used to store the sampling rate 
+	 */
+	public void setPreferences(SharedPreferences prefs) {
+		mSettings = prefs;
 	}
 
 	public void prepare() throws IllegalStateException, IOException {
-
+		testADTS();
 		((AACADTSPacketizer)mPacketizer).setSamplingRate(mActualSamplingRate);
-		
-		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
-
-		// This is completely experimental: AAC_ADTS is not yet visible in the android developer documentation
-		// Recording AAC ADTS works on my galaxy SII with this tiny trick
-		super.setOutputFormat(6);
-		super.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-		super.setAudioChannels(1);
-		super.setAudioSamplingRate(mRequestedSamplingRate);
-
 		super.prepare();
+
 	}
 
 	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
-	 * This method will fail if called when streaming.
+	 * Will fail if called when streaming.
 	 */
 	public String generateSessionDescription() throws IllegalStateException, IOException {
 		testADTS();
@@ -116,9 +123,8 @@ public class AACStream extends MediaStream {
 
 		// TODO: streamType always 5 ? profile-level-id always 15 ?
 
-		return "m=audio "+String.valueOf(getDestinationPort())+" RTP/AVP 96\r\n" +
-		"b=RR:0\r\n" +
-		"a=rtpmap:96 mpeg4-generic/"+90000+"\r\n" + // sADTSSamplingRates[mSamplingRateIndex]
+		return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+		"a=rtpmap:96 mpeg4-generic/"+mActualSamplingRate+"\r\n"+
 		"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
 	}
 
@@ -127,23 +133,37 @@ public class AACStream extends MediaStream {
 	 * On some phone indeed, no error will be reported if the sampling rate used differs from the 
 	 * one selected with setAudioSamplingRate 
 	 * @throws IOException 
-	 * @throws IllegalStateException 
+	 * @throws IllegalStateException
 	 */
 	private void testADTS() throws IllegalStateException, IOException {
 
+		if (mSettings!=null) {
+			if (mSettings.contains("aac-"+mSamplingRate)) {
+				String[] s = mSettings.getString("aac-"+mSamplingRate, "").split(",");
+				mActualSamplingRate = Integer.valueOf(s[0]);
+				mConfig = Integer.valueOf(s[1]);
+				mChannel = Integer.valueOf(s[2]);
+				return;
+			}
+		}
+
 		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
 
-		// The structure of an ADTS packet is described here: http://wiki.multimedia.cx/index.php?title=ADTS
+		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
+			throw new IllegalStateException("No external storage or external storage not ready !");
+		}
 
+		// The structure of an ADTS packet is described here: http://wiki.multimedia.cx/index.php?title=ADTS
+		
 		// ADTS header is 7 or 9 bytes long
 		byte[] buffer = new byte[9];
 
 		// That means the H264Stream will behave as a regular MediaRecorder object
 		// it will not start the packetizer thread and can be used to save video in a file
 		setMode(MODE_DEFAULT);
-		setOutputFile(TESTFILE);
+		mMediaRecorder.setOutputFile(TESTFILE);
 
-		prepare();
+		super.prepare();
 		start();
 
 		// We record for 1 sec
@@ -172,7 +192,7 @@ public class AACStream extends MediaStream {
 		mProfile = ( (buffer[1]&0xC0) >> 6 ) + 1 ;
 		mChannel = (buffer[1]&0x01) << 2 | (buffer[2]&0xC0) >> 6 ;
 		mActualSamplingRate = sADTSSamplingRates[mSamplingRateIndex];
-		
+
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
 		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
 
@@ -183,6 +203,12 @@ public class AACStream extends MediaStream {
 		Log.i(TAG,"CHANNEL: " + mChannel );
 
 		raf.close();
+
+		if (mSettings!=null) {
+			Editor editor = mSettings.edit();
+			editor.putString("aac-"+mSamplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
+			editor.commit();
+		}
 
 		if (!file.delete()) Log.e(TAG,"Temp file could not be erased");
 
