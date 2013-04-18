@@ -63,7 +63,18 @@ The **SessionBuilder** simply facilitates the creation of **Session** objects. T
 
 The complete source code of this example is available here: http://libstreaming.majorkernelpanic.net/
 
+## How to use the RTSP server
+
+```java
+// Starts the RTSP server
+context.startService(new Intent(this,RtspServer.class));
+// Stops the RTSP server
+context.stopService(new Intent(this,RtspServer.class));
+```
+
 # Class diagramm
+
+Soon !
 
 # Spydroid-ipcamera
 
