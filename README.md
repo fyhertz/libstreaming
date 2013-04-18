@@ -2,17 +2,17 @@
 
 ## What it does
 
-**libstreaming** is an API that allows you, with only a few lines of code, to stream the output camera and/or microphone of an android powered device using RTP over UDP. 
+**libstreaming** is an API that allows you, with only a few lines of code, to stream the camera and/or microphone of an android powered device using RTP over UDP. 
 
-* Supported compression algorithms includes H.264, H.263, AAC and AMR
-* Since version 2.0, a basic implementation of RTCP is implemented.
+* Supported encoders includes H.264, H.263, AAC and AMR
+* Since version 2.0, a basic support for RTCP has been implemented.
 * libstreaming also features a RTSP server for easy remote control of the phones camera and microphone.
 
 The full javadoc documentation of the API is available here: http://libstreaming.majorkernelpanic.net/
 
 ## How it does it
 
-libstreaming uses various tricks to make streaming possible without the need of any native code. Access to the devices camera(s) and microphone is achieved by simply using a MediaRecorder, but configured to write to a LocalSocket instead of a regular file (MediaStream.java). Raw data from the peripheral are then processed in a thread doing syncronous read at the other end of the LocalSocket. Voila !
+libstreaming uses various tricks to make streaming possible without the need of any native code. Access to the devices camera(s) and microphone is achieved by simply using a **MediaRecorder**, but configured to write to a **LocalSocket** instead of a regular file (**MediaStream.java**). Raw data from the peripheral are then processed in a thread doing syncronous read at the other end of the **LocalSocket**. Voila !
 
 What the thread actually does is this: it waits for data from the peripheral and then packetizes it to make it fit into proper RTP packets that are then sent one by one on the network. The packetization algorithm that must be used for H.264, H.263, AMR and AAC are all specified in their respective RFC:
 
