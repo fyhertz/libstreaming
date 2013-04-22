@@ -37,8 +37,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.majorkernelpanic.http.TinyHttpServer;
+import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
-import net.majorkernelpanic.streaming.sdp.Session;
 import android.app.Service;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -89,7 +89,7 @@ public class RtspServer extends Service {
 	protected SharedPreferences mSharedPreferences;
 	protected boolean mEnabled = true;	
 	protected int mPort = DEFAULT_RTSP_PORT;
-	private WeakHashMap<Session,Object> mSessions = new WeakHashMap<Session,Object>(2);
+	protected WeakHashMap<Session,Object> mSessions = new WeakHashMap<Session,Object>(2);
 	
 	private RequestListener mListenerThread;
 	private final IBinder mBinder = new LocalBinder();

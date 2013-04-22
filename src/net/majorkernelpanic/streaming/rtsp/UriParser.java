@@ -34,8 +34,8 @@ import java.net.UnknownHostException;
 import java.util.Iterator;
 import java.util.List;
 
+import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
-import net.majorkernelpanic.streaming.sdp.Session;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 
 import org.apache.http.NameValuePair;
