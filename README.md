@@ -65,7 +65,7 @@ The complete source code of this example is available here: http://libstreaming.
 
 ## How to use the RTSP server
 
-1. Add this to your manifest:
+#### Add this to your manifest:
 
 ```xml
 <service android:name="net.majorkernelpanic.spydroid.api.RtspServer"/>
@@ -73,7 +73,7 @@ The complete source code of this example is available here: http://libstreaming.
 
 If you decide to override **RtspServer** change the line above accordingly.
 
-2. You can change the port used by the RtspServer:
+#### You can change the port used by the RtspServer:
 
 ```java
 Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
@@ -83,7 +83,7 @@ editor.commit();
 
 The port is indeed stored as a String in the preferences, there is a good reason to that. The EditTextPreference object saves its input as a String and cannot easily (one would need to override it) be configured to store it as an Integer.
 
-3. Configure its behavior with the SessionBuilder:
+#### Configure its behavior with the SessionBuilder:
 
 ```java
 SessionBuilder.getInstance()    
@@ -93,7 +93,7 @@ SessionBuilder.getInstance()
 			.setVideoEncoder(SessionBuilder.VIDEO_H264);
 ```
 
-4. Start and stop the server like this:
+#### Start and stop the server like this:
 
 ```java
 // Starts the RTSP server
@@ -106,7 +106,7 @@ context.stopService(new Intent(this,RtspServer.class));
 
 ![Class Diagram](http://majorkernelpanic.net/libstreaming/ClassDiagram.png "Class diagram")
 
-*SessionBuilder* and *RtspServer* are the class that you will wnt to use directly, they make use of everything else in the streaming package.
+*SessionBuilder* and *RtspServer* are the class that you will want to use directly, they make use of everything else in the streaming package.
 
 # Spydroid-ipcamera
 
