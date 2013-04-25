@@ -143,7 +143,7 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/**
-	 * Sets the mode of the {@link MediaStreame}.
+	 * Sets the mode of the {@link MediaStream}.
 	 * If the mode is set to {@link #MODE_STREAMING}, video is forwarded to a UDP socket,
 	 * and if the mode is {@link #MODE_DEFAULT}, video is recorded in a file.
 	 * @param mode Either {@link #MODE_STREAMING} or {@link #MODE_DEFAULT} 

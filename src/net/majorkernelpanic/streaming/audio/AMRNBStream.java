@@ -28,7 +28,7 @@ import android.media.MediaRecorder;
 
 /**
  * A class for streaming AMR-NB from the microphone of an android device using RTP.
- * Call {@link #setDestinationAddress(java.net.InetAddress), {@link #prepare()} & {@link #start()} and that's it !
+ * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #prepare()} & {@link #start()} and that's it !
  * Call {@link #stop()} to stop the stream.
  * Do not forget to call {@link #release()} when you're done.
  */

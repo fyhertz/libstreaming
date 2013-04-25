@@ -5,5 +5,4 @@ net.majorkernelpanic.streaming.mp4
 net.majorkernelpanic.streaming.rtcp
 net.majorkernelpanic.streaming.rtp
 net.majorkernelpanic.streaming.rtsp
-net.majorkernelpanic.streaming.sdp
 net.majorkernelpanic.streaming.video

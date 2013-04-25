@@ -80,10 +80,10 @@ public class RtspServer extends Service {
 	public final static int MESSAGE_STREAMING_STOPPED = 0X01;
 	
 	/** Key used in the SharedPreferences to store whether the RTSP server is enabled or not. */
-	protected String mEnabledKey = "rtsp_enabled";
+	public final static String KEY_ENABLED = "rtsp_enabled";
 
 	/** Key used in the SharedPreferences for the port used by the RTSP server. */
-	protected String mPortKey = "rtsp_port";
+	public final static String KEY_PORT = "rtsp_port";
 
 	protected SessionBuilder mSessionBuilder;
 	protected SharedPreferences mSharedPreferences;
@@ -112,7 +112,7 @@ public class RtspServer extends Service {
 	}
 
 	/**
-	 * See {@link TinyHttpServer.CallbackListener} to check out what events will be fired once you set up a listener.
+	 * See {@link RtspServer.CallbackListener} to check out what events will be fired once you set up a listener.
 	 * @param listener The listener
 	 */
 	public void addCallbackListener(CallbackListener listener) {
@@ -142,7 +142,7 @@ public class RtspServer extends Service {
 	 */
 	public void setPort(int port) {
 		Editor editor = mSharedPreferences.edit();
-		editor.putString(mPortKey, String.valueOf(port));
+		editor.putString(KEY_PORT, String.valueOf(port));
 		editor.commit();
 	}	
 
@@ -194,8 +194,8 @@ public class RtspServer extends Service {
 
 		// Let's restore the state of the service 
 		mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-		mPort = Integer.parseInt(mSharedPreferences.getString(mPortKey, String.valueOf(mPort)));
-		mEnabled = mSharedPreferences.getBoolean(mEnabledKey, mEnabled);
+		mPort = Integer.parseInt(mSharedPreferences.getString(KEY_PORT, String.valueOf(mPort)));
+		mEnabled = mSharedPreferences.getBoolean(KEY_ENABLED, mEnabled);
 
 		// If the configuration is modified, the server will adjust
 		mSharedPreferences.registerOnSharedPreferenceChangeListener(mOnSharedPreferenceChangeListener);
@@ -213,16 +213,16 @@ public class RtspServer extends Service {
 		@Override
 		public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
 
-			if (key.equals(mPortKey)) {
-				int port = Integer.parseInt(sharedPreferences.getString(mPortKey, String.valueOf(mPort)));
+			if (key.equals(KEY_PORT)) {
+				int port = Integer.parseInt(sharedPreferences.getString(KEY_PORT, String.valueOf(mPort)));
 				if (port != mPort) {
 					mPort = port;
 					mRestart = true;
 					start();
 				}
 			}		
-			else if (key.equals(mEnabledKey)) {
-				mEnabled = sharedPreferences.getBoolean(mEnabledKey, mEnabled);
+			else if (key.equals(KEY_ENABLED)) {
+				mEnabled = sharedPreferences.getBoolean(KEY_ENABLED, mEnabled);
 				start();
 			}
 		}

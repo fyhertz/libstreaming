@@ -57,9 +57,9 @@ public class UriParser {
 	 * <li>rtsp://xxx.xxx.xxx.xxx:8086?h264=200-20-320-240</li>
 	 * <li>rtsp://xxx.xxx.xxx.xxx:8086?aac</li></ul>
 	 * @param uri The URI
-	 * @param session The Session that will be configured
 	 * @throws IllegalStateException
 	 * @throws IOException
+	 * @return A Session configured according to the URI
 	 */
 	public static Session parse(String uri) throws IllegalStateException, IOException {		
 		SessionBuilder builder = SessionBuilder.getInstance().clone();

@@ -35,7 +35,7 @@ import android.util.Log;
 
 /**
  * A class for streaming AAC from the microphone of an android device using RTP.
- * Call {@link #setDestination(java.net.InetAddress, int)}, {@link #prepare()} & {@link #start()} and that's it !
+ * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #prepare()} & {@link #start()} and that's it !
  * Call {@link #stop()} to stop the stream.
  * Do not forget to call {@link #release()} when you're done. 
  */

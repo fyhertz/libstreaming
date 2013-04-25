@@ -12,7 +12,7 @@ The full javadoc documentation of the API is available here: http://libstreaming
 
 ## How it does it
 
-libstreaming uses various tricks to make streaming possible without the need of any native code. Access to the devices camera(s) and microphone is achieved by simply using a **MediaRecorder**, but configured to write to a **LocalSocket** instead of a regular file (**MediaStream.java**). Raw data from the peripheral are then processed in a thread doing syncronous read at the other end of the **LocalSocket**. Voila !
+libstreaming uses various tricks to make streaming possible without the need of any native code. Access to the devices camera(s) and microphone is achieved by simply using a **MediaRecorder**, but configured to write to a **LocalSocket** instead of a regular file ( **MediaStream.java** ). Raw data from the peripheral are then processed in a thread doing syncronous read at the other end of the **LocalSocket**. Voila !
 
 What the thread actually does is this: it waits for data from the peripheral and then packetizes it to make it fit into proper RTP packets that are then sent one by one on the network. The packetization algorithm that must be used for H.264, H.263, AMR and AAC are all specified in their respective RFC:
 
@@ -65,6 +65,36 @@ The complete source code of this example is available here: http://libstreaming.
 
 ## How to use the RTSP server
 
+1. Add this to your manifest:
+
+```xml
+<service android:name="net.majorkernelpanic.spydroid.api.RtspServer"/>
+```
+
+If you decide to override **RtspServer** change the line above accordingly.
+
+2. You can change the port used by the RtspServer:
+
+```java
+Editor editor = PreferenceManager.getDefaultSharedPreferences(this).edit();
+editor.putString(RtspServer.KEY_PORT, String.valueOf(1234));
+editor.commit();
+```
+
+The port is indeed stored as a String in the preferences, there is a good reason to that. The EditTextPreference object saves its input as a String and cannot easily (one would need to override it) be configured to store it as an Integer.
+
+3. Configure its behavior with the SessionBuilder:
+
+```java
+SessionBuilder.getInstance()    
+			.setSurfaceHolder(mSurfaceView.getHolder())
+			.setContext(getApplicationContext())
+			.setAudioEncoder(SessionBuilder.AUDIO_AAC)
+			.setVideoEncoder(SessionBuilder.VIDEO_H264);
+```
+
+4. Start and stop the server like this:
+
 ```java
 // Starts the RTSP server
 context.startService(new Intent(this,RtspServer.class));
@@ -75,6 +105,8 @@ context.stopService(new Intent(this,RtspServer.class));
 # Class diagramm
 
 ![Class Diagram](http://majorkernelpanic.net/libstreaming/ClassDiagram.png "Class diagram")
+
+*SessionBuilder* and *RtspServer* are the class that you will wnt to use directly, they make use of everything else in the streaming package.
 
 # Spydroid-ipcamera
 
