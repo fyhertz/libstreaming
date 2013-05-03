@@ -36,7 +36,6 @@ import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.majorkernelpanic.http.TinyHttpServer;
 import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
 import android.app.Service;
@@ -260,6 +259,22 @@ public class RtspServer extends Service {
 		}
 	}
 
+	/** 
+	 * By default the RTSP uses {@link UriParser} to parse the URI requested by the client
+	 * but you can change that behavior by override this method.
+	 * @param uri The uri that the client has requested
+	 * @param client The socket associated to the client
+	 * @return A proper session
+	 */
+	protected Session handleRequest(String uri, Socket client) throws IllegalStateException, IOException {
+		Session session = UriParser.parse(uri);
+		session.setOrigin(client.getLocalAddress());
+		if (session.getDestination()==null) {
+			session.setDestination(client.getInetAddress());
+		}
+		return session;
+	}
+	
 	class RequestListener extends Thread implements Runnable {
 
 		private final ServerSocket mServer;
@@ -391,12 +406,9 @@ public class RtspServer extends Service {
 			if (request.method.equalsIgnoreCase("DESCRIBE")) {
 
 				// Parse the requested URI and configure the session
-				mSession = UriParser.parse(request.uri);
+				mSession = handleRequest(request.uri, mClient);
 				mSessions.put(mSession, null);
-				mSession.setOrigin(mClient.getLocalAddress());
-				if (mSession.getDestination()==null) {
-					mSession.setDestination(mClient.getInetAddress());
-				}
+
 				String requestContent = mSession.getSessionDescription();
 				String requestAttributes = 
 						"Content-Base: "+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/\r\n" +

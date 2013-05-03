@@ -196,7 +196,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/**
 	 * Prepare the VideoStream, you can then call {@link #start()}.
-	 * The underlying Camera will be opened and configured whaen you call this method so don't forget to deal with the RuntimeExceptions !
+	 * The underlying Camera will be opened and configured when you call this method so don't forget to deal with the RuntimeExceptions !
 	 * Camera.open, Camera.setParameter, Camera.unlock may throw one !
 	 */
 	public void prepare() throws IllegalStateException, IOException {

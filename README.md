@@ -6,7 +6,7 @@
 
 * Supported encoders includes H.264, H.263, AAC and AMR
 * Since version 2.0, a basic support for RTCP has been implemented.
-* libstreaming also features a RTSP server for easy remote control of the phones camera and microphone.
+* libstreaming also features a RTSP server for easy remote control of the phone camera and microphone.
 
 The full javadoc documentation of the API is available here: http://libstreaming.majorkernelpanic.net/
 
@@ -57,7 +57,7 @@ String sdp = session.getSessionDescription();
 session.start();
 ```
 
-The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceHolder** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (It's an ennoying limitation of the **MediaRecorder**). The call to **setContext** is optional but recommanded, it allows **H264Stream** objects and **AACStream** objects to store and recover data in the **SharedPreferences** of your app. Check the implementation of those two classes to find out exactly what data are stored. 
+The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceHolder** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (It's an ennoying limitation of the **MediaRecorder** API). The call to **setContext** is optional but recommanded, it allows **H264Stream** objects and **AACStream** objects to store and recover data in the **SharedPreferences** of your app. Check the implementation of those two classes to find out exactly what data are stored. 
 
 **Session** objects represents a streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the start() (resp. stop()) method is invoked. The method **setDestination** allows you to specify the ip address to which RTP and RTCP packets will be sent. The method **getSessionDescription** will return a SDP of the session in the form of a String.
 
