@@ -84,9 +84,11 @@ public class AACStream extends AudioStream {
 		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
 
 		try {
-			Field deprecatedName = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
-			setOutputFormat(deprecatedName.getInt(null));
+			Field name = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
+			Log.d(TAG,"AAC ADTS seems to be supported: AAC_ADTS="+name.getInt(null));
+			setOutputFormat(name.getInt(null));
 		} catch (Exception e) {
+			Log.e(TAG,"AAC ADTS not supported on this phone");
 			throw new AACNotSupportedException();
 		}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
  * 
@@ -30,7 +30,7 @@ public class MP4Config {
 	private MP4Parser mp4Parser;
 	private String mProfilLevel, mPPS, mSPS;
 
-	public MP4Config(String profil, String pps, String sps) {
+	public MP4Config(String profil, String sps, String pps) {
 		mProfilLevel = profil; 
 		mPPS = pps; 
 		mSPS = sps;
