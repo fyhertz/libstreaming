@@ -23,7 +23,6 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
-import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -68,8 +67,8 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 	public void run() {
 
 		int frameLength, frameType, delta = 10000;
-		long now = SystemClock.elapsedRealtime(), oldtime = now, measured;
-		long expected = 20, lastmeasured = 10000;
+		long now = System.nanoTime(), oldtime = now, measured;
+		long expected = 20, lastmeasured = 10000, intervalNs = 0;
 
 		try {
 
@@ -104,8 +103,9 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 				socket.markNextPacket();
 
 				// We wait a little to avoid sending to many packets too quickly
-				now = SystemClock.elapsedRealtime();
-				measured = now-oldtime;
+				now = System.nanoTime();
+				intervalNs = now-oldtime;
+				measured = intervalNs/1000000;
 				delta += measured;
 				oldtime = now;
 				//Log.d(TAG,"expected: "+ expected + " measured: "+measured);

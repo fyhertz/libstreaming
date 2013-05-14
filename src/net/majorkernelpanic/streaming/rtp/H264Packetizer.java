@@ -22,7 +22,6 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
-import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -67,7 +66,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 
 	public void run() {
 
-		long duration = 0, oldtime = 0, delta = 10000;
+		long duration = 0, oldtime = 0, delta = 10000, sum1 = 0, sum2 = 0;
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
@@ -88,22 +87,25 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 			while (!Thread.interrupted()) {
 
 				// We measure how long it takes to receive the NAL unit from the phone
-				oldtime = SystemClock.elapsedRealtime();
+				oldtime = System.nanoTime();
 				send();
-				duration = SystemClock.elapsedRealtime() - oldtime;
+				duration = System.nanoTime() - oldtime;
+				sum2 += duration;
 
 				// We send one RTCP Sender Report every 5 secs
-				delta += duration;
+				delta += duration/1000000;
 				if (delta>5000) {
 					delta = 0;
-					report.setNtpTimestamp(SystemClock.elapsedRealtime());
-					report.setRtpTimestamp(ts*90);
+					report.setRtpTimestamp(ts);
+					report.setNtpTimestamp(System.nanoTime());
 					report.send();
+					//Log.d(TAG, "sum1: "+sum1/1000000+" sum2: "+sum2/1000000);
 				}
 				
 				// Calculates the average duration of a NAL unit
 				stats.push(duration);
 				delay = stats.average();
+				sum1 += delay;
 
 			}
 		} catch (IOException e) {
@@ -129,8 +131,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 		// NAL unit type
 		type = buffer[rtphl]&0x1F;
 
-		ts += delay;
-		socket.updateTimestamp(ts*90);
+		ts += delay*9/100000;
+		socket.updateTimestamp(ts);
 
 		//Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay+" type: "+type);
 

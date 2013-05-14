@@ -81,9 +81,9 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 
 		try { 
 			while (!Thread.interrupted()) {
-				time = SystemClock.elapsedRealtime();
+				time = System.nanoTime();
 				if (fill(rtphl+j+2,MAXPACKETSIZE-rtphl-j-2)<0) return;
-				duration += SystemClock.elapsedRealtime() - time;
+				duration += System.nanoTime() - time;
 				j = 0;
 				// Each h263 frame starts with: 0000 0000 0000 0000 1000 00??
 				// Here we search where the next frame begins in the bit stream
@@ -105,21 +105,21 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 				}
 				if (j>0) {
 					// We send one RTCP Sender Report every 5 secs
-					delta += duration;
-					if (delta>5000 && duration>10) {
+					delta += duration/1000000;
+					if (delta>5000 && duration/1000000>10) {
 						delta = 0;
-						report.setRtpTimestamp(ts*90);
-						report.setNtpTimestamp(SystemClock.elapsedRealtime());
+						report.setRtpTimestamp(ts);
+						report.setNtpTimestamp(System.nanoTime());
 						report.send();
 					}
 					// We have found the end of the frame
 					stats.push(duration);
-					ts+= stats.average(); duration = 0;
+					ts+= stats.average()*9/100000; duration = 0;
 					//Log.d(TAG,"End of frame ! duration: "+stats.average());
 					// The last fragment of a frame has to be marked
 					socket.markNextPacket();
 					send(j);
-					socket.updateTimestamp(ts*90);
+					socket.updateTimestamp(ts);
 					System.arraycopy(buffer,j+2,buffer,rtphl+2,MAXPACKETSIZE-j-2);
 					j = MAXPACKETSIZE-j-2;
 					firstFragment = true;

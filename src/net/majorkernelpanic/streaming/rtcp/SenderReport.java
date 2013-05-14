@@ -38,6 +38,7 @@ public class SenderReport {
 	private byte[] buffer = new byte[MTU];
 	private int ssrc, port = -1;
 	private int octetCount = 0, packetCount = 0;
+	private long ntp = 0;
 
 	public SenderReport() throws IOException {
 
@@ -96,8 +97,18 @@ public class SenderReport {
 
 	/** Sets the NTP timestamp of the sender report. */
 	public void setNtpTimestamp(long ts) {
-		long hb = ts/1000;
-		long lb = ( ( ts - hb*1000 ) * 4294967296L )/1000;
+		ntp = ts;
+		long hb = ntp/1000000000;
+		long lb = ( ( ntp - hb*1000000000 ) * 4294967296L )/1000000000;
+		setLong(hb, 8, 12);
+		setLong(lb, 12, 16);
+	}
+	
+	/** Updates the NTP timestamp of the sender report. */
+	public void updateNtpTimestamp(long delta) {
+		ntp += delta;
+		long hb = ntp/1000000000;
+		long lb = ( ( ntp - hb*1000000000 ) * 4294967296L )/1000000000;
 		setLong(hb, 8, 12);
 		setLong(lb, 12, 16);
 	}

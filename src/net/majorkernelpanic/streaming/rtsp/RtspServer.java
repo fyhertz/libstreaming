@@ -145,7 +145,10 @@ public class RtspServer extends Service {
 		editor.commit();
 	}	
 
-	/** Starts (or restart if needed) the RTSP server. */
+	/** 
+	 * Starts (or restart if needed, if for example the configuration 
+	 * of the server has been modified) the RTSP server. 
+	 */
 	public void start() {
 		if (!mEnabled || mRestart) stop();
 		if (mEnabled && mListenerThread == null) {
@@ -158,11 +161,19 @@ public class RtspServer extends Service {
 		mRestart = false;
 	}
 
-	/** Stops the RTSP server but not the service. */
+	/** 
+	 * Stops the RTSP server but not the Android Service. 
+	 * To stop the Android Service you need to call {@link android.content.Context#stopService(Intent)}; 
+	 */
 	public void stop() {
 		if (mListenerThread != null) {
 			try {
 				mListenerThread.kill();
+				for ( Session session : mSessions.keySet() ) {
+				    if ( session != null ) {
+				    	if (session.isStreaming()) session.stop();
+				    } 
+				}
 			} catch (Exception e) {
 			} finally {
 				mListenerThread = null;

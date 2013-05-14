@@ -110,6 +110,11 @@ abstract public class AbstractPacketizer {
 		public final static int COUNT=50;
 		private float m = 0, q = 0;
 
+		public void init(long value) {
+			m = value;
+			q = COUNT;
+		}
+		
 		public void push(long duration) {
 			m = (m*q+duration)/(q+1);
 			if (q<COUNT) q++;

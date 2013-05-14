@@ -22,7 +22,6 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
-import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -44,6 +43,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	
 	private Thread t;
 	private int samplingRate = 8000;
+	private Statistics stats = new Statistics();
 
 	public AACADTSPacketizer() throws IOException {
 		super();
@@ -79,8 +79,10 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		// Adts header fields that we need to parse
 		boolean protection;
 		int frameLength, sum, length, nbau, nbpk;
-		long oldtime = SystemClock.elapsedRealtime(), now = oldtime, delta = 5000, measured, lastmeasured = 5000, expected;
+		long oldtime = System.nanoTime(), now = oldtime, delta = 5000, measured, lastmeasured = 5000, expected, interval = 0;
 
+		stats.init(1024*1000000000/samplingRate);
+		
 		try {
 			while (!Thread.interrupted()) {
 
@@ -112,14 +114,14 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				if (!protection) is.read(buffer,rtphl,2);
 
 				// We update the RTP timestamp
-				ts +=  1024; // FIXME: 1024 seems to work better on certain players...
+				ts +=  1024; //stats.average()*samplingRate/1000000000;
 				socket.updateTimestamp(ts);
 				
 				// We send one RTCP Sender Report every 5 secs
 				if (delta>5000) {
 					delta = 0;
+					report.setNtpTimestamp(now);
 					report.setRtpTimestamp(ts);
-					report.setNtpTimestamp(SystemClock.elapsedRealtime());
 					report.send();
 				}
 				
@@ -158,8 +160,10 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				}
 
 				// We wait a little to avoid sending to many packets too quickly
-				now = SystemClock.elapsedRealtime();
-				measured = now-oldtime;
+				now = System.nanoTime();
+				interval = now-oldtime;
+				measured = interval/1000000;
+				stats.push(interval);
 				delta += measured;
 				oldtime = now;
 				expected = nbau*1024*1000 / (nbpk*samplingRate);
@@ -169,16 +173,14 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				if (measured<2*expected/3) {
 					Thread.sleep( 2*expected/3-measured );
 				}
-
+				
 			}
 		} catch (IOException e) {
 			// Ignore
 		} catch (ArrayIndexOutOfBoundsException e) {
 			Log.e(TAG,"ArrayIndexOutOfBoundsException: "+(e.getMessage()!=null?e.getMessage():"unknown error"));
 			e.printStackTrace();
-		} catch (InterruptedException e) {
-			// Ignore
-		}
+		} catch (InterruptedException ignore) {}
 
 		Log.d(TAG,"AAC packetizer stopped !");
 		
