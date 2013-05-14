@@ -66,7 +66,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 
 	public void run() {
 
-		long duration = 0, oldtime = 0, delta = 10000, sum1 = 0, sum2 = 0;
+		long duration = 0, oldtime = 0, sum1 = 0, sum2 = 0;
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
@@ -94,12 +94,14 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 
 				// We send one RTCP Sender Report every 5 secs
 				delta += duration/1000000;
-				if (delta>5000) {
-					delta = 0;
-					report.setRtpTimestamp(ts);
-					report.setNtpTimestamp(System.nanoTime());
-					report.send();
-					//Log.d(TAG, "sum1: "+sum1/1000000+" sum2: "+sum2/1000000);
+				if (intervalBetweenReports>0) {
+					if (delta>=intervalBetweenReports) {
+						delta = 0;
+						report.setRtpTimestamp(ts);
+						report.setNtpTimestamp(System.nanoTime());
+						report.send();
+						//Log.d(TAG, "sum1: "+sum1/1000000+" sum2: "+sum2/1000000);
+					}
 				}
 				
 				// Calculates the average duration of a NAL unit

@@ -40,7 +40,8 @@ abstract public class AbstractPacketizer {
 	protected SenderReport report = null;
 	protected InputStream is = null;
 	protected byte[] buffer;
-	protected long ts = 0;
+	
+	protected long ts = 0, intervalBetweenReports = 5000, delta = intervalBetweenReports;
 
 	public AbstractPacketizer() throws IOException {
 		int ssrc = new Random().nextInt();
@@ -89,6 +90,16 @@ abstract public class AbstractPacketizer {
 		report.setDestination(dest, rtcpPort);		
 	}
 
+	/**
+	 * Sets the temporal interval between two RTCP Sender Reports.
+	 * Default interval is set to 5 secondes.
+	 * Set 0 to disable RTCP.
+	 * @param interval The interval in milliseconds
+	 */
+	public void setSenderReportsInterval(long interval) {
+		intervalBetweenReports = interval;
+	}
+	
 	public abstract void start() throws IOException;
 
 	public abstract void stop();

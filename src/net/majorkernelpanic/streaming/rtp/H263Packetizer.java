@@ -64,7 +64,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 
 	public void run() {
 		long time, duration = 0;
-		int i = 0, j = 0, tr, delta = 10000;
+		int i = 0, j = 0, tr;
 		boolean firstFragment = true;
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
@@ -106,11 +106,13 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 				if (j>0) {
 					// We send one RTCP Sender Report every 5 secs
 					delta += duration/1000000;
-					if (delta>5000 && duration/1000000>10) {
-						delta = 0;
-						report.setRtpTimestamp(ts);
-						report.setNtpTimestamp(System.nanoTime());
-						report.send();
+					if (intervalBetweenReports>0) {
+						if (delta>=intervalBetweenReports && duration/1000000>10) {
+							delta = 0;
+							report.setRtpTimestamp(ts);
+							report.setNtpTimestamp(System.nanoTime());
+							report.send();
+						}
 					}
 					// We have found the end of the frame
 					stats.push(duration);

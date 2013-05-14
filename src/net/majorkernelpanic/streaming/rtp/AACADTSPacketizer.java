@@ -79,7 +79,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		// Adts header fields that we need to parse
 		boolean protection;
 		int frameLength, sum, length, nbau, nbpk;
-		long oldtime = System.nanoTime(), now = oldtime, delta = 5000, measured, lastmeasured = 5000, expected, interval = 0;
+		long oldtime = System.nanoTime(), now = oldtime, measured, lastmeasured = 5000, expected, interval = 0;
 
 		stats.init(1024*1000000000/samplingRate);
 		
@@ -118,11 +118,13 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				socket.updateTimestamp(ts);
 				
 				// We send one RTCP Sender Report every 5 secs
-				if (delta>5000) {
-					delta = 0;
-					report.setNtpTimestamp(now);
-					report.setRtpTimestamp(ts);
-					report.send();
+				if (intervalBetweenReports>0) {
+					if (delta>=intervalBetweenReports) {
+						delta = 0;
+						report.setNtpTimestamp(now);
+						report.setRtpTimestamp(ts);
+						report.send();
+					}
 				}
 				
 				sum = 0;

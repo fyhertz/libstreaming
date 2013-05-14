@@ -66,7 +66,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 	public void run() {
 
-		int frameLength, frameType, delta = 10000;
+		int frameLength, frameType;
 		long now = System.nanoTime(), oldtime = now, measured;
 		long expected = 20, lastmeasured = 10000, intervalNs = 0;
 
@@ -115,11 +115,13 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 					Thread.sleep( 2*expected/3-measured );
 				}
 				
-				if (delta>5000) {
-					delta = 0;
-					report.setNtpTimestamp(now);
-					report.setRtpTimestamp(ts);
-					report.send();
+				if (intervalBetweenReports>0) {
+					if (delta>=intervalBetweenReports) {
+						delta = 0;
+						report.setNtpTimestamp(now);
+						report.setRtpTimestamp(ts);
+						report.send();
+					}
 				}
 				
 				send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
