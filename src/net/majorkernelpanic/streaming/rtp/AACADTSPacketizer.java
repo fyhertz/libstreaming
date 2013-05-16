@@ -43,7 +43,6 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	
 	private Thread t;
 	private int samplingRate = 8000;
-	private Statistics stats = new Statistics();
 
 	public AACADTSPacketizer() throws IOException {
 		super();
@@ -79,10 +78,8 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		// Adts header fields that we need to parse
 		boolean protection;
 		int frameLength, sum, length, nbau, nbpk;
-		long oldtime = System.nanoTime(), now = oldtime, measured, lastmeasured = 5000, expected, interval = 0;
+		long oldtime = System.nanoTime(), now = oldtime, measured = 0, lastmeasured = 5000, expected = 0;
 
-		stats.init(1024*1000000000/samplingRate);
-		
 		try {
 			while (!Thread.interrupted()) {
 
@@ -121,9 +118,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				if (intervalBetweenReports>0) {
 					if (delta>=intervalBetweenReports) {
 						delta = 0;
-						report.setNtpTimestamp(now);
-						report.setRtpTimestamp(ts);
-						report.send();
+						report.send(now,ts);
 					}
 				}
 				
@@ -163,9 +158,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 				// We wait a little to avoid sending to many packets too quickly
 				now = System.nanoTime();
-				interval = now-oldtime;
-				measured = interval/1000000;
-				stats.push(interval);
+				measured = (now-oldtime)/1000000;
 				delta += measured;
 				oldtime = now;
 				expected = nbau*1024*1000 / (nbpk*samplingRate);

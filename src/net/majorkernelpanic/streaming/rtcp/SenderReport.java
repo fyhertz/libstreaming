@@ -38,7 +38,6 @@ public class SenderReport {
 	private byte[] buffer = new byte[MTU];
 	private int ssrc, port = -1;
 	private int octetCount = 0, packetCount = 0;
-	private long ntp = 0;
 
 	public SenderReport() throws IOException {
 
@@ -79,6 +78,17 @@ public class SenderReport {
 		usock.send(upack);
 	}
 
+	/** Sends the RTCP packet over the network. */
+	public void send(long ntpts, long rtpts) throws IOException {
+		long hb = ntpts/1000000000;
+		long lb = ( ( ntpts - hb*1000000000 ) * 4294967296L )/1000000000;
+		setLong(hb, 8, 12);
+		setLong(lb, 12, 16);
+		setLong(rtpts, 16, 20);
+		upack.setLength(28);
+		usock.send(upack);		
+	}
+	
 	/** 
 	 * Updates the number of packets sent, and the total amount of data sent.
 	 * @param length The length of the packet 
@@ -97,18 +107,8 @@ public class SenderReport {
 
 	/** Sets the NTP timestamp of the sender report. */
 	public void setNtpTimestamp(long ts) {
-		ntp = ts;
-		long hb = ntp/1000000000;
-		long lb = ( ( ntp - hb*1000000000 ) * 4294967296L )/1000000000;
-		setLong(hb, 8, 12);
-		setLong(lb, 12, 16);
-	}
-	
-	/** Updates the NTP timestamp of the sender report. */
-	public void updateNtpTimestamp(long delta) {
-		ntp += delta;
-		long hb = ntp/1000000000;
-		long lb = ( ( ntp - hb*1000000000 ) * 4294967296L )/1000000000;
+		long hb = ts/1000000000;
+		long lb = ( ( ts - hb*1000000000 ) * 4294967296L )/1000000000;
 		setLong(hb, 8, 12);
 		setLong(lb, 12, 16);
 	}

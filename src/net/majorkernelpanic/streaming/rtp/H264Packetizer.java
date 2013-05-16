@@ -66,7 +66,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 
 	public void run() {
 
-		long duration = 0, oldtime = 0, sum1 = 0, sum2 = 0;
+		long duration = 0, oldtime = 0, sum = 0, start = 0, drift = 0, now, count = 0;
+		boolean initoffset = false;
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
@@ -82,6 +83,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 			return;
 		}
 
+		start = System.nanoTime();
+		
 		// We read a NAL units from the input stream and we send them
 		try {
 			while (!Thread.interrupted()) {
@@ -90,24 +93,37 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable{
 				oldtime = System.nanoTime();
 				send();
 				duration = System.nanoTime() - oldtime;
-				sum2 += duration;
 
-				// We send one RTCP Sender Report every 5 secs
 				delta += duration/1000000;
 				if (intervalBetweenReports>0) {
 					if (delta>=intervalBetweenReports) {
-						delta = 0;
-						report.setRtpTimestamp(ts);
-						report.setNtpTimestamp(System.nanoTime());
-						report.send();
-						//Log.d(TAG, "sum1: "+sum1/1000000+" sum2: "+sum2/1000000);
+						// We send a Sender Report
+						report.send(oldtime+duration,ts);
 					}
 				}
 				
-				// Calculates the average duration of a NAL unit
-				stats.push(duration);
+				count += duration/1000000;
+				if (count>=7000) {
+					// We estimate the drift of the steam
+					now = System.nanoTime();
+					if (!initoffset || (now - start < 0)) {
+						sum = (now - start);
+						initoffset = true;
+					}
+					drift = (now - start) - sum;
+					count = 0;
+					//Log.d(TAG, "sum1: "+sum/1000000+" sum2: "+(now-start)/1000000+" drift: "+drift/1000000);
+				}
+								
+				
+				if (drift!=0) {
+					// Compensates if the stream is drifting
+					stats.push(duration+drift);
+					drift = 0;
+				} else stats.push(duration);
+				// Computes the average duration of a NAL unit
 				delay = stats.average();
-				sum1 += delay;
+				sum += delay;
 
 			}
 		} catch (IOException e) {

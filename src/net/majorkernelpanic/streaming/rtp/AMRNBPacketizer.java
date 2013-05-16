@@ -118,9 +118,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 				if (intervalBetweenReports>0) {
 					if (delta>=intervalBetweenReports) {
 						delta = 0;
-						report.setNtpTimestamp(now);
-						report.setRtpTimestamp(ts);
-						report.send();
+						report.send(now,ts);
 					}
 				}
 				

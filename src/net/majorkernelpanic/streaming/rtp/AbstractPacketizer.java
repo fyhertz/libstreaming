@@ -41,7 +41,7 @@ abstract public class AbstractPacketizer {
 	protected InputStream is = null;
 	protected byte[] buffer;
 	
-	protected long ts = 0, intervalBetweenReports = 5000, delta = intervalBetweenReports;
+	protected long ts = 0, intervalBetweenReports = 5000, delta = 0;
 
 	public AbstractPacketizer() throws IOException {
 		int ssrc = new Random().nextInt();

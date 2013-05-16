@@ -109,9 +109,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 					if (intervalBetweenReports>0) {
 						if (delta>=intervalBetweenReports && duration/1000000>10) {
 							delta = 0;
-							report.setRtpTimestamp(ts);
-							report.setNtpTimestamp(System.nanoTime());
-							report.send();
+							report.send(System.nanoTime(),ts);
 						}
 					}
 					// We have found the end of the frame
