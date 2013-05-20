@@ -61,7 +61,7 @@ The **SessionBuilder** simply facilitates the creation of **Session** objects. T
 
 **Session** objects represents a streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the start() (resp. stop()) method is invoked. The method **setDestination** allows you to specify the ip address to which RTP and RTCP packets will be sent. The method **getSessionDescription** will return a SDP of the session in the form of a String.
 
-The complete source code of this example is available here: http://libstreaming.majorkernelpanic.net/
+The complete source code of this example is available here: https://github.com/fyhertz/libstreaming-examples
 
 ## How to use the RTSP server
 
