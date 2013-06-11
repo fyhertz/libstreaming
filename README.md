@@ -68,7 +68,7 @@ The complete source code of this example is available here: https://github.com/f
 #### Add this to your manifest:
 
 ```xml
-<service android:name="net.majorkernelpanic.spydroid.api.RtspServer"/>
+<service android:name="net.majorkernelpanic.streaming.rtsp.RtspServer"/>
 ```
 
 If you decide to override **RtspServer** change the line above accordingly.
