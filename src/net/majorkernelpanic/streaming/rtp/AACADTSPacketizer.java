@@ -97,8 +97,6 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 					if ( (is.read()&0xFF) == 0xFF ) {
 						header[1] = (byte) is.read();
 						if ( (header[1]&0xF0) == 0xF0) break;
-					} else {
-						Log.e(TAG,"SYNC");
 					}
 				}
 

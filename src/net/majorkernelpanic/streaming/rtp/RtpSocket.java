@@ -253,7 +253,7 @@ public class RtpSocket implements Runnable {
 	}
 	
 	/** Computes the proper rate at which packets are sent. */
-	public static class Statistics {
+	protected static class Statistics {
 
 		public final static String TAG = "Statistics";
 		
