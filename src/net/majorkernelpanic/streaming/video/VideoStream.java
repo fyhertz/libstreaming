@@ -49,7 +49,7 @@ public abstract class VideoStream extends MediaStream {
 
 	protected final static String TAG = "VideoStream";
 
-	protected VideoQuality mQuality = VideoQuality.defaultVideoQualiy.clone();
+	protected VideoQuality mQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
 	protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
 	protected SurfaceHolder mSurfaceHolder = null;
 	protected int mVideoEncoder, mCameraId = 0;
@@ -246,6 +246,13 @@ public abstract class VideoStream extends MediaStream {
 			mQuality = videoQuality;
 		}
 	}
+	
+	/** 
+	 * Returns the quality of the stream.  
+	 */
+	public VideoQuality getVideoQuality() {
+		return mQuality;
+	}	
 
 	/** 
 	 * Modifies the videoEncoder of the stream. You can call this method at any time 

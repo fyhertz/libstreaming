@@ -36,6 +36,7 @@ import java.util.List;
 
 import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
+import net.majorkernelpanic.streaming.audio.AudioQuality;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 
 import org.apache.http.NameValuePair;
@@ -148,12 +149,14 @@ public class UriParser {
 
 				// AMR
 				else if (param.getName().equalsIgnoreCase("amrnb") || param.getName().equalsIgnoreCase("amr")) {
-					builder.setAudioEncoder(AUDIO_AMRNB);
+					AudioQuality quality = AudioQuality.parseQuality(param.getValue());
+					builder.setAudioQuality(quality).setAudioEncoder(AUDIO_AMRNB);
 				}
 
 				// AAC
 				else if (param.getName().equalsIgnoreCase("aac")) {
-					builder.setAudioEncoder(AUDIO_AAC);
+					AudioQuality quality = AudioQuality.parseQuality(param.getValue());
+					builder.setAudioQuality(quality).setAudioEncoder(AUDIO_AAC);
 				}
 
 			}

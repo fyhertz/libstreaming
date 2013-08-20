@@ -22,6 +22,8 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
+import net.majorkernelpanic.streaming.audio.AACStream;
+import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -83,8 +85,8 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		
 		// Adts header fields that we need to parse
 		boolean protection;
-		int frameLength, sum, length, nbau, nbpk;
-		long oldtime = System.nanoTime(), now = oldtime;
+		int frameLength, sum, length, nbau, nbpk, samplingRateIndex, profile;
+		long oldtime = SystemClock.elapsedRealtime(), now = oldtime;
 		byte[] header = new byte[8]; 
 		
 		try {
@@ -95,11 +97,13 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 					if ( (is.read()&0xFF) == 0xFF ) {
 						header[1] = (byte) is.read();
 						if ( (header[1]&0xF0) == 0xF0) break;
+					} else {
+						Log.e(TAG,"SYNC");
 					}
 				}
 
 				// Parse adts header (ADTS packets start with a 7 or 9 byte long header)
-				is.read(header,2,5);
+				fill(header, 2, 5);
 				
 				// The protection bit indicates whether or not the header contains the two extra bytes
 				protection = (header[1]&0x01)>0 ? true : false;
@@ -117,16 +121,22 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				// Read CRS if any
 				if (!protection) is.read(header,0,2);
 
+				samplingRate = AACStream.ADTS_SAMPLING_RATES[(header[2]&0x3C) >> 2];
+				profile = ( (header[2]&0xC0) >> 6 ) + 1 ;
+				
 				// We update the RTP timestamp
-				ts +=  1024*1000000/samplingRate; //stats.average();
+				ts +=  1024L*1000000000L/samplingRate; //stats.average();
 				
 				// We send one RTCP Sender Report every 5 secs
+				now = SystemClock.elapsedRealtime();
 				if (intervalBetweenReports>0) {
-					if (delta>=intervalBetweenReports) {
-						delta = 0;
-						report.send(now,ts*samplingRate/1000000);
+					if (now-oldtime>=intervalBetweenReports) {
+						oldtime = now;
+						report.send(System.nanoTime(),ts*samplingRate/1000000000L);
 					}
 				}
+				
+				//Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate);
 				
 				sum = 0;
 				while (sum<frameLength) {
@@ -143,7 +153,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 						socket.markNextPacket();
 					}
 					sum += length;
-					is.read(buffer,rtphl+4, length);
+					fill(buffer, rtphl+4, length);
 
 					// AU-headers-length field: contains the size in bits of a AU-header
 					// 13+3 = 16 bits -> 13bits for AU-size and 3bits for AU-Index / AU-Index-delta 
@@ -159,16 +169,9 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 					buffer[rtphl+3] &= 0xF8;
 					buffer[rtphl+3] |= 0x00;
 
-					//Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection+ " length: "+length);
-										
 					send(rtphl+4+length);
 
 				}
-
-				// We wait a little to avoid sending to many packets too quickly
-				now = System.nanoTime();
-				delta += (now-oldtime)/1000000;
-				oldtime = now;
 				
 			}
 		} catch (IOException e) {
@@ -182,4 +185,16 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 		
 	}
 
+	private int fill(byte[] buffer, int offset,int length) throws IOException {
+		int sum = 0, len;
+		while (sum<length) {
+			len = is.read(buffer, offset+sum, length-sum);
+			if (len<0) {
+				throw new IOException("End of stream");
+			}
+			else sum+=len;
+		}
+		return sum;
+	}
+	
 }

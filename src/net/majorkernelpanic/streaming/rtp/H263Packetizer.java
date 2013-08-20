@@ -43,7 +43,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 
 	public H263Packetizer() throws IOException {
 		super();
-		socket.setClockFrequency(90);
+		socket.setClockFrequency(90000);
 	}
 
 	public void start() throws IOException {

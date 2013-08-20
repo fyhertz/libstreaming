@@ -25,6 +25,7 @@ import java.net.InetAddress;
 
 import net.majorkernelpanic.streaming.audio.AACStream;
 import net.majorkernelpanic.streaming.audio.AMRNBStream;
+import net.majorkernelpanic.streaming.audio.AudioQuality;
 import net.majorkernelpanic.streaming.audio.AudioStream;
 import net.majorkernelpanic.streaming.video.H263Stream;
 import net.majorkernelpanic.streaming.video.H264Stream;
@@ -33,6 +34,7 @@ import net.majorkernelpanic.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
+import android.util.Log;
 import android.view.SurfaceHolder;
 
 /**
@@ -61,7 +63,8 @@ public class SessionBuilder {
 	public final static int AUDIO_AAC = 5;
 
 	// Default configuration
-	private VideoQuality mVideoQuality = VideoQuality.defaultVideoQualiy.clone();
+	private VideoQuality mVideoQuality = new VideoQuality();
+	private AudioQuality mAudioQuality = new AudioQuality();
 	private Context mContext;
 	private int mVideoEncoder = VIDEO_H263; 
 	private int mAudioEncoder = AUDIO_AMRNB;
@@ -134,13 +137,14 @@ public class SessionBuilder {
 		if (session.getVideoTrack()!=null) {
 			VideoStream video = session.getVideoTrack();
 			video.setFlashState(mFlash);
-			video.setVideoQuality(mVideoQuality);
+			video.setVideoQuality(VideoQuality.merge(mVideoQuality,video.getVideoQuality()));
 			video.setPreviewDisplay(mSurfaceHolder);
 			video.setDestinationPorts(5006);
 		}
 
 		if (session.getAudioTrack()!=null) {
 			AudioStream audio = session.getAudioTrack();
+			audio.setAudioQuality(AudioQuality.merge(mAudioQuality,audio.getAudioQuality()));
 			audio.setDestinationPorts(5004);
 		}
 
@@ -178,6 +182,12 @@ public class SessionBuilder {
 	/** Sets the audio encoder. */
 	public SessionBuilder setAudioEncoder(int encoder) {
 		mAudioEncoder = encoder;
+		return this;
+	}
+	
+	/** Sets the audio quality. */
+	public SessionBuilder setAudioQuality(AudioQuality quality) {
+		mAudioQuality = AudioQuality.merge(quality, mAudioQuality);
 		return this;
 	}
 
@@ -245,6 +255,11 @@ public class SessionBuilder {
 	public VideoQuality getVideoQuality() {
 		return mVideoQuality;
 	}
+	
+	/** Returns the AudioQuality set with {@link #setAudioQuality(AudioQuality)}. */
+	public AudioQuality getAudioQuality() {
+		return mAudioQuality;
+	}
 
 	/** Returns the flash state set with {@link #setFlashEnabled(boolean)}. */
 	public boolean getFlashState() {
@@ -273,6 +288,7 @@ public class SessionBuilder {
 		.setCamera(mCamera)
 		.setTimeToLive(mTimeToLive)
 		.setAudioEncoder(mAudioEncoder)
+		.setAudioQuality(mAudioQuality)
 		.setContext(mContext);
 	}
 

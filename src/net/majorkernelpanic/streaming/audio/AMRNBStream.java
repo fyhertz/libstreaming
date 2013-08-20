@@ -49,7 +49,7 @@ public class AMRNBStream extends AudioStream {
 		}
 		
 		setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-		setAudioSamplingRate(8000);
+		setAudioSamplingRate(mQuality.samplingRate);
 		
 	}
 

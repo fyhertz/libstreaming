@@ -101,7 +101,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 				// RFC 3267 Page 14: "For AMR, the sampling frequency is 8 kHz"
 				// FIXME: Is this really always the case ??
-				ts += 160*1000000/samplingRate; //stats.average();
+				ts += 160L*1000000000L/samplingRate; //stats.average();
 				socket.updateTimestamp(ts);
 				socket.markNextPacket();
 
@@ -114,7 +114,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 				if (intervalBetweenReports>0) {
 					if (delta>=intervalBetweenReports) {
 						delta = 0;
-						report.send(now,ts*samplingRate/1000000);
+						report.send(now,ts*samplingRate/1000000000L);
 					}
 				}
 				
@@ -129,11 +129,8 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 	}
 
-
 	private int fill(byte[] buffer, int offset,int length) throws IOException {
-
 		int sum = 0, len;
-
 		while (sum<length) {
 			len = is.read(buffer, offset+sum, length-sum);
 			if (len<0) {
@@ -141,9 +138,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 			}
 			else sum+=len;
 		}
-
 		return sum;
-
 	}
 
 

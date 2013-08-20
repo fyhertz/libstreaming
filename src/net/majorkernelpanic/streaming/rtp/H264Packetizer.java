@@ -47,7 +47,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 	public H264Packetizer() throws IOException {
 		super();
-		socket.setClockFrequency(90);
+		socket.setClockFrequency(90000);
 	}
 
 	public void start() throws IOException {

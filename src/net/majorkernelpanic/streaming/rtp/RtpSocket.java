@@ -65,7 +65,7 @@ public class RtpSocket implements Runnable {
 	 */
 	public RtpSocket() throws IOException {
 
-		mCacheSize = 1000;
+		mCacheSize = 400;
 		mBufferCount = 300; // TODO: reajust that when the FIFO is full 
 		mBufferIn = 0;
 		mBufferOut = 0;
@@ -121,12 +121,12 @@ public class RtpSocket implements Runnable {
 		return mSsrc;
 	}
 
-	/** Sets the clock frquency of the stream in kHz. */
+	/** Sets the clock frquency of the stream in Hz. */
 	public void setClockFrequency(long clock) {
 		mClock = clock;
 	}
 
-	/** Sets the temporal  */
+	/** Sets the size of the FIFO in ms. */
 	public void setCacheSize(long cacheSize) {
 		mCacheSize = cacheSize;
 	}
@@ -172,7 +172,7 @@ public class RtpSocket implements Runnable {
 
 		mOctetCount += length;
 		mTime = SystemClock.elapsedRealtime();
-		if (mTime - mOldTime > 1000) {
+		if (mTime - mOldTime > 1500) {
 			mBitRate = mOctetCount*8000/(mTime-mOldTime);
 			mOctetCount = 0;
 			mOldTime = mTime;
@@ -204,7 +204,7 @@ public class RtpSocket implements Runnable {
 	 **/
 	public void updateTimestamp(long timestamp) {
 		mTimestamps[mBufferIn] = timestamp;
-		setLong(mBuffers[mBufferIn], timestamp*mClock/1000000, 4, 8);
+		setLong(mBuffers[mBufferIn], timestamp*mClock/1000000000L, 4, 8);
 	}
 
 	/** Sets the marker in the RTP packet. */
@@ -215,8 +215,7 @@ public class RtpSocket implements Runnable {
 	/** The Thread sends the packets in the FIFO one by one at a constant rate. */
 	@Override
 	public void run() {
-		Statistics stats = new Statistics(10,100);
-		long delta = 0;
+		Statistics stats = new Statistics(20,330);
 		try {
 			// Caches mCacheSize milliseconds of the stream in the FIFO.
 			Thread.sleep(mCacheSize);
@@ -224,16 +223,16 @@ public class RtpSocket implements Runnable {
 				if (mOldTimestamp != 0) {
 					// We use our knowledge of the clock rate of the stream and the difference between to timestamp to
 					// compute the temporal length of the packet.
-					stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
+					if (mTimestamps[mBufferOut]-mOldTimestamp>=0) stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
 					// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
 					long d = stats.average()/1000000;
-					//Log.d(TAG,"delay: "+d);
+					//Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
 					Thread.sleep(d);
-					delta += mTimestamps[mBufferOut]-mOldTimestamp;
-					if (delta>500000000) {
+					/*delta += mTimestamps[mBufferOut]-mOldTimestamp;
+					if (delta>500000000 || delta<0) {
 						Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
 						delta = 0;
-					}
+					}*/
 				}
 				mOldTimestamp = mTimestamps[mBufferOut];
 				mSocket.send(mPackets[mBufferOut]);
@@ -283,7 +282,7 @@ public class RtpSocket implements Runnable {
 					initoffset = true;
 				}
 				value -= (now - start) - duration;
-				Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
+				//Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
 			}
 			if (c<20) {
 				// We ignore the first 20 measured values because they may not be accurate

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
  * 
@@ -27,9 +27,9 @@ package net.majorkernelpanic.streaming.video;
 public class VideoQuality {
 
 	/** Default video stream quality. */
-	public final static VideoQuality defaultVideoQualiy = new VideoQuality(640,480,15,500000);
+	public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(640,480,15,500000);
 
-	/**	Represents a quality for a video stream. **/ 
+	/**	Represents a quality for a video stream. */ 
 	public VideoQuality() {}
 
 	/**
@@ -97,11 +97,13 @@ public class VideoQuality {
 	}
 
 	public static VideoQuality merge(VideoQuality videoQuality, VideoQuality withVideoQuality) {
-		if (videoQuality.resX==0) videoQuality.resX = withVideoQuality.resX;
-		if (videoQuality.resY==0) videoQuality.resY = withVideoQuality.resY;
-		if (videoQuality.framerate==0) videoQuality.framerate = withVideoQuality.framerate;
-		if (videoQuality.bitrate==0) videoQuality.bitrate = withVideoQuality.bitrate;
-		if (videoQuality.orientation==90) videoQuality.orientation = withVideoQuality.orientation;
+		if (withVideoQuality != null && videoQuality != null) {
+			if (videoQuality.resX==0) videoQuality.resX = withVideoQuality.resX;
+			if (videoQuality.resY==0) videoQuality.resY = withVideoQuality.resY;
+			if (videoQuality.framerate==0) videoQuality.framerate = withVideoQuality.framerate;
+			if (videoQuality.bitrate==0) videoQuality.bitrate = withVideoQuality.bitrate;
+			if (videoQuality.orientation==90) videoQuality.orientation = withVideoQuality.orientation;
+		}
 		return videoQuality;
 	}
 

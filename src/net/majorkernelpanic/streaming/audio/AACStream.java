@@ -41,9 +41,11 @@ import android.util.Log;
 public class AACStream extends AudioStream {
 
 	public final static String TAG = "AACStream";
+	
+	protected AudioQuality mQuality = new AudioQuality(32000,32000);
 
 	/** MPEG-4 Audio Object Types supported by ADTS. **/
-	private static final String[] sAudioObjectTypes = {
+	private static final String[] AUDIO_OBJECT_TYPES = {
 		"NULL",							  // 0
 		"AAC Main",						  // 1
 		"AAC LC (Low Complexity)",		  // 2
@@ -52,7 +54,7 @@ public class AACStream extends AudioStream {
 	};
 
 	/** There are 13 supported frequencies by ADTS. **/
-	private static final int[] sADTSSamplingRates = {
+	public static final int[] ADTS_SAMPLING_RATES = {
 		96000, // 0
 		88200, // 1
 		64000, // 2
@@ -95,7 +97,7 @@ public class AACStream extends AudioStream {
 		catch (Exception ignore) {}	
 
 		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-		setAudioSamplingRate(16000);
+		setAudioSamplingRate(mQuality.samplingRate);
 
 	}
 
@@ -152,8 +154,8 @@ public class AACStream extends AudioStream {
 	private void testADTS() throws IllegalStateException, IOException {
 
 		if (mSettings!=null) {
-			if (mSettings.contains("aac-"+mSamplingRate)) {
-				String[] s = mSettings.getString("aac-"+mSamplingRate, "").split(",");
+			if (mSettings.contains("aac-"+mQuality.samplingRate)) {
+				String[] s = mSettings.getString("aac-"+mQuality.samplingRate, "").split(",");
 				mActualSamplingRate = Integer.valueOf(s[0]);
 				mConfig = Integer.valueOf(s[1]);
 				mChannel = Integer.valueOf(s[2]);
@@ -177,7 +179,8 @@ public class AACStream extends AudioStream {
 		mMediaRecorder.setOutputFormat(mOutputFormat);
 		mMediaRecorder.setAudioEncoder(mAudioEncoder);
 		mMediaRecorder.setAudioChannels(1);
-		mMediaRecorder.setAudioSamplingRate(mSamplingRate);
+		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
+		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		mMediaRecorder.setOutputFile(TESTFILE);
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
@@ -208,14 +211,14 @@ public class AACStream extends AudioStream {
 		mSamplingRateIndex = (buffer[1]&0x3C) >> 2;
 		mProfile = ( (buffer[1]&0xC0) >> 6 ) + 1 ;
 		mChannel = (buffer[1]&0x01) << 2 | (buffer[2]&0xC0) >> 6 ;
-		mActualSamplingRate = sADTSSamplingRates[mSamplingRateIndex];
+		mActualSamplingRate = ADTS_SAMPLING_RATES[mSamplingRateIndex];
 
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
 		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
 
 		Log.i(TAG,"MPEG VERSION: " + ( (buffer[0]&0x08) >> 3 ) );
 		Log.i(TAG,"PROTECTION: " + (buffer[0]&0x01) );
-		Log.i(TAG,"PROFILE: " + sAudioObjectTypes[ mProfile ] );
+		Log.i(TAG,"PROFILE: " + AUDIO_OBJECT_TYPES[ mProfile ] );
 		Log.i(TAG,"SAMPLING FREQUENCY: " + mActualSamplingRate );
 		Log.i(TAG,"CHANNEL: " + mChannel );
 
@@ -223,7 +226,7 @@ public class AACStream extends AudioStream {
 
 		if (mSettings!=null) {
 			Editor editor = mSettings.edit();
-			editor.putString("aac-"+mSamplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
+			editor.putString("aac-"+mQuality.samplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
 			editor.commit();
 		}
 
