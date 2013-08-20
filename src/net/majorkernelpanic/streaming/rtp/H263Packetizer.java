@@ -22,7 +22,6 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 
-import android.os.SystemClock;
 import android.util.Log;
 
 /**
@@ -44,6 +43,7 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 
 	public H263Packetizer() throws IOException {
 		super();
+		socket.setClockFrequency(90);
 	}
 
 	public void start() throws IOException {
@@ -66,7 +66,8 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 		long time, duration = 0;
 		int i = 0, j = 0, tr;
 		boolean firstFragment = true;
-
+		byte[] nextBuffer;
+		stats.reset();
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
 			skipHeader();
@@ -75,12 +76,16 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 			return;
 		}	
 
-		// Each packet we send has a two byte long header (See section 5.1 of RFC 4629)
-		buffer[rtphl] = 0;
-		buffer[rtphl+1] = 0;
-
 		try { 
 			while (!Thread.interrupted()) {
+				
+				if (j==0) buffer = socket.requestBuffer();
+				socket.updateTimestamp(ts);
+				
+				// Each packet we send has a two byte long header (See section 5.1 of RFC 4629)
+				buffer[rtphl] = 0;
+				buffer[rtphl+1] = 0;
+				
 				time = System.nanoTime();
 				if (fill(rtphl+j+2,MAXPACKETSIZE-rtphl-j-2)<0) return;
 				duration += System.nanoTime() - time;
@@ -109,18 +114,19 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 					if (intervalBetweenReports>0) {
 						if (delta>=intervalBetweenReports && duration/1000000>10) {
 							delta = 0;
-							report.send(System.nanoTime(),ts);
+							report.send(System.nanoTime(),ts*90/1000000);
 						}
 					}
 					// We have found the end of the frame
 					stats.push(duration);
-					ts+= stats.average()*9/100000; duration = 0;
+					ts+= stats.average(); duration = 0;
 					//Log.d(TAG,"End of frame ! duration: "+stats.average());
 					// The last fragment of a frame has to be marked
 					socket.markNextPacket();
 					send(j);
-					socket.updateTimestamp(ts);
-					System.arraycopy(buffer,j+2,buffer,rtphl+2,MAXPACKETSIZE-j-2);
+					nextBuffer = socket.requestBuffer();
+					System.arraycopy(buffer,j+2,nextBuffer,rtphl+2,MAXPACKETSIZE-j-2);
+					buffer = nextBuffer;
 					j = MAXPACKETSIZE-j-2;
 					firstFragment = true;
 				} else {
@@ -129,7 +135,8 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 					send(MAXPACKETSIZE);
 				}
 			}
-		} catch (IOException e) {}
+		} catch (IOException e) { 
+		} catch (InterruptedException e) {}
 
 		Log.d(TAG,"H263 Packetizer stopped !");
 
@@ -154,10 +161,11 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 	// The InputStream may start with a header that we need to skip
 	private void skipHeader() throws IOException {
 		// Skip all atoms preceding mdat atom
+		byte[] buffer = new byte[3];
 		while (true) {
 			while (is.read() != 'm');
-			is.read(buffer,rtphl,3);
-			if (buffer[rtphl] == 'd' && buffer[rtphl+1] == 'a' && buffer[rtphl+2] == 't') break;
+			is.read(buffer,0,3);
+			if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
 		}
 	}
 

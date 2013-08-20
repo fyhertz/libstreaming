@@ -43,22 +43,22 @@ public class SessionBuilder {
 	public final static String TAG = "SessionBuilder";
 
 	/** Can be used with {@link #setVideoEncoder}. */
-	public final static int VIDEO_NONE = 0x00;
+	public final static int VIDEO_NONE = 0;
 
 	/** Can be used with {@link #setVideoEncoder}. */
-	public final static int VIDEO_H264 = 0x01;
+	public final static int VIDEO_H264 = 1;
 
 	/** Can be used with {@link #setVideoEncoder}. */
-	public final static int VIDEO_H263 = 0x02;
+	public final static int VIDEO_H263 = 2;
 
 	/** Can be used with {@link #setAudioEncoder}. */
-	public final static int AUDIO_NONE = 0x00;
+	public final static int AUDIO_NONE = 0;
 
 	/** Can be used with {@link #setAudioEncoder}. */
-	public final static int AUDIO_AMRNB = 0x03;
+	public final static int AUDIO_AMRNB = 3;
 
 	/** Can be used with {@link #setAudioEncoder}. */
-	public final static int AUDIO_AAC = 0x05;
+	public final static int AUDIO_AAC = 5;
 
 	// Default configuration
 	private VideoQuality mVideoQuality = VideoQuality.defaultVideoQualiy.clone();

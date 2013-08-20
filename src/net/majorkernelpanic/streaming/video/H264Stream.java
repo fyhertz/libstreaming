@@ -80,7 +80,7 @@ public class H264Stream extends VideoStream {
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 * Will fail if called when streaming.
 	 */
-	public String generateSessionDescription() throws IllegalStateException, IOException {
+	public synchronized  String generateSessionDescription() throws IllegalStateException, IOException {
 		MP4Config config = testH264();
 
 		return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
@@ -110,10 +110,27 @@ public class H264Stream extends VideoStream {
 		boolean savedFlashState = mFlashState;
 		mFlashState = false;
 
-		// That means the H264Stream will behave as a regular MediaRecorder object
-		// it will not start the packetizer thread and can be used to save video in a file
-		setMode(MODE_DEFAULT);
+		// Opens the camera if needed
+		if (mCamera == null) {
+			mCameraOpenedManually = false;
+		}
 
+		// Will start the preview if not already started !
+		startPreview();
+
+		unlockCamera();
+		
+		mMediaRecorder = new MediaRecorder();
+		mMediaRecorder.setCamera(mCamera);
+		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
+		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+		mMediaRecorder.setMaxDuration(1000);
+		mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
+		mMediaRecorder.setVideoEncoder(mVideoEncoder);
+		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
+		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
+		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
 		mMediaRecorder.setOutputFile(TESTFILE);
 
 		// We wait a little and stop recording
@@ -134,8 +151,8 @@ public class H264Stream extends VideoStream {
 		});
 
 		// Start recording
-		prepare();
-		start();
+		mMediaRecorder.prepare();
+		mMediaRecorder.start();
 
 		try {
 			if (mLock.tryAcquire(6,TimeUnit.SECONDS)) {
@@ -147,14 +164,11 @@ public class H264Stream extends VideoStream {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
-			stop();
-			setMode(MODE_STREAMING);
+			mMediaRecorder.stop();
+			mMediaRecorder.release();
+			mMediaRecorder = null;
+			lockCamera();
 		}
-
-		// Disable the callback
-		try {
-			mMediaRecorder.setOnInfoListener(null);
-		} catch (Exception ignore) {}
 
 		// Retrieve SPS & PPS & ProfileId with MP4Config
 		MP4Config config = new MP4Config(TESTFILE);

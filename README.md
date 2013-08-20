@@ -8,7 +8,7 @@
 * Since version 2.0, a basic support for RTCP has been implemented.
 * libstreaming also features a RTSP server for easy remote control of the phone camera and microphone.
 
-The full javadoc documentation of the API is available here: http://libstreaming.majorkernelpanic.net/
+The full javadoc documentation of the API is available here: http://dallens.fr/majorkernelpanic/libstreaming/
 
 ## How it does it
 
@@ -104,7 +104,7 @@ context.stopService(new Intent(this,RtspServer.class));
 
 # Class diagramm
 
-![Class Diagram](http://majorkernelpanic.net/libstreaming/ClassDiagram.png "Class diagram")
+![Class Diagram](http://dallens.fr/majorkernelpanic/libstreaming/ClassDiagram.png "Class diagram")
 
 *SessionBuilder* and *RtspServer* are the class that you will want to use directly, they make use of everything else in the streaming package.
 

@@ -116,6 +116,11 @@ public class RtspServer extends Service {
 	 */
 	public void addCallbackListener(CallbackListener listener) {
 		synchronized (mListeners) {
+			if (mListeners.size() > 0) {
+				for (CallbackListener cl : mListeners) {
+					if (cl == listener) return;
+				}
+			}
 			mListeners.add(listener);			
 		}
 	}
@@ -181,6 +186,7 @@ public class RtspServer extends Service {
 		}
 	}
 
+	/** Returns whether or not the RTSP server is streaming to some client(s). */
 	public boolean isStreaming() {
 		for ( Session session : mSessions.keySet() ) {
 		    if ( session != null ) {
@@ -192,6 +198,17 @@ public class RtspServer extends Service {
 	
 	public boolean isEnabled() {
 		return mEnabled;
+	}
+
+	/** Returns the bandwidth consumed by the RTSP server in bits per second. */
+	public long getBitrate() {
+		long bitrate = 0;
+		for ( Session session : mSessions.keySet() ) {
+		    if ( session != null ) {
+		    	if (session.isStreaming()) bitrate += session.getBitrate();
+		    } 
+		}
+		return bitrate;
 	}
 	
 	@Override

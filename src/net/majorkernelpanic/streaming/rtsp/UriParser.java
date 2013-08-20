@@ -44,8 +44,7 @@ import org.apache.http.client.utils.URLEncodedUtils;
 import android.hardware.Camera.CameraInfo;
 
 /**
- * This class parses URIs and configures Sessions accordingly.
- * It is used by the HttpServer and the Rtsp server of this package to configure Sessions
+ * This class parses URIs received by the RTSP server and configures a Session accordingly.
  */
 public class UriParser {
 
@@ -68,7 +67,7 @@ public class UriParser {
 		if (params.size()>0) {
 
 			builder.setAudioEncoder(AUDIO_NONE).setVideoEncoder(VIDEO_NONE);
-			
+
 			// Those parameters must be parsed first or else they won't necessarily be taken into account
 			for (Iterator<NameValuePair> it = params.iterator();it.hasNext();) {
 				NameValuePair param = it.next();
@@ -90,7 +89,7 @@ public class UriParser {
 				}
 
 				// MULTICAST -> the stream will be sent to a multicast group
-				// The default mutlicast address is 228.5.6.7, but the client can specify one 
+				// The default mutlicast address is 228.5.6.7, but the client can specify another
 				else if (param.getName().equalsIgnoreCase("multicast")) {
 					if (param.getValue()!=null) {
 						try {
@@ -109,7 +108,7 @@ public class UriParser {
 					}
 				}
 
-				// UNICAST -> the client can use this so specify where he wants the stream to be sent
+				// UNICAST -> the client can use this to specify where he wants the stream to be sent
 				else if (param.getName().equalsIgnoreCase("unicast")) {
 					if (param.getValue()!=null) {
 						try {
@@ -156,7 +155,7 @@ public class UriParser {
 				else if (param.getName().equalsIgnoreCase("aac")) {
 					builder.setAudioEncoder(AUDIO_AAC);
 				}
-				
+
 			}
 
 		}
@@ -166,9 +165,9 @@ public class UriParser {
 			builder.setVideoEncoder(b.getVideoEncoder());
 			builder.setAudioEncoder(b.getAudioEncoder());
 		}
-		
+
 		return builder.build();
-		
+
 	}
 
 }

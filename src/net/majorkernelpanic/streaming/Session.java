@@ -187,6 +187,16 @@ public class Session {
 			return mVideoStream;
 	}
 
+	/**
+	 * Returns an approximation of the bandwidth consumed by the session in bit per seconde. 
+	 */
+	public long getBitrate() {
+		long sum = 0;
+		if (mAudioStream != null) sum += mAudioStream.getBitrate();
+		if (mVideoStream != null) sum += mVideoStream.getBitrate();
+		return sum;
+	}
+	
 	/** Indicates if a track is currently running. */
 	public boolean isStreaming() {
 		if ( (mAudioStream!=null && mAudioStream.isStreaming()) || (mVideoStream!=null && mVideoStream.isStreaming()) )
@@ -205,7 +215,6 @@ public class Session {
 			if (stream!=null && !stream.isStreaming()) {
 				stream.setTimeToLive(mTimeToLive);
 				stream.setDestinationAddress(mDestination);
-				stream.prepare();
 				stream.start();
 			}
 		}
@@ -260,12 +269,10 @@ public class Session {
 		synchronized (sLock) {
 			if (mVideoStream!=null) {
 				mVideoStream.stop();
-				mVideoStream.release();
 				mVideoStream = null;
 			}
 			if (mAudioStream!=null) {
 				mAudioStream.stop();
-				mAudioStream.release();
 				mAudioStream = null;
 			}
 		}

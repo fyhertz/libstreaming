@@ -28,10 +28,8 @@ import java.net.InetAddress;
  */
 public interface Stream {
 
-	public void start() throws IllegalStateException;
-	public void prepare() throws IllegalStateException,IOException;
+	public void start() throws IllegalStateException, IOException;
 	public void stop();
-	public void release();
 
 	/**
 	 * Sets the Time To Live of packets sent over the network.
@@ -77,6 +75,11 @@ public interface Stream {
 	
 	public int getSSRC();
 
+	/**
+	 * Returns an approximation of the bitrate of the stream in bit per seconde. 
+	 */
+	public long getBitrate();
+	
 	/**
 	 * The SSRC identifier of the stream.
 	 * @return The SSRC
