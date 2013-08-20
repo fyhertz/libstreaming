@@ -30,9 +30,8 @@ import android.media.MediaRecorder;
  * A class for streaming H.263 from the camera of an android device using RTP.
  * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #setDestinationPorts(int)}, 
  * {@link #setVideoSize(int, int)}, {@link #setVideoFramerate(int)} and {@link #setVideoEncodingBitrate(int)} and you're good to go.
- * You can then call {@link #prepare()} & {@link #start()}.
+ * You can then call {@link #start()}.
  * Call {@link #stop()} to stop the stream.
- * Finally, do not forget to call {@link #release()} when you're done.
  */
 public class H263Stream extends VideoStream {
 

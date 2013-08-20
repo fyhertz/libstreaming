@@ -35,9 +35,8 @@ import android.util.Log;
 
 /**
  * A class for streaming AAC from the microphone of an android device using RTP.
- * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #prepare()} & {@link #start()} and that's it !
+ * Call {@link #setDestinationAddress(java.net.InetAddress)} & {@link #start()} and that's it !
  * Call {@link #stop()} to stop the stream.
- * Do not forget to call {@link #release()} when you're done. 
  */
 public class AACStream extends AudioStream {
 
@@ -111,7 +110,7 @@ public class AACStream extends AudioStream {
 	}
 
 	/**
-	 * Some data (the actual sampling rate) needs to be stored once {@link #generateSessionDescription()} is called.
+	 * Some data (the actual sampling rate used by the phone and the AAC profile) needs to be stored once {@link #generateSessionDescription()} is called.
 	 * @param prefs The SharedPreferences that will be used to store the sampling rate 
 	 */
 	public void setPreferences(SharedPreferences prefs) {

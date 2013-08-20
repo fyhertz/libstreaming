@@ -102,7 +102,7 @@ public class Session {
 	/** 
 	 * Reference to the context is needed to aquire a MulticastLock. 
 	 * If the Session has a multicast destination is address such a lock will be aquired.
-	 * @param A reference to the application context 
+	 * @param context reference to the application context 
 	 **/
 	public void setContext(Context context) {
 		mContext = context;

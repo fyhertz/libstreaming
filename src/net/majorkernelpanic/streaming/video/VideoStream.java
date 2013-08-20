@@ -78,7 +78,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/**
 	 * Sets the camera that will be used to capture video.
-	 * You can call this method at any time and changes will take effect next time you call {@link #prepare()}.
+	 * You can call this method at any time and changes will take effect next time you start the stream.
 	 * @param camera Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
 	 */
 	public void setCamera(int camera) {
@@ -94,8 +94,8 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/**	Switch between the front facing and the back facing camera of the phone. 
-	 * If {@link startPreview()} has been called, the preview will be  briefly interrupted. 
-	 * If {@link start()} has been called, the stream will be  briefly interrupted.
+	 * If {@link #startPreview()} has been called, the preview will be  briefly interrupted. 
+	 * If {@link #start()} has been called, the stream will be  briefly interrupted.
 	 * You should not call this method from the main thread if you are already streaming. 
 	 * @throws IOException 
 	 * @throws RuntimeException 
@@ -117,7 +117,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/**
 	 * Sets a Surface to show a preview of recorded media (video). 
-	 * You can call this method at any time and changes will take effect next time you call {@link #prepare()}.
+	 * You can call this method at any time and changes will take effect next time you call {@link #start()}.
 	 */
 	public synchronized void setPreviewDisplay(SurfaceHolder surfaceHolder) {
 		if (mSurfaceHolderCallback != null && mSurfaceHolder != null) {
@@ -200,7 +200,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/** 
 	 * Modifies the resolution of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #prepare()}.
+	 * and changes will take effect next time you call {@link #start()}.
 	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
 	 * @param width Width of the stream
 	 * @param height height of the stream
@@ -214,7 +214,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/** 
 	 * Modifies the framerate of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #prepare()}.
+	 * and changes will take effect next time you call {@link #start()}.
 	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
 	 * @param rate Framerate of the stream
 	 */	
@@ -226,7 +226,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/** 
 	 * Modifies the bitrate of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #prepare()}.
+	 * and changes will take effect next time you call {@link #start()}.
 	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
 	 * @param bitrate Bitrate of the stream in bit per second
 	 */	
@@ -238,7 +238,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/** 
 	 * Modifies the quality of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #prepare()}.
+	 * and changes will take effect next time you call {@link #start()}.
 	 * @param videoQuality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality videoQuality) {
@@ -249,7 +249,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/** 
 	 * Modifies the videoEncoder of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #prepare()}.
+	 * and changes will take effect next time you call {@link #start()}.
 	 * @param videoEncoder Encoder of the stream
 	 */
 	protected void setVideoEncoder(int videoEncoder) {

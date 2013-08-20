@@ -155,7 +155,7 @@ public class RtpSocket implements Runnable {
 
 	/** 
 	 * Returns an available buffer from the FIFO, it can then directly be modified. 
-	 * Call {@link commitBuffer(int)} to send it over the network. 
+	 * Call {@link #commitBuffer(int)} to send it over the network. 
 	 * @throws InterruptedException 
 	 **/
 	public byte[] requestBuffer() throws InterruptedException {
