@@ -117,14 +117,21 @@ public class H264Stream extends VideoStream {
 		// Will start the preview if not already started !
 		startPreview();
 
-		unlockCamera();
+		try {
+			Thread.sleep(5000);
+		} catch (InterruptedException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
+		unlockCamera();
+
 		mMediaRecorder = new MediaRecorder();
 		mMediaRecorder.setCamera(mCamera);
 		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 		mMediaRecorder.setMaxDuration(1000);
-		mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
+		//mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
 		mMediaRecorder.setVideoEncoder(mVideoEncoder);
 		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);

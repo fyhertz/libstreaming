@@ -215,7 +215,7 @@ public class RtpSocket implements Runnable {
 	/** The Thread sends the packets in the FIFO one by one at a constant rate. */
 	@Override
 	public void run() {
-		Statistics stats = new Statistics(20,330);
+		Statistics stats = new Statistics(50,3300);
 		try {
 			// Caches mCacheSize milliseconds of the stream in the FIFO.
 			Thread.sleep(mCacheSize);
@@ -223,11 +223,13 @@ public class RtpSocket implements Runnable {
 				if (mOldTimestamp != 0) {
 					// We use our knowledge of the clock rate of the stream and the difference between to timestamp to
 					// compute the temporal length of the packet.
-					if (mTimestamps[mBufferOut]-mOldTimestamp>=0) stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
-					// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-					long d = stats.average()/1000000;
-					//Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
-					Thread.sleep(d);
+					if (mTimestamps[mBufferOut]-mOldTimestamp>0) {
+						stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
+						long d = stats.average()/1000000;
+						//Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
+						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
+						Thread.sleep(d);
+					}
 					/*delta += mTimestamps[mBufferOut]-mOldTimestamp;
 					if (delta>500000000 || delta<0) {
 						Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
@@ -265,9 +267,9 @@ public class RtpSocket implements Runnable {
 		private long period = 6000000000L;
 		private boolean initoffset = false;
 
-		public Statistics(int count, int period) {
+		public Statistics(int count, long period) {
 			this.count = count;
-			this.period = period*1000000; 
+			this.period = period*1000000L; 
 		}
 		
 		public void push(long value) {
@@ -284,7 +286,7 @@ public class RtpSocket implements Runnable {
 				value -= (now - start) - duration;
 				//Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
 			}
-			if (c<20) {
+			if (c<40) {
 				// We ignore the first 20 measured values because they may not be accurate
 				c++;
 				m = value;

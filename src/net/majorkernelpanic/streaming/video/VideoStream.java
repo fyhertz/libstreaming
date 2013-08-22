@@ -320,11 +320,19 @@ public abstract class VideoStream extends MediaStream {
 				}
 			}
 
+			try {
 			mCamera.setParameters(parameters);
 			mCamera.setDisplayOrientation(mQuality.orientation);
 			mCamera.setPreviewDisplay(mSurfaceHolder);
-
-			mCamera.startPreview();
+			if (mCameraOpenedManually) mCamera.startPreview();
+			
+			} catch (RuntimeException e) {
+				stopPreview();
+				throw e;
+			} catch (IOException e) {
+				stopPreview();
+				throw e;
+			}
 
 		}
 
@@ -336,7 +344,7 @@ public abstract class VideoStream extends MediaStream {
 
 		if (mCamera != null) {
 			lockCamera();
-			mCamera.stopPreview();
+			if (!mCameraOpenedManually) mCamera.stopPreview();
 			try {
 				mCamera.release();
 			} catch (Exception e) {
