@@ -150,7 +150,7 @@ public class H264Stream extends VideoStream {
 				} else if (what==MediaRecorder.MEDIA_RECORDER_INFO_UNKNOWN) {
 					Log.d(TAG,"MediaRecorder: INFO_UNKNOWN");
 				} else {
-					Log.d(TAG,"WTF ?");
+					Log.d(TAG,"WTF ?. what: "+what);
 				}
 				mLock.release();
 			}
