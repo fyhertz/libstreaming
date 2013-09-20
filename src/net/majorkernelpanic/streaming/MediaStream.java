@@ -182,7 +182,7 @@ public abstract class MediaStream implements Stream {
 
 	/** Starts the stream. */
 	public synchronized void start() throws IllegalStateException, IOException {
-
+		Log.d(TAG, "start");
 		if (mPacketizer==null)
 			throw new IllegalStateException("setPacketizer() should be called before start().");
 
