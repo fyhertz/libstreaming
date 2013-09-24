@@ -182,17 +182,17 @@ public class RtspClient {
 				"Content-Length: " + body.length() + "\r\n" +
 				"Content-Type: application/sdp \r\n\r\n" +
 				body;
-
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response response = Response.parseResponse(mBufferedReader);
 
 		try {
-			Matcher m = Response.rexegSession.matcher(response.headers.get("session")); m.find();
+			Matcher m = Response.rexegSession.matcher(response.headers.get("session"));
+			m.find();
 			mSessionID = m.group(1);
 		} catch (Exception e) {
-			throw new IOException("Invalid response from server");
+			throw new IOException("Invalid response from server. Session id: "+mSessionID);
 		}
 
 		if (response.status == 401) {
@@ -246,17 +246,17 @@ public class RtspClient {
 						"CSeq: " + (++mCSeq) + "\r\n" +
 						"Transport: RTP/AVP/UDP;unicast;client_port="+(5000+2*i)+"-"+(5000+2*i+1)+";mode=receive\r\n" +
 						"Session: " + mSessionID + "\r\n" +
-						"Authorization: " + mAuthorization+ "\r\n";
+						"Authorization: " + mAuthorization+ "\r\n\r\n";
 
 				Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 
 				mOutputStream.write(request.getBytes("UTF-8"));
 				Response response = Response.parseResponse(mBufferedReader);
-
 				Matcher m;
 				try {
 					m = Response.rexegTransport.matcher(response.headers.get("transport")); m.find();
 					stream.setDestinationPorts(Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4)));
+					Log.d(TAG, "Setting destination ports: "+Integer.parseInt(m.group(3))+", "+Integer.parseInt(m.group(4)));
 				} catch (Exception e) {
 					e.printStackTrace();
 					int[] ports = stream.getDestinationPorts();
@@ -274,7 +274,7 @@ public class RtspClient {
 				"Range: npt=0.000-" +
 				"CSeq: " + (++mCSeq) + "\r\n" +
 				"Session: " + mSessionID + "\r\n" +
-				"Authorization: " + mAuthorization+ "\r\n";
+				"Authorization: " + mAuthorization+ "\r\n\r\n";
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response.parseResponse(mBufferedReader);
@@ -325,7 +325,7 @@ public class RtspClient {
 		// Parses a WWW-Authenticate header
 		public static final Pattern rexegAuthenticate = Pattern.compile("realm=\"(.+)\",\\s+nonce=\"(\\w+)\"",Pattern.CASE_INSENSITIVE);
 		// Parses a Session header
-		public static final Pattern rexegSession = Pattern.compile("(\\d+);",Pattern.CASE_INSENSITIVE);
+		public static final Pattern rexegSession = Pattern.compile("(\\d+)",Pattern.CASE_INSENSITIVE);
 		// Parses a Transport header
 		public static final Pattern rexegTransport = Pattern.compile("client_port=(\\d+)-(\\d+).+server_port=(\\d+)-(\\d+)",Pattern.CASE_INSENSITIVE);
 
@@ -338,7 +338,6 @@ public class RtspClient {
 			Response response = new Response();
 			String line;
 			Matcher matcher;
-
 			// Parsing request method & uri
 			if ((line = input.readLine())==null) throw new SocketException("Connection lost");
 			matcher = regexStatus.matcher(line);

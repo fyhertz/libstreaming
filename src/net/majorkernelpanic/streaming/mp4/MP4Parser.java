@@ -17,12 +17,12 @@
  * along with this source code; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
 package net.majorkernelpanic.streaming.mp4;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 
 import android.util.Base64;
@@ -40,7 +40,6 @@ class MP4Parser {
 	private HashMap<String, Long> boxes = new HashMap<String, Long>();
 	private final RandomAccessFile file;
 	private long pos = 0;
-	private byte[] buffer = new byte[8];
 
 	public MP4Parser(final String path) throws IOException, FileNotFoundException {
 		this.file = new RandomAccessFile(new File(path), "r");
@@ -85,20 +84,26 @@ class MP4Parser {
 	}
 
 	private void parse(String path, long len) throws IOException {
+		byte[] buffer = new byte[8];
 		String name="";
 		long sum = 0, newlen = 0;
-
-		boxes.put(path, pos-8);
+		if(!path.equals(""))
+			boxes.put(path, pos-8);
 
 
 		while (sum<len) {
 
-			file.read(buffer,0,8); sum += 8; pos += 8;
-			if (validBoxName()) {
+			file.read(buffer,0,8);
+			sum += 8; 
+			pos += 8;
+			if (validBoxName(buffer)) {
 
-				newlen = ( buffer[3]&0xFF | (buffer[2]&0xFF)<<8 | (buffer[1]&0xFF)<<16 | (buffer[0]&0xFF)<<24 ) - 8;
-				// 1061109559+8 correspond to "????" in ASCII the HTC Desire S seems to write that sometimes, maybe other phones do
-				if (newlen<=0 || newlen==1061109559) throw new IOException();
+				ByteBuffer byteBuffer = ByteBuffer.wrap(buffer,0,4);
+				newlen = byteBuffer.getInt()-8;
+				
+				// a) 1061109559+8 correspond to "????" in ASCII the HTC Desire S seems to write that sometimes, maybe other phones do
+				// b) wide atom would produce a newlen == 0, and we shouldn't throw an exception because of that 
+				if (newlen < 0 || newlen == 1061109559) throw new IOException();
 				name = new String(buffer,4,4);
 				Log.d(TAG,"Atom -> name: "+name+" newlen: "+newlen+" pos: "+pos);
 				sum += newlen;
@@ -110,7 +115,8 @@ class MP4Parser {
 					file.seek(file.getFilePointer() - 8 + len);
 					sum += len-8;
 				} else {
-					if (file.skipBytes((int) (len-8))<len-8) {
+					int skipped = file.skipBytes((int)(len-8));
+					if (skipped < ((int)(len-8))) {
 						throw new IOException();
 					}
 					pos += len-8;
@@ -120,9 +126,10 @@ class MP4Parser {
 		}
 	}
 
-	private boolean validBoxName() {
+	private boolean validBoxName(byte[] buffer) {
 		for (int i=0;i<4;i++) {
-			if ((buffer[i+4]<97 || buffer[i+4]>122) && (buffer[i+4]<48 || buffer[i+4]>57) ) return false;
+			// If the next 4 bytes are neither lowercase letters nor numbers
+			if ((buffer[i+4]< 'a' || buffer[i+4]>'z') && (buffer[i+4]<'0'|| buffer[i+4]>'9') ) return false;
 		}
 		return true;
 	}
