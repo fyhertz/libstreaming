@@ -76,7 +76,6 @@ public abstract class VideoStream extends MediaStream {
 		setCamera(camera);
 		// TODO: Remove this when encoding with the MediaCodec API is ready
 		setMode(MODE_MEDIARECORDER_API);
-		Log.e(TAG,"MODE: "+mMode);		
 	}
 
 	/**

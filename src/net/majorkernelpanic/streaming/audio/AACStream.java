@@ -92,12 +92,15 @@ public class AACStream extends AudioStream {
 		if (!AACStreamingSupported()) {
 			Log.e(TAG,"AAC not supported on this phone");
 			throw new AACNotSupportedException();
+		} else {
+			Log.d(TAG,"AAC supported on this phone");
 		}
 
-		if (mMode == MODE_MEDIARECORDER_API) 
+		if (mMode == MODE_MEDIARECORDER_API) {
 			mPacketizer = new AACADTSPacketizer();
-		else 
+		} else { 
 			mPacketizer = new AACLATMPacketizer();
+		}
 		
 	}
 
@@ -125,16 +128,9 @@ public class AACStream extends AudioStream {
 	}
 
 	@Override
-	@SuppressLint("InlinedApi")
 	protected void encodeWithMediaRecorder() throws IOException {
 		testADTS();
 		((AACADTSPacketizer)mPacketizer).setSamplingRate(mActualSamplingRate);
-		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
-		try {
-			Field name = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
-			setOutputFormat(name.getInt(null));
-		}
-		catch (Exception ignore) {}
 		super.encodeWithMediaRecorder();
 	}
 
@@ -274,8 +270,31 @@ public class AACStream extends AudioStream {
 	 * @throws IOException 
 	 * @throws IllegalStateException
 	 */
+	@SuppressLint("InlinedApi")
 	private void testADTS() throws IllegalStateException, IOException {
 
+		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+		try {
+			Field name = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
+			setOutputFormat(name.getInt(null));
+		}
+		catch (Exception ignore) {
+			setOutputFormat(6);
+		}
+		
+		// Checks if the user has supplied an exotic sampling rate
+		int i=0;
+		for (;i<AUDIO_SAMPLING_RATES.length;i++) {
+			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
+				break;
+			}
+		}
+		// If he did, we force a reasonable one: 24 kHz
+		if (i>12) {
+			Log.e(TAG,"Not a valid sampling rate: "+mQuality.samplingRate);
+			mQuality.samplingRate = 24000;
+		}
+		
 		if (mSettings!=null) {
 			if (mSettings.contains("aac-"+mQuality.samplingRate)) {
 				String[] s = mSettings.getString("aac-"+mQuality.samplingRate, "").split(",");
@@ -305,13 +324,14 @@ public class AACStream extends AudioStream {
 		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		mMediaRecorder.setOutputFile(TESTFILE);
+		mMediaRecorder.setMaxDuration(1000);
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
 
 		// We record for 1 sec
 		// TODO: use the MediaRecorder.OnInfoListener
 		try {
-			Thread.sleep(1000);
+			Thread.sleep(2000);
 		} catch (InterruptedException e) {}
 
 		mMediaRecorder.stop();
@@ -331,7 +351,7 @@ public class AACStream extends AudioStream {
 
 		raf.read(buffer,1,5);
 
-		mSamplingRateIndex = (buffer[1]&0x3C) >> 2;
+		mSamplingRateIndex = (buffer[1]&0x3C)>>2 ;
 		mProfile = ( (buffer[1]&0xC0) >> 6 ) + 1 ;
 		mChannel = (buffer[1]&0x01) << 2 | (buffer[2]&0xC0) >> 6 ;
 		mActualSamplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
