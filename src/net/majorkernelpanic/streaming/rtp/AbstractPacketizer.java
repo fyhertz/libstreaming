@@ -130,7 +130,7 @@ abstract public class AbstractPacketizer {
 		private long elapsed = 0;
 		private long start = 0;
 		private long duration = 0;
-		private long period = 6000000000L;
+		private long period = 10000000000L;
 		private boolean initoffset = false;
 		
 		public Statistics() {}
@@ -163,7 +163,7 @@ abstract public class AbstractPacketizer {
 				value += (now - start) - duration;
 				//Log.d(TAG, "sum1: "+duration/1000000+" sum2: "+(now-start)/1000000+" drift: "+((now-start)-duration)/1000000+" v: "+value/1000000);
 			}
-			if (c<20) {
+			if (c<5) {
 				// We ignore the first 20 measured values because they may not be accurate
 				c++;
 				m = value;

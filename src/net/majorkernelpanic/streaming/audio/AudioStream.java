@@ -3,7 +3,6 @@ package net.majorkernelpanic.streaming.audio;
 import java.io.IOException;
 
 import net.majorkernelpanic.streaming.MediaStream;
-import net.majorkernelpanic.streaming.video.VideoQuality;
 import android.media.MediaRecorder;
 import android.util.Log;
 
@@ -17,16 +16,12 @@ public abstract class AudioStream  extends MediaStream {
 	protected int mAudioEncoder;
 	protected AudioQuality mQuality = AudioQuality.DEFAULT_AUDIO_QUALITY.clone();
 	
+	public AudioStream() {
+		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
+	}
+	
 	public void setAudioSource(int audioSource) {
 		mAudioSource = audioSource;
-	}
-	
-	public void setOutputFormat(int outputFormat) {
-		mOutputFormat = outputFormat;
-	}
-	
-	public void setAudioEncoder(int audioEncoder) {
-		mAudioEncoder = audioEncoder;
 	}
 	
 	public void setAudioSamplingRate(int samplingRate) {
@@ -50,6 +45,14 @@ public abstract class AudioStream  extends MediaStream {
 	 */
 	public void setAudioEncodingBitRate(int bitRate) {
 		mQuality.bitRate = bitRate;
+	}
+	
+	protected void setAudioEncoder(int audioEncoder) {
+		mAudioEncoder = audioEncoder;
+	}
+	
+	protected void setOutputFormat(int outputFormat) {
+		mOutputFormat = outputFormat;
 	}
 	
 	@Override
@@ -88,12 +91,6 @@ public abstract class AudioStream  extends MediaStream {
 			throw new IOException("Something happened with the local sockets :/ Start failed !");
 		}
 		
-	}
-
-	@Override
-	protected void encodeWithMediaCodec() throws IOException {
-		// TODO: Implement this !
-		encodeWithMediaRecorder();
 	}
 	
 }

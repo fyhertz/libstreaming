@@ -43,12 +43,15 @@ import org.apache.http.NameValuePair;
 import org.apache.http.client.utils.URLEncodedUtils;
 
 import android.hardware.Camera.CameraInfo;
+import android.util.Log;
 
 /**
  * This class parses URIs received by the RTSP server and configures a Session accordingly.
  */
 public class UriParser {
 
+	public final static String TAG = "UriParser";
+	
 	/**
 	 * Configures a Session according to the given URI.
 	 * Here are some examples of URIs that can be used to configure a Session:

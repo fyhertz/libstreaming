@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
  * 
@@ -74,6 +74,9 @@ public abstract class VideoStream extends MediaStream {
 	public VideoStream(int camera) {
 		super();
 		setCamera(camera);
+		// TODO: Remove this when encoding with the MediaCodec API is ready
+		setMode(MODE_MEDIARECORDER_API);
+		Log.e(TAG,"MODE: "+mMode);		
 	}
 
 	/**
@@ -162,7 +165,7 @@ public abstract class VideoStream extends MediaStream {
 		if (mCamera != null) {
 
 			// Needed on Android 2.3
-			if (mStreaming && mMode == MODE_STREAMING_LEGACY) {
+			if (mStreaming && mMode == MODE_MEDIARECORDER_API) {
 				lockCamera();
 			}
 
@@ -182,7 +185,7 @@ public abstract class VideoStream extends MediaStream {
 			}
 
 			// Needed on Android 2.3
-			if (mStreaming && mMode == MODE_STREAMING_LEGACY) {
+			if (mStreaming && mMode == MODE_MEDIARECORDER_API) {
 				unlockCamera();
 			}
 
@@ -265,11 +268,11 @@ public abstract class VideoStream extends MediaStream {
 
 	/** Stops the stream. */
 	public synchronized void stop() {
-		if (mMode == MODE_STREAMING_JB) {
+		if (mMode == MODE_MEDIACODEC_API) {
 			mCamera.setPreviewCallback(null);
 		}
 		super.stop();
-		if (mMode == MODE_STREAMING_LEGACY) {
+		if (mMode == MODE_MEDIARECORDER_API) {
 			lockCamera();
 		}
 		if (!mCameraOpenedManually) {
@@ -304,7 +307,7 @@ public abstract class VideoStream extends MediaStream {
 
 			Parameters parameters = mCamera.getParameters();
 
-			if (mMode == MODE_STREAMING_JB) {
+			if (mMode == MODE_MEDIACODEC_API) {
 				getClosestSupportedQuality(parameters);
 				parameters.setPreviewFormat(ImageFormat.YV12);
 				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
@@ -357,8 +360,8 @@ public abstract class VideoStream extends MediaStream {
 
 	/**
 	 * Starts the stream.
-	 * This will also open the camera and dispay the preview if {@link #startPreview()}
-	 * has not laready been called.
+	 * This will also open the camera and dispay the preview 
+	 * if {@link #startPreview()} has not aready been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
 		super.start();
@@ -493,6 +496,7 @@ public abstract class VideoStream extends MediaStream {
 	/** 
 	 * Checks if the resolution and the framerate selected are supported by the camera.
 	 * If not, it modifies it by supported parameters. 
+	 * FIXME: Not reliable, more or less useless :(
 	 **/
 	private void getClosestSupportedQuality(Camera.Parameters parameters) {
 

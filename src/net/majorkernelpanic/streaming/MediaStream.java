@@ -42,10 +42,10 @@ public abstract class MediaStream implements Stream {
 	protected static final String TAG = "MediaStream";
 
 	/** MediaStream forwards data to a packetizer through a LocalSocket. */
-	public static final int MODE_STREAMING_LEGACY = 0;
+	public static final int MODE_MEDIARECORDER_API = 0x00;
 
 	/** MediaStream uses the new MediaCodec API introduced in JB 4.2 to stream audio/video. */
-	public static final int MODE_STREAMING_JB = 1;
+	public static final int MODE_MEDIACODEC_API = 0x01;
 
 	/** The packetizer that will read the output of the camera and send RTP packets over the networkd. */
 	protected AbstractPacketizer mPacketizer = null;
@@ -56,8 +56,8 @@ public abstract class MediaStream implements Stream {
 	private int mSocketId;
 
 	protected boolean mStreaming = false;
-	protected int mMode = MODE_STREAMING_LEGACY;
-	protected static int sSuggestedMode = MODE_STREAMING_LEGACY; 
+	protected int mMode = MODE_MEDIARECORDER_API;
+	protected static int sSuggestedMode = MODE_MEDIARECORDER_API; 
 
 	private LocalServerSocket mLss = null;
 	protected LocalSocket mReceiver, mSender = null;
@@ -69,11 +69,12 @@ public abstract class MediaStream implements Stream {
 		// We determine wether or not the MediaCodec API should be used
 		try {
 			Class.forName("android.media.MediaCodec");
-			sSuggestedMode = MODE_STREAMING_LEGACY;
-			Log.d(TAG,"Phone supports the MediaCoded API");
+			// Will be set to MODE_MEDIACODEC_API at some point...
+			sSuggestedMode = MODE_MEDIACODEC_API;
+			Log.i(TAG,"Phone supports the MediaCoded API");
 		} catch (ClassNotFoundException e) {
-			sSuggestedMode = MODE_STREAMING_LEGACY;
-			Log.d(TAG,"Phone does not support the MediaCodec API");
+			sSuggestedMode = MODE_MEDIARECORDER_API;
+			Log.i(TAG,"Phone does not support the MediaCodec API");
 		}
 	}
 	
@@ -81,6 +82,15 @@ public abstract class MediaStream implements Stream {
 		mMode = sSuggestedMode;
 	}
 
+	/**
+	 * By default, the API that will be used to encode video or audio is choosen automatically depending
+	 * on the capabilities of the phone, and what have been implemented in libstreaming.
+	 * @param mode {@link MediaStream#MODE_MEDIACODEC_API} or {@link MediaStream#MODE_MEDIACODEC_API} 
+	 */
+	public void setAPI(int mode) {
+		mMode = mode;
+	}
+	
 	/** 
 	 * Sets the destination ip address of the stream.
 	 * @param dest The destination address of the stream 
@@ -150,10 +160,11 @@ public abstract class MediaStream implements Stream {
 
 	/**
 	 * Sets the mode of the {@link MediaStream}.
-	 * If the mode is set to {@link #MODE_STREAMING_LEGACY}, video is forwarded to a UDP socket.
-	 * @param mode Either {@link #MODE_STREAMING_LEGACY} or {@link #MODE_STREAMING_JB} 
+	 * If the mode is set to {@link #MODE_MEDIARECORDER_API}, video is forwarded to a UDP socket.
+	 * @param mode Either {@link #MODE_MEDIARECORDER_API} or {@link #MODE_MEDIACODEC_API} 
 	 */
-	public void setMode(int mode) {
+	public void setMode(int mode) throws IllegalStateException {
+		if (mStreaming) throw new IllegalStateException("Can't be called while streaming !");
 		this.mMode = mode;
 	}
 
@@ -182,9 +193,6 @@ public abstract class MediaStream implements Stream {
 
 	/** Starts the stream. */
 	public synchronized void start() throws IllegalStateException, IOException {
-		Log.d(TAG, "start");
-		if (mPacketizer==null)
-			throw new IllegalStateException("setPacketizer() should be called before start().");
 
 		if (mDestination==null)
 			throw new IllegalStateException("No destination ip address set for the stream !");
@@ -193,10 +201,10 @@ public abstract class MediaStream implements Stream {
 			throw new IllegalStateException("No destination ports set for the stream !");
 
 		switch (mMode) {
-		case MODE_STREAMING_LEGACY: 
+		case MODE_MEDIARECORDER_API: 
 			encodeWithMediaRecorder(); 
 			break;
-		case MODE_STREAMING_JB: 
+		case MODE_MEDIACODEC_API: 
 			encodeWithMediaCodec();
 			break;
 		};
@@ -209,16 +217,16 @@ public abstract class MediaStream implements Stream {
 		if (mStreaming) {
 			mPacketizer.stop();
 			try {
-				if (mMode==MODE_STREAMING_LEGACY) {
+				if (mMode==MODE_MEDIARECORDER_API) {
 					mMediaRecorder.stop();
 					mMediaRecorder.release();
 					mMediaRecorder = null;
-					closeSockets();
 				} else {
 					mMediaCodec.stop();
 					mMediaCodec.release();
 					mMediaCodec = null;
 				}
+				closeSockets();
 			} catch (Exception ignore) {}	
 			mStreaming = false;
 		}

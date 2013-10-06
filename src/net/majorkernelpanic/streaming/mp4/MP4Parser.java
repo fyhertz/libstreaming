@@ -100,9 +100,9 @@ class MP4Parser {
 
 				ByteBuffer byteBuffer = ByteBuffer.wrap(buffer,0,4);
 				newlen = byteBuffer.getInt()-8;
-				
-				// a) 1061109559+8 correspond to "????" in ASCII the HTC Desire S seems to write that sometimes, maybe other phones do
-				// b) wide atom would produce a newlen == 0, and we shouldn't throw an exception because of that 
+
+				// 1061109559+8 correspond to "????" in ASCII the HTC Desire S seems to write that sometimes, maybe other phones do
+				// "wide" atom would produce a newlen == 0, and we shouldn't throw an exception because of that
 				if (newlen < 0 || newlen == 1061109559) throw new IOException();
 				name = new String(buffer,4,4);
 				Log.d(TAG,"Atom -> name: "+name+" newlen: "+newlen+" pos: "+pos);

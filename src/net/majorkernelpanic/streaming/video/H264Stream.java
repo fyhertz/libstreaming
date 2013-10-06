@@ -32,6 +32,7 @@ import android.content.SharedPreferences.Editor;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
 import android.os.Environment;
+import android.util.Base64;
 import android.util.Log;
 
 /**
@@ -87,6 +88,19 @@ public class H264Stream extends VideoStream {
 		"a=fmtp:96 packetization-mode=1;profile-level-id="+config.getProfileLevel()+";sprop-parameter-sets="+config.getB64SPS()+","+config.getB64PPS()+";\r\n";
 	}	
 
+	/**
+	 * Starts the stream.
+	 * This will also open the camera and dispay the preview 
+	 * if {@link #startPreview()} has not aready been called.
+	 */
+	public synchronized void start() throws IllegalStateException, IOException {
+		MP4Config config = testH264();
+		byte[] pps = Base64.decode(config.getB64PPS(), Base64.NO_WRAP);
+		byte[] sps = Base64.decode(config.getB64SPS(), Base64.NO_WRAP);
+		((H264Packetizer)mPacketizer).setStreamParameters(pps, sps);
+		super.start();
+	}
+	
 	// Should not be called by the UI thread
 	private MP4Config testH264() throws IllegalStateException, IOException {
 
@@ -150,7 +164,7 @@ public class H264Stream extends VideoStream {
 				} else if (what==MediaRecorder.MEDIA_RECORDER_INFO_UNKNOWN) {
 					Log.d(TAG,"MediaRecorder: INFO_UNKNOWN");
 				} else {
-					Log.d(TAG,"WTF ?. what: "+what);
+					Log.d(TAG,"WTF ?");
 				}
 				mLock.release();
 			}

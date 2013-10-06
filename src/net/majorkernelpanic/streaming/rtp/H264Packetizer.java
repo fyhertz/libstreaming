@@ -39,12 +39,15 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	public final static String TAG = "H264Packetizer";
 
 	private final static int MAXPACKETSIZE = 1400;
-
+	
 	private Thread t = null;
 	private int naluLength = 0;
 	private long delay = 0, oldtime = 0;
 	private Statistics stats = new Statistics();
-
+	private byte[] sps = null, pps = null;
+	private int count = 0;
+	
+	
 	public H264Packetizer() throws IOException {
 		super();
 		socket.setClockFrequency(90000);
@@ -67,10 +70,17 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		}
 	}
 
+	public void setStreamParameters(byte[] pps, byte[] sps) {
+		this.pps = pps;
+		this.sps = sps;
+	}	
+	
 	public void run() {
-		long duration = 0;
+		long duration = 0, delta2 = 0;
 		Log.d(TAG,"H264 packetizer started !");
 		stats.reset();
+		count = 0;
+		
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
 		try {
 			byte buffer[] = new byte[4];
@@ -85,23 +95,45 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			return;
 		}
 
-		// We read a NAL units from the input stream and we send them
 		try {
 			while (!Thread.interrupted()) {
 
-				// We measure how long it takes to receive the NAL unit from the phone
 				oldtime = System.nanoTime();
+				// We read a NAL units from the input stream and we send them
 				send();
+				// We measure how long it took to receive NAL units from the phone
 				duration = System.nanoTime() - oldtime;
 
+				// We regulary send RTSP Sender Report to the decoder
 				delta += duration/1000000;
 				if (intervalBetweenReports>0) {
 					if (delta>=intervalBetweenReports) {
 						// We send a Sender Report
-						report.send(oldtime+duration,ts*90/1000000);
+						report.send(oldtime+duration,(ts/100)*90/10000);
 					}
 				}
 
+				// Every 5 secondes, we send two packets containing NALU type 7 (sps) and 8 (pps)
+				// Those should allow the H264 stream to be decoded even if no SDP was sent to the decoder.				
+				delta2 += duration/1000000;
+				if (delta2>5000) {
+					delta2 = 0;
+					if (sps != null) {
+						buffer = socket.requestBuffer();
+						socket.markNextPacket();
+						socket.updateTimestamp(ts);
+						System.arraycopy(sps, 0, buffer, rtphl, sps.length);
+						super.send(rtphl+sps.length);
+					}
+					if (pps != null) {
+						buffer = socket.requestBuffer();
+						socket.updateTimestamp(ts);
+						socket.markNextPacket();
+						System.arraycopy(pps, 0, buffer, rtphl, pps.length);
+						super.send(rtphl+pps.length);
+					}					
+				}
+				
 				stats.push(duration);
 				// Computes the average duration of a NAL unit
 				delay = stats.average();
@@ -132,6 +164,16 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 		// Parses the NAL unit type
 		type = header[4]&0x1F;
+		
+		// The stream already contains NAL unit type 7 or 8, we don't need 
+		// to add them to the stream ourselves
+		if (type == 7 || type == 8) {
+			count++;
+			if (count>4) {
+				sps = null;
+				pps = null;
+			}
+		}
 
 		// Updates the timestamp
 		ts += delay;

@@ -62,4 +62,9 @@ public class AMRNBStream extends AudioStream {
 				"a=fmtp:96 octet-align=1;\r\n";
 	}
 
+	@Override
+	protected void encodeWithMediaCodec() throws IOException {
+		super.encodeWithMediaRecorder();
+	}
+
 }

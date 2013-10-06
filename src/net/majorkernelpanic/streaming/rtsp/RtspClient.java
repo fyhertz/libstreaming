@@ -112,7 +112,7 @@ public class RtspClient {
 	public synchronized boolean isRunning() {
 		return mRunning;
 	}
-	
+
 	/**
 	 * Connects to the RTSP server to publish the stream, and the effectively starts streaming.
 	 * You need to call {@link #setServerAddress(String, int)} and optionnally {@link #setSession(Session)} 
@@ -148,7 +148,7 @@ public class RtspClient {
 			stopStream();
 			throw e;
 		}
-		
+
 		mRunning = true;
 
 	}
@@ -159,7 +159,7 @@ public class RtspClient {
 	public synchronized void stopStream() {
 
 		if (!mRunning) return;
-		
+
 		try {
 			sendRequestTeardown();
 		} catch (Exception ignore) {}
@@ -279,7 +279,7 @@ public class RtspClient {
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response.parseResponse(mBufferedReader);
 	}
-	
+
 	/**
 	 * Forges and sends the TEARDOWN request 
 	 */
