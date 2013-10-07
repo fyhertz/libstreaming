@@ -58,6 +58,7 @@ public abstract class VideoStream extends MediaStream {
 	protected boolean mFlashState = false;
 	protected boolean mSurfaceReady = false;
 	protected boolean mUnlocked = false;
+	protected boolean mPreviewStarted = false;
 
 	/** 
 	 * Don't use this class directly.
@@ -156,7 +157,7 @@ public abstract class VideoStream extends MediaStream {
 
 		// FIXME: Is it possible to toggle the flash while streaming on android 2.3 ?
 		// FIXME: It works on android 4.2 and 4.3
-		
+
 		mFlashState = state;
 
 		// If the camera has already been opened, we apply the change immediately
@@ -248,7 +249,7 @@ public abstract class VideoStream extends MediaStream {
 			mQuality = videoQuality;
 		}
 	}
-	
+
 	/** 
 	 * Returns the quality of the stream.  
 	 */
@@ -265,105 +266,58 @@ public abstract class VideoStream extends MediaStream {
 		this.mVideoEncoder = videoEncoder;
 	}
 
-	/** Stops the stream. */
-	public synchronized void stop() {
-		if (mMode == MODE_MEDIACODEC_API) {
-			mCamera.setPreviewCallback(null);
-		}
-		super.stop();
-		if (mMode == MODE_MEDIARECORDER_API) {
-			lockCamera();
-		}
-		if (!mCameraOpenedManually) {
-			stopPreview();
-		}
-		mCameraOpenedManually = true;
-	}
-
-	public synchronized void startPreview() throws RuntimeException, IOException {
-
-		if (mSurfaceHolder == null || mSurfaceHolder.getSurface() == null || !mSurfaceReady)
-			throw new IllegalStateException("Invalid surface holder !");
-
-		if (mCamera == null) {
-			mCamera = Camera.open(mCameraId);
-			mCamera.setErrorCallback(new Camera.ErrorCallback() {
-				@Override
-				public void onError(int error, Camera camera) {
-					// On some phones when trying to use the camera facing front the media server will die
-					// Whether or not this callback may be called really depends on the phone
-					if (error == Camera.CAMERA_ERROR_SERVER_DIED) {
-						// In this case the application must release the camera and instantiate a new one
-						Log.e(TAG,"Media server died !");
-						// We don't know in what thread we are so stop needs to be synchronized
-						mCameraOpenedManually = false;
-						stop();
-					} else {
-						Log.e(TAG,"Error unknown with the camera: "+error);
-					}	
-				}
-			});
-
-			Parameters parameters = mCamera.getParameters();
-
-			if (mMode == MODE_MEDIACODEC_API) {
-				getClosestSupportedQuality(parameters);
-				parameters.setPreviewFormat(ImageFormat.YV12);
-				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-				parameters.setPreviewFrameRate(mQuality.framerate);
-			}
-
-			if (mFlashState) {
-				if (parameters.getFlashMode()==null) {
-					// The phone has no flash or the choosen camera can not toggle the flash
-					throw new IllegalStateException("Can't turn the flash on !");
-				} else {
-					parameters.setFlashMode(mFlashState?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
-				}
-			}
-
-			try {
-			mCamera.setParameters(parameters);
-			mCamera.setDisplayOrientation(mQuality.orientation);
-			mCamera.setPreviewDisplay(mSurfaceHolder);
-			if (mCameraOpenedManually) mCamera.startPreview();
-			
-			} catch (RuntimeException e) {
-				stopPreview();
-				throw e;
-			} catch (IOException e) {
-				stopPreview();
-				throw e;
-			}
-
-		}
-
-	}
-
-	public synchronized void stopPreview() {
-
-		if (mStreaming) super.stop();
-
-		if (mCamera != null) {
-			lockCamera();
-			if (!mCameraOpenedManually) mCamera.stopPreview();
-			try {
-				mCamera.release();
-			} catch (Exception e) {
-				Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
-			}
-			mCamera = null;
-			mUnlocked = false;
-		}		
-	}
-
 	/**
 	 * Starts the stream.
 	 * This will also open the camera and dispay the preview 
 	 * if {@link #startPreview()} has not aready been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
+		if (!mPreviewStarted) mCameraOpenedManually = false;
 		super.start();
+	}	
+
+	/** Stops the stream. */
+	public synchronized void stop() {
+		if (mCamera != null) {
+			if (mMode == MODE_MEDIACODEC_API) {
+				mCamera.setPreviewCallback(null);
+			}
+			super.stop();
+			// We need to restart the preview
+			if (!mCameraOpenedManually) {
+				destroyCamera();
+			} else {
+				try {
+					startPreview();
+				} catch (RuntimeException e) {
+					e.printStackTrace();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	public synchronized void startPreview() throws RuntimeException, IOException {
+		if (!mPreviewStarted) {
+			createCamera();
+			try {
+				mCamera.startPreview();
+				mPreviewStarted = true;
+				mCameraOpenedManually = true;
+			} catch (RuntimeException e) {
+				destroyCamera();
+				throw e;
+			}
+		}
+	}
+
+	/**
+	 * Stops the preview.
+	 */
+	public synchronized void stopPreview() {
+		mCameraOpenedManually = false;
+		stop();
 	}
 
 	/**
@@ -375,15 +329,20 @@ public abstract class VideoStream extends MediaStream {
 		createSockets();
 
 		// Opens the camera if needed
-		if (mCamera == null) {
-			mCameraOpenedManually = false;
-			// Will start the preview if not already started !
-			Log.d(TAG,"Preview must be started to record video !");
-			startPreview();
+		createCamera();
+
+		// Stops the preview if needed
+		if (mPreviewStarted) {
+			lockCamera();
+			try {
+				mCamera.stopPreview();
+			} catch (Exception e) {}
+			mPreviewStarted = false;
 		}
 
+		// Unlock the camera if needed
 		unlockCamera();
-	
+
 		mMediaRecorder = new MediaRecorder();
 		mMediaRecorder.setCamera(mCamera);
 		mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
@@ -423,10 +382,17 @@ public abstract class VideoStream extends MediaStream {
 	protected void encodeWithMediaCodec() throws RuntimeException, IOException {
 
 		// Opens the camera if needed
-		if (mCamera == null) {
-			mCameraOpenedManually = false;
-			// Will start the preview if not already started !
-			startPreview();
+		createCamera();
+
+		// Starts the preview if needed
+		if (!mPreviewStarted) {
+			try {
+				mCamera.startPreview();
+				mPreviewStarted = true;
+			} catch (RuntimeException e) {
+				destroyCamera();
+				throw e;
+			}
 		}
 
 		mMediaCodec = MediaCodec.createEncoderByType("video/avc");
@@ -473,6 +439,78 @@ public abstract class VideoStream extends MediaStream {
 
 	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
 
+	protected synchronized void createCamera() throws RuntimeException, IOException {
+		if (mSurfaceHolder == null || mSurfaceHolder.getSurface() == null || !mSurfaceReady)
+			throw new IllegalStateException("Invalid surface holder !");
+
+		if (mCamera == null) {
+			mCamera = Camera.open(mCameraId);
+			mUnlocked = false;
+			mCamera.setErrorCallback(new Camera.ErrorCallback() {
+				@Override
+				public void onError(int error, Camera camera) {
+					// On some phones when trying to use the camera facing front the media server will die
+					// Whether or not this callback may be called really depends on the phone
+					if (error == Camera.CAMERA_ERROR_SERVER_DIED) {
+						// In this case the application must release the camera and instantiate a new one
+						Log.e(TAG,"Media server died !");
+						// We don't know in what thread we are so stop needs to be synchronized
+						mCameraOpenedManually = false;
+						stop();
+					} else {
+						Log.e(TAG,"Error unknown with the camera: "+error);
+					}	
+				}
+			});
+
+			Parameters parameters = mCamera.getParameters();
+
+			if (mMode == MODE_MEDIACODEC_API) {
+				getClosestSupportedQuality(parameters);
+				parameters.setPreviewFormat(ImageFormat.YV12);
+				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+				parameters.setPreviewFrameRate(mQuality.framerate);
+			}
+
+			if (mFlashState) {
+				if (parameters.getFlashMode()==null) {
+					// The phone has no flash or the choosen camera can not toggle the flash
+					throw new IllegalStateException("Can't turn the flash on !");
+				} else {
+					parameters.setFlashMode(mFlashState?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
+				}
+			}
+
+			try {
+				mCamera.setParameters(parameters);
+				mCamera.setDisplayOrientation(mQuality.orientation);
+				mCamera.setPreviewDisplay(mSurfaceHolder);
+			} catch (RuntimeException e) {
+				destroyCamera();
+				throw e;
+			} catch (IOException e) {
+				destroyCamera();
+				throw e;
+			}
+		}
+	}
+
+	protected synchronized void destroyCamera() {
+		if (mCamera != null) {
+			if (mStreaming) super.stop();
+			lockCamera();
+			mCamera.stopPreview();
+			try {
+				mCamera.release();
+			} catch (Exception e) {
+				Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
+			}
+			mCamera = null;
+			mUnlocked = false;
+			mPreviewStarted = false;
+		}	
+	}	
+	
 	/** Verifies if streaming using the MediaCodec API is feasable. */
 	@SuppressLint("NewApi")
 	private void checkMediaCodecAPI() {
@@ -531,9 +569,10 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 	}
-	
+
 	protected void lockCamera() {
 		if (mUnlocked) {
+			Log.d(TAG,"Locking camera");
 			try {
 				mCamera.reconnect();
 			} catch (Exception e) {
@@ -545,6 +584,7 @@ public abstract class VideoStream extends MediaStream {
 
 	protected void unlockCamera() {
 		if (!mUnlocked) {
+			Log.d(TAG,"Unlocking camera");
 			try {	
 				mCamera.unlock();
 			} catch (Exception e) {
@@ -553,5 +593,5 @@ public abstract class VideoStream extends MediaStream {
 			mUnlocked = true;
 		}
 	}
-	
+
 }

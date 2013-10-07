@@ -58,6 +58,7 @@ public class RtspClient {
 	private String mPath;
 	private String mSessionID;
 	private String mAuthorization;
+	private String mRtspServerName;
 	private Session mSession;
 	private BufferedReader mBufferedReader;
 	private OutputStream mOutputStream;
@@ -187,6 +188,8 @@ public class RtspClient {
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response response = Response.parseResponse(mBufferedReader);
 
+		mRtspServerName = response.headers.get("server");
+		
 		try {
 			Matcher m = Response.rexegSession.matcher(response.headers.get("session"));
 			m.find();
@@ -243,10 +246,8 @@ public class RtspClient {
 			Stream stream = mSession.getTrack(i);
 			if (stream != null) {
 				String request = "SETUP rtsp://"+mHost+":"+mPort+mPath+"/trackID="+i+" RTSP/1.0\r\n" +
-						"CSeq: " + (++mCSeq) + "\r\n" +
 						"Transport: RTP/AVP/UDP;unicast;client_port="+(5000+2*i)+"-"+(5000+2*i+1)+";mode=receive\r\n" +
-						"Session: " + mSessionID + "\r\n" +
-						"Authorization: " + mAuthorization+ "\r\n\r\n";
+						addHeaders();
 
 				Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 
@@ -272,9 +273,7 @@ public class RtspClient {
 	private void sendRequestRecord() throws IllegalStateException, SocketException, IOException {
 		String request = "RECORD rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" +
 				"Range: npt=0.000-" +
-				"CSeq: " + (++mCSeq) + "\r\n" +
-				"Session: " + mSessionID + "\r\n" +
-				"Authorization: " + mAuthorization+ "\r\n\r\n";
+				addHeaders();
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response.parseResponse(mBufferedReader);
@@ -284,15 +283,31 @@ public class RtspClient {
 	 * Forges and sends the TEARDOWN request 
 	 */
 	private void sendRequestTeardown() throws IOException {
-		String request = "TEARDOWN rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" +
-				"CSeq: " + (++mCSeq) + "\r\n" +
-				"Session: " + mSessionID + "\r\n" +
-				"Authorization: " + mAuthorization+ "\r\n";
+		String request = "TEARDOWN rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" + addHeaders();
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response.parseResponse(mBufferedReader);
 	}
 
+	private String addHeaders() {
+		String delimiter = "\r\n";
+		/*if (mRtspServerName != null && mRtspServerName.contains("Wowza")) {
+			Log.e(TAG,mRtspServerName);
+			// On certain versions of Wowza it appears that this is necessary
+			try {
+				Pattern regex = Pattern.compile("build(\\d+)",Pattern.CASE_INSENSITIVE);
+				Matcher matcher = regex.matcher(mRtspServerName);
+				if (Integer.parseInt(matcher.group(1))<5334) { 
+					delimiter = "\r\n\r\n";
+				}
+			} catch (Exception ignore) {ignore.printStackTrace();}
+		}*/
+		return "CSeq: " + (++mCSeq) + "\r\n" +
+		"Content-Length: 0\r\n" +
+		"Session: " + mSessionID + "\r\n" +
+		"Authorization: " + mAuthorization+ delimiter;
+	}	
+	
 	final protected static char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
 	private static String bytesToHex(byte[] bytes) {
@@ -346,13 +361,13 @@ public class RtspClient {
 
 			// Parsing headers of the request
 			while ( (line = input.readLine()) != null && line.length()>3 ) {
+				//Log.e(TAG,line);
 				matcher = rexegHeader.matcher(line);
 				matcher.find();
 				response.headers.put(matcher.group(1).toLowerCase(Locale.US),matcher.group(2));
 			}
 			if (line==null) throw new SocketException("Connection lost");
 
-			// It's not an error, it's just easier to follow what's happening in logcat with the request in red
 			Log.d(TAG, "Response from server: "+response.status);
 
 			return response;

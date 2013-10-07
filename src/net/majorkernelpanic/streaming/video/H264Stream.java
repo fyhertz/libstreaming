@@ -123,14 +123,17 @@ public class H264Stream extends VideoStream {
 		boolean savedFlashState = mFlashState;
 		mFlashState = false;
 
-		// Opens the camera if needed
-		if (mCamera == null) {
-			mCameraOpenedManually = false;
+		createCamera();
+		
+		// Stops the preview if needed
+		if (mPreviewStarted) {
+			lockCamera();
+			try {
+				mCamera.stopPreview();
+			} catch (Exception e) {}
+			mPreviewStarted = false;
 		}
-
-		// Will start the preview if not already started !
-		startPreview();
-
+		
 		try {
 			Thread.sleep(5000);
 		} catch (InterruptedException e1) {
@@ -184,7 +187,9 @@ public class H264Stream extends VideoStream {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
-			mMediaRecorder.stop();
+			try {
+				mMediaRecorder.stop();
+			} catch (Exception e) {}
 			mMediaRecorder.release();
 			mMediaRecorder = null;
 			lockCamera();

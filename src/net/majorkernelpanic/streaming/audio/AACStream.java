@@ -24,7 +24,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
-import java.nio.Buffer;
 import java.nio.ByteBuffer;
 
 import net.majorkernelpanic.streaming.rtp.AACADTSPacketizer;
@@ -289,10 +288,10 @@ public class AACStream extends AudioStream {
 				break;
 			}
 		}
-		// If he did, we force a reasonable one: 24 kHz
+		// If he did, we force a reasonable one: 16 kHz
 		if (i>12) {
 			Log.e(TAG,"Not a valid sampling rate: "+mQuality.samplingRate);
-			mQuality.samplingRate = 24000;
+			mQuality.samplingRate = 16000;
 		}
 		
 		if (mSettings!=null) {
