@@ -58,7 +58,6 @@ public class RtspClient {
 	private String mPath;
 	private String mSessionID;
 	private String mAuthorization;
-	private String mRtspServerName;
 	private Session mSession;
 	private BufferedReader mBufferedReader;
 	private OutputStream mOutputStream;
@@ -81,6 +80,10 @@ public class RtspClient {
 		mSession = session;
 	}
 
+	public Session getSession() {
+		return mSession;
+	}	
+	
 	/**
 	 * Sets the destination address of the RTSP server.
 	 * @param host The destination address
@@ -110,8 +113,9 @@ public class RtspClient {
 		mPath = path;
 	}
 
-	public synchronized boolean isRunning() {
-		return mRunning;
+	public synchronized boolean isStreaming() {
+		if (mSession == null) return false;
+		return mSession.isStreaming();
 	}
 
 	/**
@@ -159,8 +163,6 @@ public class RtspClient {
 	 */
 	public synchronized void stopStream() {
 
-		if (!mRunning) return;
-
 		try {
 			sendRequestTeardown();
 		} catch (Exception ignore) {}
@@ -188,7 +190,7 @@ public class RtspClient {
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response response = Response.parseResponse(mBufferedReader);
 
-		mRtspServerName = response.headers.get("server");
+		Log.v(TAG,"RTSP Server:" + response.headers.get("server"));
 		
 		try {
 			Matcher m = Response.rexegSession.matcher(response.headers.get("session"));
@@ -290,22 +292,10 @@ public class RtspClient {
 	}
 
 	private String addHeaders() {
-		String delimiter = "\r\n";
-		/*if (mRtspServerName != null && mRtspServerName.contains("Wowza")) {
-			Log.e(TAG,mRtspServerName);
-			// On certain versions of Wowza it appears that this is necessary
-			try {
-				Pattern regex = Pattern.compile("build(\\d+)",Pattern.CASE_INSENSITIVE);
-				Matcher matcher = regex.matcher(mRtspServerName);
-				if (Integer.parseInt(matcher.group(1))<5334) { 
-					delimiter = "\r\n\r\n";
-				}
-			} catch (Exception ignore) {ignore.printStackTrace();}
-		}*/
 		return "CSeq: " + (++mCSeq) + "\r\n" +
 		"Content-Length: 0\r\n" +
 		"Session: " + mSessionID + "\r\n" +
-		"Authorization: " + mAuthorization+ delimiter;
+		"Authorization: " + mAuthorization + "\r\n\r\n";
 	}	
 	
 	final protected static char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
@@ -360,11 +350,15 @@ public class RtspClient {
 			response.status = Integer.parseInt(matcher.group(1));
 
 			// Parsing headers of the request
-			while ( (line = input.readLine()) != null && line.length()>3 ) {
-				//Log.e(TAG,line);
-				matcher = rexegHeader.matcher(line);
-				matcher.find();
-				response.headers.put(matcher.group(1).toLowerCase(Locale.US),matcher.group(2));
+			while ( (line = input.readLine()) != null) {
+				//Log.e(TAG,"l: "+line.length()+"c: "+line);
+				if (line.length()>3) {
+					matcher = rexegHeader.matcher(line);
+					matcher.find();
+					response.headers.put(matcher.group(1).toLowerCase(Locale.US),matcher.group(2));
+				} else {
+					break;
+				}
 			}
 			if (line==null) throw new SocketException("Connection lost");
 

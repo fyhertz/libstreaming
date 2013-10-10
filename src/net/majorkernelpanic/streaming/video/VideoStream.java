@@ -131,11 +131,8 @@ public abstract class VideoStream extends MediaStream {
 				@Override
 				public void surfaceDestroyed(SurfaceHolder holder) {
 					mSurfaceReady = false;
-					if (VideoStream.this.mStreaming) {
-						VideoStream.this.stop();
-						Log.d(TAG,"Surface destroyed: video streaming stopped.");
-					}
-					if (mCamera != null) stopPreview();
+					stopPreview();
+					Log.d(TAG,"Surface destroyed !");
 				}
 				@Override
 				public void surfaceCreated(SurfaceHolder holder) {
