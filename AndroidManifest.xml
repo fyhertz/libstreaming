@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="net.majorkernelpanic.streaming"
-    android:versionCode="30"
-    android:versionName="3.0beta" >
+    android:versionCode="31"
+    android:versionName="3.0" >
 
     <uses-sdk
         android:minSdkVersion="9"

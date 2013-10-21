@@ -83,7 +83,7 @@ public class RtspClient {
 	public Session getSession() {
 		return mSession;
 	}	
-	
+
 	/**
 	 * Sets the destination address of the RTSP server.
 	 * @param host The destination address
@@ -190,8 +190,12 @@ public class RtspClient {
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response response = Response.parseResponse(mBufferedReader);
 
-		Log.v(TAG,"RTSP Server:" + response.headers.get("server"));
-		
+		if (response.headers.containsKey("server")) {
+			Log.v(TAG,"RTSP server name:" + response.headers.get("server"));
+		} else {
+			Log.v(TAG,"RTSP server name unknown");
+		}
+
 		try {
 			Matcher m = Response.rexegSession.matcher(response.headers.get("session"));
 			m.find();
@@ -293,11 +297,12 @@ public class RtspClient {
 
 	private String addHeaders() {
 		return "CSeq: " + (++mCSeq) + "\r\n" +
-		"Content-Length: 0\r\n" +
-		"Session: " + mSessionID + "\r\n" +
-		"Authorization: " + mAuthorization + "\r\n\r\n";
+				"Content-Length: 0\r\n" +
+				"Session: " + mSessionID + "\r\n" +
+				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"") + 
+				"\r\n";
 	}	
-	
+
 	final protected static char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
 	private static String bytesToHex(byte[] bytes) {
