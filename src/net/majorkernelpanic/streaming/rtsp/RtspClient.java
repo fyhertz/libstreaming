@@ -124,7 +124,7 @@ public class RtspClient {
 	 * and {@link #setCredentials(String, String)} before calling this.
 	 * Should be called of the main thread !
 	 * @param retries The number of retries that will be
-	 * @throws RuntimeException Thrown if wrong credentials have been provided, or if an error occurs with {@link Session#start()}
+	 * @throws RuntimeException Thrown if wrong credentials have been provided, if an error 403 "Access Forbidden" occured, or if an error occurs with {@link Session#start()}
 	 * @throws IllegalStateException Thrown if {@link #setServerAddress(String, int)} was never called, if the server requires authentication of the client, or if an error occurs with {@link Session#start()} 
 	 * @throws UnknownHostException Thrown if the hostname specified with {@link #setServerAddress(String, int)} can't be resolved
 	 * @throws IOException Thrown if an error occurs with {@link Session#start()}
@@ -240,6 +240,8 @@ public class RtspClient {
 
 			if (response.status == 401) throw new RuntimeException("Bad credentials !");
 
+		} else if (response.status == 403) {
+			throw new RuntimeException("Access forbidden !");
 		}
 
 	}
