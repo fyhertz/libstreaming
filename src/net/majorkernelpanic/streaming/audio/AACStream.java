@@ -211,7 +211,7 @@ public class AACStream extends AudioStream {
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mStreaming) {
-			if (mMode == MODE_MEDIACODEC_API) {
+			if ((mMode&MODE_MEDIACODEC_API)!=0) {
 				Log.d(TAG, "Interrupting threads...");
 				mThread.interrupt();
 				mAudioRecord.stop();

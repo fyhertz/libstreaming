@@ -20,8 +20,11 @@
 
 package net.majorkernelpanic.streaming.rtp;
 
+import java.io.FileOutputStream;
 import java.io.IOException;
 
+import android.annotation.SuppressLint;
+import android.os.Environment;
 import android.util.Log;
 
 /**
@@ -39,15 +42,17 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	public final static String TAG = "H264Packetizer";
 
 	private final static int MAXPACKETSIZE = 1400;
-	
+
 	private Thread t = null;
 	private int naluLength = 0;
 	private long delay = 0, oldtime = 0;
 	private Statistics stats = new Statistics();
 	private byte[] sps = null, pps = null;
 	private int count = 0;
-	
-	
+	private int streamType = 1;
+	private FileOutputStream fos = null;
+
+
 	public H264Packetizer() throws IOException {
 		super();
 		socket.setClockFrequency(90000);
@@ -62,9 +67,12 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 	public void stop() {
 		if (t != null) {
+			try {
+				is.close();
+			} catch (IOException e) {}
 			t.interrupt();
 			try {
-				t.join(1000);
+				t.join();
 			} catch (InterruptedException e) {}
 			t = null;
 		}
@@ -74,26 +82,23 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		this.pps = pps;
 		this.sps = sps;
 	}	
-	
+
 	public void run() {
 		long duration = 0, delta2 = 0;
 		Log.d(TAG,"H264 packetizer started !");
 		stats.reset();
 		count = 0;
-		
-		// This will skip the MPEG4 header if this step fails we can't stream anything :(
+
+		if (is instanceof MediaCodecInputStream) streamType = 1; else streamType = 0;
+
+		final String FILE = Environment.getExternalStorageDirectory().getPath()+"/record.h264";
+
 		try {
-			byte buffer[] = new byte[4];
-			// Skip all atoms preceding mdat atom
-			while (!Thread.interrupted()) {
-				while (is.read() != 'm');
-				is.read(buffer,0,3);
-				if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
-			}
-		} catch (IOException e) {
-			Log.e(TAG,"Couldn't skip mp4 header :/");
+			fos = new FileOutputStream(FILE);
+		} catch (Exception e1) {
+			Log.e(TAG, "Can't record stream in "+FILE);
 			return;
-		}
+		}		
 
 		try {
 			while (!Thread.interrupted()) {
@@ -133,7 +138,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 						super.send(rtphl+pps.length);
 					}					
 				}
-				
+
 				stats.push(duration);
 				// Computes the average duration of a NAL unit
 				delay = stats.average();
@@ -151,32 +156,53 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	 * Reads a NAL unit in the FIFO and sends it.
 	 * If it is too big, we split it in FU-A units (RFC 3984).
 	 */
+	@SuppressLint("NewApi")
 	private void send() throws IOException, InterruptedException {
 		int sum = 1, len = 0, type;
 		byte[] header = new byte[5];
 
-		// Read NAL unit length (4 bytes) and NAL unit header (1 byte)
-		fill(header,0,5);
-		naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
-		//naluLength = is.available();
+		if (streamType == 0) {
+			// NAL units are preceeded by their length, we parse the length
+			fill(header,0,5);
+			ts += delay;
+			naluLength = header[3]&0xFF | (header[2]&0xFF)<<8 | (header[1]&0xFF)<<16 | (header[0]&0xFF)<<24;
+			if (naluLength>100000 || naluLength<0) resync();
+		} else if (streamType == 1) {
+			// NAL units are preceeded with 0x00000001
+			fill(header,0,5);
+			ts = ((MediaCodecInputStream)is).getLastBufferInfo().presentationTimeUs*1000L;
+			//ts += delay;
+			naluLength = is.available()+1;
+			if (!(header[0]==0 && header[1]==0 && header[2]==0)) {
+				// Turns out, the NAL units are not preceeded with 0x00000001
+				Log.e(TAG, "NAL units are not preceeded by 0x00000001");
+				streamType = 2; 
+				return;
+			}
+		} else {
+			// Nothing preceededs the NAL units
+			fill(header,0,1);
+			header[4] = header[0];
+			ts = ((MediaCodecInputStream)is).getLastBufferInfo().presentationTimeUs*1000L;
+			//ts += delay;
+			naluLength = is.available()+1;
+		}
 
-		if (naluLength>100000 || naluLength<0) resync();
-
-		// Parses the NAL unit type
-		type = header[4]&0x1F;
+		fos.write(header,0,5); 
 		
+		// Parses the NAL unit type
+		type = header[0]&0x1F;
+
 		// The stream already contains NAL unit type 7 or 8, we don't need 
 		// to add them to the stream ourselves
 		if (type == 7 || type == 8) {
+			Log.v(TAG,"SPS or PPS present in the stream.");
 			count++;
 			if (count>4) {
 				sps = null;
 				pps = null;
 			}
 		}
-
-		// Updates the timestamp
-		ts += delay;
 
 		//Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay/1000000+" type: "+type);
 
@@ -185,6 +211,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			buffer = socket.requestBuffer();
 			buffer[rtphl] = header[4];
 			len = fill(buffer, rtphl+1,  naluLength-1);
+			fos.write(buffer, rtphl+1, naluLength-1);
 			socket.updateTimestamp(ts);
 			socket.markNextPacket();
 			super.send(naluLength+rtphl);
@@ -206,6 +233,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 				buffer[rtphl+1] = header[1];
 				socket.updateTimestamp(ts);
 				if ((len = fill(buffer, rtphl+2,  naluLength-sum > MAXPACKETSIZE-rtphl-2 ? MAXPACKETSIZE-rtphl-2 : naluLength-sum  ))<0) return; sum += len;
+				fos.write(buffer, rtphl+2, len);
 				// Last packet before next NAL
 				if (sum >= naluLength) {
 					// End bit on
@@ -239,8 +267,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		byte[] header = new byte[5];
 		int type;
 
-		Log.e(TAG,"Packetizer out of sync ! Let's try to fix that...");
-		
+		Log.e(TAG,"Packetizer out of sync ! Let's try to fix that...(NAL length: "+naluLength+")");
+
 		while (true) {
 
 			header[0] = header[1];

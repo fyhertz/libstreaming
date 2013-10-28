@@ -58,6 +58,7 @@ public class RtpSocket implements Runnable {
 	private long mBitRate = 0, mOctetCount = 0;
 	private int mSsrc, mSeq = 0, mPort = -1;
 	private int mBufferCount, mBufferIn, mBufferOut;
+	private int mCount = 0;
 
 	/**
 	 * This RTP socket implements a buffering mechanism relying on a FIFO of buffers and a Thread.
@@ -65,7 +66,7 @@ public class RtpSocket implements Runnable {
 	 */
 	public RtpSocket() throws IOException {
 
-		mCacheSize = 400;
+		mCacheSize = 0;
 		mBufferCount = 300; // TODO: reajust that when the FIFO is full 
 		mBufferIn = 0;
 		mBufferOut = 0;
@@ -229,7 +230,9 @@ public class RtpSocket implements Runnable {
 						long d = stats.average()/1000000;
 						//Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-						Thread.sleep(d);
+						//Thread.sleep(d);
+					} else if ((mTimestamps[mBufferOut]-mOldTimestamp)<0) {
+						Log.e(TAG,"WHAAAT ???");
 					}
 					delta += mTimestamps[mBufferOut]-mOldTimestamp;
 					if (delta>500000000 || delta<0) {
@@ -238,7 +241,7 @@ public class RtpSocket implements Runnable {
 					}
 				}
 				mOldTimestamp = mTimestamps[mBufferOut];
-				mSocket.send(mPackets[mBufferOut]);
+				if (mCount++>30) mSocket.send(mPackets[mBufferOut]);
 				if (++mBufferOut>=mBufferCount) mBufferOut = 0;
 				mBufferRequested.release();
 			}

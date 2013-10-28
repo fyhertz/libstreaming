@@ -133,6 +133,16 @@ class MP4Parser {
 		}
 		return true;
 	}
+	
+	static String toHexString(byte[] buffer,int start, int len) {
+		String c;
+		StringBuilder s = new StringBuilder();
+		for (int i=start;i<start+len;i++) {
+			c = Integer.toHexString(buffer[i]&0xFF);
+			s.append( c.length()<2 ? "0"+c : c );
+		}
+		return s.toString();
+	}
 
 }
 
@@ -161,7 +171,7 @@ class StsdBox {
 	}
 
 	public String getProfileLevel() {
-		return toHexString(sps,1,3);
+		return MP4Parser.toHexString(sps,1,3);
 	}
 
 	public String getB64PPS() {
@@ -236,16 +246,6 @@ class StsdBox {
 		}
 		return true;
 
-	}
-
-	static private String toHexString(byte[] buffer,int start, int len) {
-		String c;
-		StringBuilder s = new StringBuilder();
-		for (int i=start;i<start+len;i++) {
-			c = Integer.toHexString(buffer[i]&0xFF);
-			s.append( c.length()<2 ? "0"+c : c );
-		}
-		return s.toString();
 	}
 
 }

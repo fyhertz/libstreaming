@@ -54,12 +54,16 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 	}
 
 	public void stop() {
-		try {
-			is.close();
-		} catch (IOException ignore) {}
-		t.interrupt();
-		t = null;
-
+		if (t != null) {
+			try {
+				is.close();
+			} catch (IOException ignore) {}
+			t.interrupt();
+			try {
+				t.join();
+			} catch (InterruptedException e) {}
+			t = null;
+		}
 	}
 
 	public void run() {
