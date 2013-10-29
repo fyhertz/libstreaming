@@ -68,6 +68,7 @@ public abstract class VideoStream extends MediaStream {
 
 	protected int mEncoderColorFormat = 0;
 	protected String mEncoderName = null;
+	protected int mCameraImageFormat = 0;
 
 	// The FPS really achieved when asking for a certain FPS 
 	protected int mActualFramerate = 0;
@@ -75,7 +76,7 @@ public abstract class VideoStream extends MediaStream {
 	protected int mCorrectedFramerate = 0;
 	// The maximum possible FPS, depends on the resolution and on the Camera
 	protected int mMaxFps = 0;	
-	
+
 	/** 
 	 * Don't use this class directly.
 	 * Uses CAMERA_FACING_BACK by default.
@@ -91,6 +92,7 @@ public abstract class VideoStream extends MediaStream {
 	@SuppressLint("InlinedApi")
 	public VideoStream(int camera) {
 		super();
+		mCameraImageFormat = ImageFormat.YV12;
 		setCamera(camera);
 		if ((sSuggestedMode&MODE_MEDIACODEC_API)!=0) {
 			int yuvPlanar = MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
@@ -108,8 +110,8 @@ public abstract class VideoStream extends MediaStream {
 				return;
 			}
 
-			// We don't want to use the sofware encoder OMX.google.h264.encoder beaucause
-			// I am not sure if it is using the hardware capabilities of the phone
+			// We don't want to use the sofware encoder OMX.google.h264.encoder because
+			// it is not using the hardware capabilities of the phone
 			try {
 				codecs = (ArrayList<String>) list.get(yuvPlanar).clone();
 				codecs.remove("OMX.google.h264.encoder");
@@ -470,8 +472,9 @@ public abstract class VideoStream extends MediaStream {
 	 */
 	@SuppressLint("NewApi")
 	protected void encodeWithMediaCodecMethod1() throws RuntimeException, IOException {
-		// Opens the camera if needed
+		// Reopens the camera if needed
 		createCamera();
+		updateCamera();
 
 		// Starts the preview if needed
 		if (!mPreviewStarted) {
@@ -484,19 +487,22 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 
+		final ColorFormatTranslator convertor = new ColorFormatTranslator(mCameraImageFormat,mEncoderColorFormat,mQuality.resX,mQuality.resY);
+		
 		mMediaCodec = MediaCodec.createByCodecName(mEncoderName);
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
 		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualFramerate!=0?mActualFramerate:mQuality.framerate);	
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,mEncoderColorFormat);
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 4);
+		mediaFormat.setInteger("stride", convertor.getYStride());
+		mediaFormat.setInteger("slice-height", convertor.getUVStride());
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 		mMediaCodec.start();
 
 		final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-		final ColorFormatTranslator convertor = new ColorFormatTranslator(ImageFormat.YV12,mEncoderColorFormat,mQuality.resX,mQuality.resY);
 
-		for (int i=0;i<20;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
+		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
 
 		mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {
 			private long now = System.nanoTime()/1000, oldnow = 0;
@@ -510,10 +516,11 @@ public abstract class VideoStream extends MediaStream {
 					bufferIndex = mMediaCodec.dequeueInputBuffer(0);
 					if (bufferIndex>=0) {
 						byte[] buffer = convertor.translate(data);
+						int min = inputBuffers[bufferIndex].capacity()<buffer.length?inputBuffers[bufferIndex].capacity():buffer.length;
 						inputBuffers[bufferIndex].clear();
-						inputBuffers[bufferIndex].put(buffer, 0, buffer.length);
-						//Log.d(TAG, "Queue buffer: "+data.length+" prl: "+bufferSize);
-						mMediaCodec.queueInputBuffer(bufferIndex, 0, buffer.length, now, 0);
+						inputBuffers[bufferIndex].put(buffer, 0, min);
+						Log.d(TAG, "Encoder: "+inputBuffers[bufferIndex].capacity()+" Camera: "+buffer.length+" Cv: "+convertor.getBufferSize());
+						mMediaCodec.queueInputBuffer(bufferIndex, 0, min, now, 0);
 					} else {
 						Log.e(TAG,"No buffer available !");
 					}
@@ -574,16 +581,6 @@ public abstract class VideoStream extends MediaStream {
 
 			Parameters parameters = mCamera.getParameters();
 
-			if ((mMode&MODE_MEDIACODEC_API)!=0) {
-				parameters.setPreviewFormat(ImageFormat.YV12);
-				determineClosestSupportedResolution(parameters);
-				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-				determineClosestSupportedFramerate(parameters);
-				//parameters.setPreviewFpsRange((mQuality.framerate-10)*1000,(mQuality.framerate+10)*1000);
-				parameters.setPreviewFrameRate(mCorrectedFramerate!=0?mCorrectedFramerate:mQuality.framerate);
-				Log.d(TAG,"Fps max: "+mMaxFps+" corrected: "+mCorrectedFramerate+" actual: "+mActualFramerate);
-			}
-
 			if (mFlashState) {
 				if (parameters.getFlashMode()==null) {
 					// The phone has no flash or the choosen camera can not toggle the flash
@@ -621,7 +618,36 @@ public abstract class VideoStream extends MediaStream {
 			mUnlocked = false;
 			mPreviewStarted = false;
 		}	
-	}	
+	}
+
+	protected synchronized void updateCamera() throws IOException, RuntimeException {
+		if ((mMode&MODE_MEDIACODEC_API)!=0) {
+			if (mPreviewStarted) {
+				mPreviewStarted = false;
+				mCamera.stopPreview();
+			}
+			Parameters parameters = mCamera.getParameters();
+			parameters.setPreviewFormat(mCameraImageFormat);
+			determineClosestSupportedResolution(parameters);
+			parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+			determineClosestSupportedFramerate(parameters);
+			//parameters.setPreviewFpsRange((mQuality.framerate-10)*1000,(mQuality.framerate+10)*1000);
+			parameters.setPreviewFrameRate(mQuality.framerate);
+			try {
+				mCamera.setParameters(parameters);
+				mCamera.setDisplayOrientation(mQuality.orientation);
+				mCamera.setPreviewDisplay(mSurfaceHolder);
+				mCamera.startPreview();
+				mPreviewStarted = false;
+			} catch (RuntimeException e) {
+				destroyCamera();
+				throw e;
+			} catch (IOException e) {
+				destroyCamera();
+				throw e;
+			}
+		}
+	}
 
 	/** 
 	 * Returns an associative array of the supported color formats and the names of the encoders for a given mime type

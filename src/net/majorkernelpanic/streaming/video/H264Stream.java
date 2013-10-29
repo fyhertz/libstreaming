@@ -33,10 +33,8 @@ import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
-import android.hardware.Camera.Parameters;
 import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
@@ -138,6 +136,7 @@ public class H264Stream extends VideoStream {
 
 		boolean cameraOpen = mCamera!=null;
 		createCamera();
+		updateCamera();
 
 		// Starts the preview if needed
 		if (!mPreviewStarted) {
@@ -153,13 +152,12 @@ public class H264Stream extends VideoStream {
 		try {
 			mMediaCodec = MediaCodec.createByCodecName(mEncoderName);
 
-			final ColorFormatTranslator convertor = new ColorFormatTranslator(ImageFormat.YV12,mEncoderColorFormat,mQuality.resX,mQuality.resY);
+			final ColorFormatTranslator convertor = new ColorFormatTranslator(mCameraImageFormat,mEncoderColorFormat,mQuality.resX,mQuality.resY);
 			final byte[][] buffers = new byte[10][];
 			for (int i=0;i<10;i++) {
 				buffers[i] = new byte[convertor.getBufferSize()];
 				mCamera.addCallbackBuffer(buffers[i]);
 			}
-			Log.e(TAG, "BFS: "+convertor.getBufferSize());
 
 			MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
 			mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
@@ -182,12 +180,12 @@ public class H264Stream extends VideoStream {
 						bufferIndex = mMediaCodec.dequeueInputBuffer(0);
 						if (bufferIndex>=0) {
 							inputBuffers[bufferIndex].clear();
-							Log.e(TAG, "LENGTH: "+inputBuffers[bufferIndex].capacity());
-							inputBuffers[bufferIndex].put(data, 0, data.length);
-							Log.d(TAG, "Queue buffer: "+data.length);
-							mMediaCodec.queueInputBuffer(bufferIndex, 0, data.length, System.nanoTime()/1000, 0);
+							Log.d(TAG, "Encoder: "+inputBuffers[bufferIndex].capacity()+" Camera: "+data.length+" Cv: "+convertor.getBufferSize());
+							int min = inputBuffers[bufferIndex].capacity()<data.length?inputBuffers[bufferIndex].capacity():data.length;
+							inputBuffers[bufferIndex].put(data, 0, min);
+							mMediaCodec.queueInputBuffer(bufferIndex, 0, min, System.nanoTime()/1000, 0);
 						} else {
-							Log.e(TAG,"No buffer available !");
+							//Log.e(TAG,"No buffer available !");
 						}
 					} catch (IllegalStateException ignore) {}
 					mCamera.addCallbackBuffer(data);

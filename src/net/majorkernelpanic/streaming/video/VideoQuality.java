@@ -78,7 +78,7 @@ public class VideoQuality {
 	}
 
 	public VideoQuality clone() {
-		return new VideoQuality(resX,resY,framerate,bitrate);
+		return new VideoQuality(resX,resY,framerate,bitrate,orientation);
 	}
 
 	public static VideoQuality parseQuality(String str) {
