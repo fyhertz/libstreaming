@@ -59,11 +59,16 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 	}
 
 	public void stop() {
-		try {
-			is.close();
-		} catch (IOException ignore) {}
-		t.interrupt();
-		t = null;
+		if (t != null) {
+			try {
+				is.close();
+			} catch (IOException ignore) {}
+			t.interrupt();
+			try {
+				t.join();
+			} catch (InterruptedException e) {}
+			t = null;
+		}
 	}
 
 	public void run() {
@@ -105,18 +110,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 				socket.updateTimestamp(ts);
 				socket.markNextPacket();
 
-				// We wait a little to avoid sending to many packets too quickly
-				now = System.nanoTime();
-				delta += (now-oldtime)/1000000;
-				oldtime = now;
 				//Log.d(TAG,"expected: "+ expected + " measured: "+measured);
-				
-				if (intervalBetweenReports>0) {
-					if (delta>=intervalBetweenReports) {
-						delta = 0;
-						report.send(now,ts*samplingRate/1000000000L);
-					}
-				}
 				
 				send(rtphl+1+AMR_FRAME_HEADER_LENGTH+frameLength);
 				

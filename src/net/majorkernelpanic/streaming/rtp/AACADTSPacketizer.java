@@ -127,15 +127,6 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 				// We update the RTP timestamp
 				ts +=  1024L*1000000000L/samplingRate; //stats.average();
 
-				// We send one RTCP Sender Report every 5 secs
-				now = SystemClock.elapsedRealtime();
-				if (intervalBetweenReports>0) {
-					if (now-oldtime>=intervalBetweenReports) {
-						oldtime = now;
-						report.send(System.nanoTime(),ts*samplingRate/1000000000L);
-					}
-				}
-
 				//Log.d(TAG,"frameLength: "+frameLength+" protection: "+protection+" p: "+profile+" sr: "+samplingRate);
 
 				sum = 0;

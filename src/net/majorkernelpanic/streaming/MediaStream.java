@@ -42,10 +42,13 @@ public abstract class MediaStream implements Stream {
 	protected static final String TAG = "MediaStream";
 
 	/** MediaStream forwards data to a packetizer through a LocalSocket. */
-	public static final int MODE_MEDIARECORDER_API = 0x00;
+	public static final byte MODE_MEDIARECORDER_API = 0x01;
 
-	/** MediaStream uses the new MediaCodec API introduced in JB 4.2 to stream audio/video. */
-	public static final int MODE_MEDIACODEC_API = 0x01;
+	/** MediaStream uses the new MediaCodec API introduced in JB 4.1 to stream audio/video. */
+	public static final byte MODE_MEDIACODEC_API = 0x02;
+	
+	/** MediaStream uses the new features of the MediaCodec API introduced in JB 4.3 to stream audio/video. */
+	public static final byte MODE_MEDIACODEC_API_2 = 0x05;
 
 	/** The packetizer that will read the output of the camera and send RTP packets over the networkd. */
 	protected AbstractPacketizer mPacketizer = null;
@@ -56,8 +59,8 @@ public abstract class MediaStream implements Stream {
 	private int mSocketId;
 
 	protected boolean mStreaming = false;
-	protected int mMode = MODE_MEDIARECORDER_API;
-	protected static int sSuggestedMode = MODE_MEDIARECORDER_API; 
+	protected byte mMode = MODE_MEDIARECORDER_API;
+	protected static byte sSuggestedMode = MODE_MEDIARECORDER_API; 
 
 	private LocalServerSocket mLss = null;
 	protected LocalSocket mReceiver, mSender = null;
@@ -80,15 +83,6 @@ public abstract class MediaStream implements Stream {
 	
 	public MediaStream() {
 		mMode = sSuggestedMode;
-	}
-
-	/**
-	 * By default, the API that will be used to encode video or audio is choosen automatically depending
-	 * on the capabilities of the phone, and what have been implemented in libstreaming.
-	 * @param mode {@link MediaStream#MODE_MEDIACODEC_API} or {@link MediaStream#MODE_MEDIACODEC_API} 
-	 */
-	public void setAPI(int mode) {
-		mMode = mode;
 	}
 	
 	/** 
@@ -163,7 +157,7 @@ public abstract class MediaStream implements Stream {
 	 * If the mode is set to {@link #MODE_MEDIARECORDER_API}, video is forwarded to a UDP socket.
 	 * @param mode Either {@link #MODE_MEDIARECORDER_API} or {@link #MODE_MEDIACODEC_API} 
 	 */
-	public void setMode(int mode) throws IllegalStateException {
+	public void setMode(byte mode) throws IllegalStateException {
 		if (mStreaming) throw new IllegalStateException("Can't be called while streaming !");
 		this.mMode = mode;
 	}
@@ -200,14 +194,11 @@ public abstract class MediaStream implements Stream {
 		if (mRtpPort<=0 || mRtcpPort<=0)
 			throw new IllegalStateException("No destination ports set for the stream !");
 
-		switch (mMode) {
-		case MODE_MEDIARECORDER_API: 
-			encodeWithMediaRecorder(); 
-			break;
-		case MODE_MEDIACODEC_API: 
+		if ((mMode&MODE_MEDIACODEC_API)!=0) {
 			encodeWithMediaCodec();
-			break;
-		};
+		} else {
+			encodeWithMediaRecorder();
+		}
 		
 	}
 

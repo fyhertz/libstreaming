@@ -22,11 +22,16 @@ package net.majorkernelpanic.streaming.mp4;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
+import android.util.Base64;
+import android.util.Log;
+
 /**
  * Finds SPS & PPS parameters in mp4 file.
  */
 public class MP4Config {
 
+	public final static String TAG = "MP4Config";
+	
 	private MP4Parser mp4Parser;
 	private String mProfilLevel, mPPS, mSPS;
 
@@ -35,6 +40,12 @@ public class MP4Config {
 		mPPS = pps; 
 		mSPS = sps;
 	}
+
+	public MP4Config(byte[] sps, byte[] pps) {
+		mPPS = Base64.encodeToString(pps, 0, pps.length, Base64.NO_WRAP);
+		mSPS = Base64.encodeToString(sps, 0, sps.length, Base64.NO_WRAP);
+		mProfilLevel = MP4Parser.toHexString(sps,1,3);
+	}	
 	
 	/**
 	 * Finds sps & pps parameters inside a .mp4.
@@ -72,10 +83,12 @@ public class MP4Config {
 	}
 
 	public String getB64PPS() {
+		Log.d(TAG, "PPS: "+mPPS);
 		return mPPS;
 	}
 
 	public String getB64SPS() {
+		Log.d(TAG, "SPS: "+mSPS);
 		return mSPS;
 	}
 

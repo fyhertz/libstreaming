@@ -21,7 +21,10 @@
 package net.majorkernelpanic.streaming.video;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -38,7 +41,9 @@ import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 
@@ -49,16 +54,26 @@ public abstract class VideoStream extends MediaStream {
 
 	protected final static String TAG = "VideoStream";
 
+	private static HashMap<String,SparseArray<ArrayList<String>>> sSupportedColorFormats = new HashMap<String, SparseArray<ArrayList<String>>>(); 
+
 	protected VideoQuality mQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
 	protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
 	protected SurfaceHolder mSurfaceHolder = null;
 	protected int mVideoEncoder, mCameraId = 0;
 	protected Camera mCamera;
+	
 	protected boolean mCameraOpenedManually = true;
 	protected boolean mFlashState = false;
 	protected boolean mSurfaceReady = false;
 	protected boolean mUnlocked = false;
 	protected boolean mPreviewStarted = false;
+
+	protected CodecManager.Codecs mCodecs;
+	protected String mMimeType;
+	protected String mEncoderName;
+	protected int mEncoderColorFormat;
+	protected int mCameraImageFormat;
+	protected int mMaxFps = 0;	
 
 	/** 
 	 * Don't use this class directly.
@@ -72,13 +87,49 @@ public abstract class VideoStream extends MediaStream {
 	 * Don't use this class directly
 	 * @param camera Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
 	 */
+	@SuppressLint("InlinedApi")
 	public VideoStream(int camera) {
 		super();
 		setCamera(camera);
-		// TODO: Remove this when encoding with the MediaCodec API is ready
-		setMode(MODE_MEDIARECORDER_API);
 	}
 
+	/**
+	 * Called by subclasses. 
+	 */
+	protected void init(String mimeType) {
+		mCameraImageFormat = ImageFormat.YV12;
+		mMimeType = mimeType;
+		
+		if (sSuggestedMode == MODE_MEDIACODEC_API) {
+			mCodecs = CodecManager.Selector.findCodecsFormMimeType(mMimeType, false);
+			
+			if (mCodecs.hardwareCodec == null && mCodecs.softwareCodec == null ) {
+				mMode = MODE_MEDIARECORDER_API;
+				Log.e(TAG,"No encoder can be used on this phone, we will use the MediaRecorder API");
+				
+			} else if (Build.VERSION.SDK_INT<18) {
+				if (mCodecs.softwareCodec != null) {
+					// On android 4.1 and 4.2, hardware encoders can behave oddly...
+					mEncoderColorFormat = mCodecs.softwareColorFormat;
+					mEncoderName = mCodecs.softwareCodec;					
+				} else {
+					mMode = MODE_MEDIARECORDER_API;
+					Log.e(TAG,"Not using the hardware encoder because phone is running 4.1 or 4.2, we will use the MediaRecorder API");
+				}
+				
+			} else {
+				if (mCodecs.hardwareCodec != null) {
+					mEncoderColorFormat = mCodecs.hardwareColorFormat;
+					mEncoderName = mCodecs.hardwareCodec;
+				} else {
+					mEncoderColorFormat = mCodecs.softwareColorFormat;
+					mEncoderName = mCodecs.softwareCodec;	
+				}
+			}
+			
+		}
+	}
+	
 	/**
 	 * Sets the camera that will be used to capture video.
 	 * You can call this method at any time and changes will take effect next time you start the stream.
@@ -243,7 +294,7 @@ public abstract class VideoStream extends MediaStream {
 	 */
 	public void setVideoQuality(VideoQuality videoQuality) {
 		if (!mQuality.equals(videoQuality)) {
-			mQuality = videoQuality;
+			mQuality = videoQuality.clone();
 		}
 	}
 
@@ -276,7 +327,7 @@ public abstract class VideoStream extends MediaStream {
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mCamera != null) {
-			if (mMode == MODE_MEDIACODEC_API) {
+			if ((mMode&MODE_MEDIACODEC_API)!=0) {
 				mCamera.setPreviewCallback(null);
 			}
 			super.stop();
@@ -348,7 +399,9 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
 		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
-		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+		
+		// The bandwidth actually consumed is often above what was requested 
+		mMediaRecorder.setVideoEncodingBitRate((int)(mQuality.bitrate*0.8));
 
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
@@ -357,6 +410,21 @@ public abstract class VideoStream extends MediaStream {
 
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
+
+		// This will skip the MPEG4 header if this step fails we can't stream anything :(
+		InputStream is = mReceiver.getInputStream();
+		try {
+			byte buffer[] = new byte[4];
+			// Skip all atoms preceding mdat atom
+			while (!Thread.interrupted()) {
+				while (is.read() != 'm');
+				is.read(buffer,0,3);
+				if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
+			}
+		} catch (IOException e) {
+			Log.e(TAG,"Couldn't skip mp4 header :/");
+			stop();
+		}
 
 		try {
 			// mReceiver.getInputStream contains the data from the camera
@@ -372,14 +440,28 @@ public abstract class VideoStream extends MediaStream {
 
 	}
 
+
 	/**
 	 * Encoding of the audio/video is done by a MediaCodec.
 	 */
-	@SuppressLint({ "InlinedApi", "NewApi" })
 	protected void encodeWithMediaCodec() throws RuntimeException, IOException {
+		if ((mMode&MODE_MEDIACODEC_API_2)!=0) {
+			// Uses the method MediaCodec.createInputSurface to feed the encoder
+			encodeWithMediaCodecMethod2();
+		} else {
+			// Uses dequeueInputBuffer to feed the encoder
+			encodeWithMediaCodecMethod1();
+		}
+	}	
 
-		// Opens the camera if needed
+	/**
+	 * Encoding of the audio/video is done by a MediaCodec.
+	 */
+	@SuppressLint("NewApi")
+	protected void encodeWithMediaCodecMethod1() throws RuntimeException, IOException {
+		// Reopens the camera if needed
 		createCamera();
+		updateCamera();
 
 		// Starts the preview if needed
 		if (!mPreviewStarted) {
@@ -392,31 +474,45 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 
-		mMediaCodec = MediaCodec.createEncoderByType("video/avc");
+		final CodecManager.Translator convertor = new CodecManager.Translator(mEncoderColorFormat,mQuality.resX,mQuality.resY);
+		
+		mMediaCodec = MediaCodec.createByCodecName(mEncoderName);
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
 		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);	
-		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar);
+		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,mEncoderColorFormat);
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 4);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 		mMediaCodec.start();
 
 		final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
 
-		mCamera.setPreviewCallback(new Camera.PreviewCallback() {
+		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
+
+		mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {
+			private long now = System.nanoTime()/1000, oldnow = 0;
+			private int bufferIndex;
 			@Override
 			public void onPreviewFrame(byte[] data, Camera camera) {
-				long now = System.nanoTime()/1000, timeout = 1000000/mQuality.framerate;
-				int bufferIndex = mMediaCodec.dequeueInputBuffer(timeout);
-
-				if (bufferIndex>=0) {
-					inputBuffers[bufferIndex].clear();
-					inputBuffers[bufferIndex].put(data, 0, data.length);
-					mMediaCodec.queueInputBuffer(bufferIndex, 0, data.length, System.nanoTime()/1000, 0);
-				} else {
-					Log.e(TAG,"No buffer available !");
+				oldnow = now;
+				now = System.nanoTime()/1000;
+				//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
+				try {
+					bufferIndex = mMediaCodec.dequeueInputBuffer(0);
+					if (bufferIndex>=0) {
+						byte[] buffer = convertor.translate(data);
+						int min = inputBuffers[bufferIndex].capacity()<buffer.length?inputBuffers[bufferIndex].capacity():buffer.length;
+						inputBuffers[bufferIndex].clear();
+						inputBuffers[bufferIndex].put(buffer, 0, min);
+						//Log.d(TAG, "E: "+inputBuffers[bufferIndex].capacity()+" C1: "+buffer.length+" C2: "+convertor.getBufferSize());
+						mMediaCodec.queueInputBuffer(bufferIndex, 0, min, now, 0);
+					} else {
+						Log.e(TAG,"No buffer available !");
+					}
+				} catch (IllegalStateException e) {
+				} finally {
+					mCamera.addCallbackBuffer(data);
 				}
-
 			}
 		});
 
@@ -431,6 +527,14 @@ public abstract class VideoStream extends MediaStream {
 			stop();
 			throw new IOException("Something happened with the local sockets :/ Start failed !");
 		}
+
+	}
+
+	/**
+	 * Encoding of the audio/video is done by a MediaCodec.
+	 */
+	@SuppressLint({ "InlinedApi", "NewApi" })	
+	protected void encodeWithMediaCodecMethod2() throws RuntimeException, IOException {
 
 	}
 
@@ -462,13 +566,6 @@ public abstract class VideoStream extends MediaStream {
 
 			Parameters parameters = mCamera.getParameters();
 
-			if (mMode == MODE_MEDIACODEC_API) {
-				getClosestSupportedQuality(parameters);
-				parameters.setPreviewFormat(ImageFormat.YV12);
-				parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-				parameters.setPreviewFrameRate(mQuality.framerate);
-			}
-
 			if (mFlashState) {
 				if (parameters.getFlashMode()==null) {
 					// The phone has no flash or the choosen camera can not toggle the flash
@@ -480,7 +577,7 @@ public abstract class VideoStream extends MediaStream {
 
 			try {
 				mCamera.setParameters(parameters);
-				mCamera.setDisplayOrientation(mQuality.orientation);
+				//mCamera.setDisplayOrientation(mQuality.orientation);
 				mCamera.setPreviewDisplay(mSurfaceHolder);
 			} catch (RuntimeException e) {
 				destroyCamera();
@@ -506,50 +603,129 @@ public abstract class VideoStream extends MediaStream {
 			mUnlocked = false;
 			mPreviewStarted = false;
 		}	
-	}	
-	
-	/** Verifies if streaming using the MediaCodec API is feasable. */
-	@SuppressLint("NewApi")
-	private void checkMediaCodecAPI() {
-		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
-			MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
-			if (codecInfo.isEncoder()) {
-				MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType("video/avc");
-				for (int i = 0; i < capabilities.colorFormats.length; i++) {
-					int format = capabilities.colorFormats[i];
-					Log.e(TAG, codecInfo.getName()+" with color format " + format);           
-				}
-				/*for (int i = 0; i < capabilities.profileLevels; i++) {
-					int format = capabilities.colorFormats[i];
-					Log.e(TAG, codecInfo.getName()+" with color format " + format);           
-				}*/
+	}
+
+	protected synchronized void updateCamera() throws IOException, RuntimeException {
+		if ((mMode&MODE_MEDIACODEC_API)!=0) {
+			if (mPreviewStarted) {
+				mPreviewStarted = false;
+				mCamera.stopPreview();
+			}
+			Parameters parameters = mCamera.getParameters();
+			parameters.setPreviewFormat(mCameraImageFormat);
+			determineClosestSupportedResolution(parameters);
+			parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+			determineClosestSupportedFramerate(parameters);
+			//parameters.setPreviewFpsRange((mQuality.framerate-10)*1000,(mQuality.framerate+10)*1000);
+			parameters.setPreviewFrameRate(mQuality.framerate);
+			try {
+				mCamera.setParameters(parameters);
+				mCamera.setDisplayOrientation(mQuality.orientation);
+				mCamera.setPreviewDisplay(mSurfaceHolder);
+				mCamera.startPreview();
+				mPreviewStarted = false;
+			} catch (RuntimeException e) {
+				destroyCamera();
+				throw e;
+			} catch (IOException e) {
+				destroyCamera();
+				throw e;
 			}
 		}
 	}
 
 	/** 
-	 * Checks if the resolution and the framerate selected are supported by the camera.
-	 * If not, it modifies it by supported parameters. 
-	 * FIXME: Not reliable, more or less useless :(
+	 * Returns an associative array of the supported color formats and the names of the encoders for a given mime type
+	 * The goal here will be to check if either YUV420SemiPlanar or YUV420Planar color formats 
+	 * are supported by one of the encoders of the phone.
+	 * This can take up to sec to return apparently !
 	 **/
-	private void getClosestSupportedQuality(Camera.Parameters parameters) {
+	@SuppressLint("NewApi")
+	static protected SparseArray<ArrayList<String>> findSupportedColorFormats(String mimeType) {
+		SparseArray<ArrayList<String>> list = new SparseArray<ArrayList<String>>();
 
-		// Resolutions
+		if (sSupportedColorFormats.containsKey(mimeType)) {
+			return sSupportedColorFormats.get(mimeType); 
+		}
+
+		Log.v(TAG,"Searching supported color formats for mime type "+mimeType);
+
+		// We loop through the encoders, apparently this can take up to a sec (testes on a GS3)
+		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
+			MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
+			if (!codecInfo.isEncoder()) continue;
+
+			String[] types = codecInfo.getSupportedTypes();
+			for (int i = 0; i < types.length; i++) {
+				if (types[i].equalsIgnoreCase(mimeType)) {
+					MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
+					// And through the color formats supported
+					for (int k = 0; k < capabilities.colorFormats.length; k++) {
+						int format = capabilities.colorFormats[k];
+						if (list.get(format) == null) list.put(format, new ArrayList<String>());
+						list.get(format).add(codecInfo.getName());
+					}
+				}
+			}
+		}
+
+		// Logs the supported color formats on the phone
+		StringBuilder e = new StringBuilder();
+		e.append("Supported color formats on this phone: ");
+		for (int i=0;i<list.size();i++) e.append(list.keyAt(i)+(i==list.size()-1?".":", "));
+		Log.v(TAG, e.toString());
+
+		sSupportedColorFormats.put(mimeType, list);
+		return list;
+	}
+
+	/** 
+	 * Checks if the requested resolution is supported by the camera.
+	 * If not, it modifies it by supported parameters. 
+	 **/
+	protected void determineClosestSupportedResolution(Camera.Parameters parameters) {
+		int minDist = Integer.MAX_VALUE, newResX = mQuality.resX, newResY = mQuality.resY;
 		String supportedSizesStr = "Supported resolutions: ";
 		List<Size> supportedSizes = parameters.getSupportedPreviewSizes();
 		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
 			Size size = it.next();
 			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");
+			int dist = Math.abs(mQuality.resX - size.width);
+			if (dist<minDist) {
+				minDist = dist;
+				newResX = size.width;
+				newResY = size.height;
+			}
 		}
 		Log.v(TAG,supportedSizesStr);
+		mQuality.resX = newResX;
+		mQuality.resY = newResY;
+	}
 
+	/** 
+	 * Checks if the framerate is supported by the camera.
+	 * If not, it modifies it by supported parameters. 
+	 **/	
+	protected void determineClosestSupportedFramerate(Camera.Parameters parameters) {
 		// Frame rates
 		String supportedFrameRatesStr = "Supported frame rates: ";
 		List<Integer> supportedFrameRates = parameters.getSupportedPreviewFrameRates();
 		for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
 			supportedFrameRatesStr += it.next()+"fps"+(it.hasNext()?", ":"");
 		}
-		//Log.v(TAG,supportedFrameRatesStr);
+		Log.v(TAG,supportedFrameRatesStr);
+
+		// Frame rates
+		String supportedFpsRangesStr = "Supported frame rates: ";
+		int maxFps = 0;
+		List<int[]> supportedFpsRanges = parameters.getSupportedPreviewFpsRange();
+		for (Iterator<int[]> it = supportedFpsRanges.iterator(); it.hasNext();) {
+			int[] interval = it.next();
+			supportedFpsRangesStr += interval[0]+"-"+interval[1]+"fps"+(it.hasNext()?", ":"");
+			if (interval[1]/1000>maxFps) maxFps = interval[1]/1000; 
+		}
+		this.mMaxFps = maxFps;
+		Log.v(TAG,supportedFpsRangesStr);
 
 		int minDist = Integer.MAX_VALUE, newFps = mQuality.framerate;
 		if (!supportedFrameRates.contains(mQuality.framerate)) {
@@ -562,9 +738,8 @@ public abstract class VideoStream extends MediaStream {
 				}
 			}
 			Log.v(TAG,"Frame rate modified: "+mQuality.framerate+"->"+newFps);
-			//mQuality.framerate = newFps;
+			mQuality.framerate = newFps;
 		}
-
 	}
 
 	protected void lockCamera() {
