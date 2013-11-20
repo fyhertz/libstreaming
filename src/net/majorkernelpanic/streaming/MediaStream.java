@@ -50,6 +50,9 @@ public abstract class MediaStream implements Stream {
 	/** MediaStream uses the new features of the MediaCodec API introduced in JB 4.3 to stream audio/video. */
 	public static final byte MODE_MEDIACODEC_API_2 = 0x05;
 
+	/** Prefix that will be used for all shared preferences saved by libstreaming */
+	protected static final String PREF_PREFIX = "libstreaming-";
+	
 	/** The packetizer that will read the output of the camera and send RTP packets over the networkd. */
 	protected AbstractPacketizer mPacketizer = null;
 
@@ -206,19 +209,22 @@ public abstract class MediaStream implements Stream {
 	@SuppressLint("NewApi")
 	public synchronized  void stop() {
 		if (mStreaming) {
-			mPacketizer.stop();
 			try {
 				if (mMode==MODE_MEDIARECORDER_API) {
 					mMediaRecorder.stop();
 					mMediaRecorder.release();
+					closeSockets();
+					mPacketizer.stop();
 					mMediaRecorder = null;
 				} else {
+					mPacketizer.stop();
 					mMediaCodec.stop();
 					mMediaCodec.release();
 					mMediaCodec = null;
 				}
-				closeSockets();
-			} catch (Exception ignore) {}	
+			} catch (Exception e) {
+				e.printStackTrace();
+			}	
 			mStreaming = false;
 		}
 	}

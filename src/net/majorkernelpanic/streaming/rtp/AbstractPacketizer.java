@@ -39,19 +39,16 @@ abstract public class AbstractPacketizer {
 	protected static final int rtphl = RtpSocket.RTP_HEADER_LENGTH;
 
 	protected RtpSocket socket = null;
-	protected SenderReport report = null;
 	protected InputStream is = null;
 	protected byte[] buffer;
 	
-	protected long ts = 0, intervalBetweenReports = 5000, delta = 0;
+	protected long ts = 0;
 
 	public AbstractPacketizer() throws IOException {
 		int ssrc = new Random().nextInt();
 		ts = new Random().nextInt();
 		socket = new RtpSocket();
-		report = new SenderReport();
 		socket.setSSRC(ssrc);
-		report.setSSRC(ssrc);
 	}
 
 	public RtpSocket getRtpSocket() {
@@ -59,13 +56,12 @@ abstract public class AbstractPacketizer {
 	}
 
 	public SenderReport getRtcpSocket() {
-		return report;
+		return socket.getRtcpSocket();
 	}
 
 
 	public void setSSRC(int ssrc) {
 		socket.setSSRC(ssrc);
-		report.setSSRC(ssrc);
 	}
 
 	public int getSSRC() {
@@ -87,20 +83,9 @@ abstract public class AbstractPacketizer {
 	 * @param rtcpPort Destination port that will be used for RTCP
 	 */
 	public void setDestination(InetAddress dest, int rtpPort, int rtcpPort) {
-		socket.setDestination(dest, rtpPort);
-		report.setDestination(dest, rtcpPort);		
+		socket.setDestination(dest, rtpPort, rtcpPort);		
 	}
 
-	/**
-	 * Sets the temporal interval between two RTCP Sender Reports.
-	 * Default interval is set to 5 secondes.
-	 * Set 0 to disable RTCP.
-	 * @param interval The interval in milliseconds
-	 */
-	public void setSenderReportsInterval(long interval) {
-		intervalBetweenReports = interval;
-	}
-	
 	/** Starts the packetizer. */
 	public abstract void start() throws IOException;
 
@@ -110,7 +95,6 @@ abstract public class AbstractPacketizer {
 	/** Updates data for RTCP SR and sends the packet. */
 	protected void send(int length) throws IOException {
 		socket.commitBuffer(length);
-		report.update(length);
 	}
 
 	/** For debugging purposes. */

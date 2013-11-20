@@ -22,20 +22,18 @@ package net.majorkernelpanic.streaming.video;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import net.majorkernelpanic.streaming.mp4.MP4Config;
 import net.majorkernelpanic.streaming.rtp.H264Packetizer;
-import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
-import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaCodec;
+import android.media.MediaCodec.BufferInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Environment;
@@ -53,7 +51,6 @@ public class H264Stream extends VideoStream {
 
 	public final static String TAG = "H264Stream";
 
-	private SharedPreferences mSettings = null;
 	private Semaphore mLock = new Semaphore(0);
 
 	/**
@@ -72,16 +69,10 @@ public class H264Stream extends VideoStream {
 	 */
 	public H264Stream(int cameraId) throws IOException {
 		super(cameraId);
+		//mMode = MODE_MEDIARECORDER_API;
+		init("video/avc");
 		setVideoEncoder(MediaRecorder.VideoEncoder.H264);
 		mPacketizer = new H264Packetizer();
-	}
-
-	/**
-	 * Some data (SPS and PPS params) needs to be stored when {@link #generateSessionDescription()} is called 
-	 * @param prefs The SharedPreferences that will be used to save SPS and PPS parameters
-	 */
-	public void setPreferences(SharedPreferences prefs) {
-		mSettings = prefs;
 	}
 
 	/**
@@ -117,19 +108,18 @@ public class H264Stream extends VideoStream {
 	// Should not be called by the UI thread
 	@SuppressLint("NewApi")
 	private MP4Config testMediaCodecAPI() throws RuntimeException, IOException {
-		final Semaphore lock = new Semaphore(0);
 		byte[] sps = null, pps = null;
-		String prefix = "h264-mc-"+mEncoderName+"-";
-
+		String key = PREF_PREFIX+"h264-mc-"+mEncoderName+"-"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
+		
 		if (mSettings != null) {
-			if (mSettings.contains(prefix+mQuality.framerate+","+mQuality.resX+","+mQuality.resY)) {
-				String[] s = mSettings.getString(prefix+mQuality.framerate+","+mQuality.resX+","+mQuality.resY, "").split(",");
-				//mActualFramerate = mSettings.getInt(prefix+"act-"+mQuality.framerate, mQuality.framerate);
-				//mCorrectedFramerate = mSettings.getInt(prefix+"cor-"+mQuality.framerate, mQuality.framerate);
+			if (mSettings.contains(key)) {
+				String[] s = mSettings.getString(key, "").split(",");
 				return new MP4Config(s[0],s[1],s[2]);
 			}
 		}
 
+		Log.i(TAG,"Testing H264 support...");		
+		
 		// Save flash state & set it to false so that led remains off while testing h264
 		boolean savedFlashState = mFlashState;
 		mFlashState = false;
@@ -150,100 +140,119 @@ public class H264Stream extends VideoStream {
 		}
 
 		try {
+
+			CodecManager.NV21Translator convertor = new CodecManager.NV21Translator(mEncoderName, mEncoderColorFormat,mActualQuality.resX,mActualQuality.resY);
+			for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
 			mMediaCodec = MediaCodec.createByCodecName(mEncoderName);
-
-			final ColorFormatTranslator convertor = new ColorFormatTranslator(mCameraImageFormat,mEncoderColorFormat,mQuality.resX,mQuality.resY);
-			final byte[][] buffers = new byte[10][];
-			for (int i=0;i<10;i++) {
-				buffers[i] = new byte[convertor.getBufferSize()];
-				mCamera.addCallbackBuffer(buffers[i]);
-			}
-
-			MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
-			mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
+			MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mActualQuality.resX, mActualQuality.resY);
+			mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mActualQuality.bitrate);
 			mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,mEncoderColorFormat);
-			mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 4);						
-			mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);
+			mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);	
+			mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualQuality.framerate);
 			mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 			mMediaCodec.start();
+			
 			final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
+			BufferInfo info = new BufferInfo();
 
+			// Some encoders won't give us the SPS and PPS unless they receive something to encode first...
 			mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {
-				// FIXME: compute the actual framerate and pass it to the MediaCodec
-				private long now = 0, oldnow = 0, fps = 0, average = 0, n = 0;
-				private int bufferIndex, i = 0, averageFps = 0;
 				@Override
 				public void onPreviewFrame(byte[] data, Camera camera) {
-					oldnow = now;
-					now = System.nanoTime()/1000;
+					long now = System.nanoTime()/1000;
 					try {
-						bufferIndex = mMediaCodec.dequeueInputBuffer(0);
+						int bufferIndex = mMediaCodec.dequeueInputBuffer(0);
 						if (bufferIndex>=0) {
+							Log.e(TAG,"Buffer capacity: "+inputBuffers[bufferIndex].capacity()+" Length: "+data.length);
 							inputBuffers[bufferIndex].clear();
-							Log.d(TAG, "Encoder: "+inputBuffers[bufferIndex].capacity()+" Camera: "+data.length+" Cv: "+convertor.getBufferSize());
 							int min = inputBuffers[bufferIndex].capacity()<data.length?inputBuffers[bufferIndex].capacity():data.length;
 							inputBuffers[bufferIndex].put(data, 0, min);
-							mMediaCodec.queueInputBuffer(bufferIndex, 0, min, System.nanoTime()/1000, 0);
+							mMediaCodec.queueInputBuffer(bufferIndex, 0, min, now, 0);
 						} else {
-							//Log.e(TAG,"No buffer available !");
+							Log.e(TAG,"No buffer available !");
 						}
 					} catch (IllegalStateException ignore) {}
 					mCamera.addCallbackBuffer(data);
 				}
-			});			
+			});
 
-			InputStream is = new MediaCodecInputStream(mMediaCodec);
-			byte[] buffer = new byte[2048];
+			ByteBuffer[] buffers = mMediaCodec.getOutputBuffers();
+			byte[] buffer = new byte[128];
 			int len = 0, p = 4, q = 4, c = 0;
 
-			while ((pps == null || sps == null) && c++<300) {
-				len = is.read(buffer,0,buffer.length);
-				//StringBuilder e = new StringBuilder();
-				//for (int i=0;i<len;i++) e.append(Integer.toHexString(buffer[i]&0xFF)+",");
-				//Log.e(TAG,e.toString());
-				if (len>0 && buffer[0]==0 && buffer[1]==0 && buffer[2]==0 && buffer[3]==1) {
-					Log.d(TAG,"SPS or/and PPS found !");
-					// Parses the SPS and PPS, they could be in different packets and in a different order depending on the phone
-					// so we don't make any assumption about that
-					while (p<len) {
-						while (!(buffer[p+0]==0 && buffer[p+1]==0 && buffer[p+2]==0 && buffer[p+3]==1) && p+3<len) p++;
-						if (p+3>=len) p=len;
-						if ((buffer[q]&0x1F)==7) {
-							sps = new byte[p-q];
-							System.arraycopy(buffer, q, sps, 0, p-q);
-						} else {
-							pps = new byte[p-q];
-							System.arraycopy(buffer, q, pps, 0, p-q);
-						}
-						p += 4;
-						q = p;
+			// We are looking for the SPS and the PPS here. As always, Android is very inconsistent, I have observed that some
+			// encoders will give those parameters through the MediaFormat object (that is the normal behaviour).
+			// But some other will not, in that case we try to find a NAL unit of type 7 or 8 in the byte stream outputed by the encoder...
+			
+			while (!Thread.interrupted() && c++<10 && (sps==null || pps==null)) {
+				int index = mMediaCodec.dequeueOutputBuffer(info, 1000000);
+				
+				if (index == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
+					Log.i(TAG,"INFO_OUTPUT_FORMAT_CHANGED");
+					// The PPS and PPS shoud be there
+					MediaFormat format = mMediaCodec.getOutputFormat();
+					ByteBuffer spsb = format.getByteBuffer("csd-0");
+					ByteBuffer ppsb = format.getByteBuffer("csd-1");
+					sps = new byte[spsb.capacity()-4];
+					spsb.position(4);
+					spsb.get(sps,0,sps.length);
+					pps = new byte[ppsb.capacity()-4];
+					ppsb.position(4);
+					ppsb.get(pps,0,pps.length);
+					break;
+					
+				} else if (index == MediaCodec.INFO_OUTPUT_BUFFERS_CHANGED) {
+					Log.i(TAG,"INFO_OUTPUT_BUFFERS_CHANGED");
+					buffers = mMediaCodec.getOutputBuffers();				
+				} else if (index>=0) {
+					
+					len = info.size;
+					if (len<128) {
+						
+						buffers[index].get(buffer,0,len);
+						if (len>0 && buffer[0]==0 && buffer[1]==0 && buffer[2]==0 && buffer[3]==1) {
+							// Parses the SPS and PPS, they could be in two different packets and in a different order 
+							//depending on the phone so we don't make any assumption about that
+							while (p<len) {
+								while (!(buffer[p+0]==0 && buffer[p+1]==0 && buffer[p+2]==0 && buffer[p+3]==1) && p+3<len) p++;
+								if (p+3>=len) p=len;
+								if ((buffer[q]&0x1F)==7) {
+									sps = new byte[p-q];
+									System.arraycopy(buffer, q, sps, 0, p-q);
+								} else {
+									pps = new byte[p-q];
+									System.arraycopy(buffer, q, pps, 0, p-q);
+								}
+								p += 4;
+								q = p;
+							}
+						}					
 					}
+					mMediaCodec.releaseOutputBuffer(index, false);
 				}
-			}
+			}	
 
+			Log.d(TAG,"SPS and PPS found !");
+			
 			if (pps == null || sps == null) throw new RuntimeException("Could not determine the SPS & PPS.");
 
-			is.close();
-
 		} finally {
+			if (mCamera != null) mCamera.setPreviewCallbackWithBuffer(null);
 			if (mMediaCodec != null) {
 				mMediaCodec.stop();
 				mMediaCodec.release();
 				mMediaCodec = null;
 			}
-			if (mCamera != null) mCamera.setPreviewCallbackWithBuffer(null);
 			if (!cameraOpen) destroyCamera();
 			mFlashState = savedFlashState;
 		}
-
+		
 		MP4Config config = new MP4Config(sps, pps);
 
 		// Save test result
 		if (mSettings != null) {
 			Editor editor = mSettings.edit();
-			editor.putString(prefix+mQuality.framerate+","+mQuality.resX+","+mQuality.resY, config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS());
-			editor.putInt(prefix+"act-"+mQuality.framerate, mActualFramerate);
-			editor.putInt(prefix+"cor-"+mQuality.framerate, mCorrectedFramerate);
+			editor.putString(key, config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS());
 			editor.commit();
 		}
 
@@ -253,10 +262,11 @@ public class H264Stream extends VideoStream {
 
 	// Should not be called by the UI thread
 	private MP4Config testMediaRecorderAPI() throws RuntimeException, IOException {
-
+		String key = "h264-mr"+mEncoderName+"-"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
+		
 		if (mSettings != null) {
-			if (mSettings.contains("h264-mr"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY)) {
-				String[] s = mSettings.getString("h264-mr"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY, "").split(",");
+			if (mSettings.contains(key)) {
+				String[] s = mSettings.getString(key, "").split(",");
 				return new MP4Config(s[0],s[1],s[2]);
 			}
 		}
@@ -362,12 +372,12 @@ public class H264Stream extends VideoStream {
 		// Save test result
 		if (mSettings != null) {
 			Editor editor = mSettings.edit();
-			editor.putString("h264-mr"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY, config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS());
+			editor.putString(key, config.getProfileLevel()+","+config.getB64SPS()+","+config.getB64PPS());
 			editor.commit();
 		}
 
 		return config;
 
 	}
-
+	
 }

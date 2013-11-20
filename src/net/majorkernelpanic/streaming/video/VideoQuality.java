@@ -20,18 +20,40 @@
 
 package net.majorkernelpanic.streaming.video;
 
+import java.util.Iterator;
+import java.util.List;
+
+import android.hardware.Camera;
+import android.hardware.Camera.Size;
+import android.util.Log;
+
 /**
  * A class that represents the quality of a video stream. 
  * It contains the resolution, the framerate (in fps) and the bitrate (in bps) of the stream.
  */
 public class VideoQuality {
 
+	public final static String TAG = "VideoQuality";
+	
 	/** Default video stream quality. */
 	public final static VideoQuality DEFAULT_VIDEO_QUALITY = new VideoQuality(640,480,15,500000);
 
 	/**	Represents a quality for a video stream. */ 
 	public VideoQuality() {}
 
+	/**
+	 * Represents a quality for a video stream.
+	 * @param resX The horizontal resolution
+	 * @param resY The vertical resolution
+	 */
+	public VideoQuality(int resX, int resY) {
+		this.framerate = framerate;
+		this.bitrate = bitrate;
+		this.resX = resX;
+		this.resY = resY;
+		this.orientation = orientation;
+	}	
+	
 	/**
 	 * Represents a quality for a video stream.
 	 * @param resX The horizontal resolution
@@ -107,4 +129,77 @@ public class VideoQuality {
 		return videoQuality;
 	}
 
+	/** 
+	 * Checks if the requested resolution is supported by the camera.
+	 * If not, it modifies it by supported parameters. 
+	 **/
+	public static VideoQuality determineClosestSupportedResolution(Camera.Parameters parameters, VideoQuality quality) {
+		VideoQuality v = quality.clone();
+		int minDist = Integer.MAX_VALUE;
+		String supportedSizesStr = "Supported resolutions: ";
+		List<Size> supportedSizes = parameters.getSupportedPreviewSizes();
+		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
+			Size size = it.next();
+			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");
+			int dist = Math.abs(quality.resX - size.width);
+			if (dist<minDist) {
+				minDist = dist;
+				v.resX = size.width;
+				v.resY = size.height;
+			}
+		}
+		Log.v(TAG, supportedSizesStr);
+		if (quality.resX != v.resX || quality.resY != v.resY) {
+			Log.v(TAG,"Resolution modified: "+quality.resX+"x"+quality.resY+"->"+v.resX+"x"+v.resY);
+		}
+		
+		return v;
+	}
+
+	/** 
+	 * Checks if the framerate is supported by the camera.
+	 * If not, it modifies it by a supported one. 
+	 **/	
+	public static VideoQuality determineClosestSupportedFramerate(Camera.Parameters parameters, VideoQuality quality) {
+		VideoQuality v = quality.clone();
+		int minDist = Integer.MAX_VALUE;
+		
+		// Frame rates
+		String supportedFrameRatesStr = "Supported frame rates: ";
+		List<Integer> supportedFrameRates = parameters.getSupportedPreviewFrameRates();
+		for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
+			supportedFrameRatesStr += it.next()+"fps"+(it.hasNext()?", ":"");
+		}
+		Log.v(TAG,supportedFrameRatesStr);
+
+		if (!supportedFrameRates.contains(quality.framerate)) {
+			for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
+				int fps = it.next();
+				int dist = Math.abs(fps - quality.framerate);
+				if (dist<minDist) {
+					minDist = dist;
+					v.framerate = fps;
+				}
+			}
+			Log.v(TAG,"Frame rate modified: "+quality.framerate+"->"+v.framerate);
+		}
+		
+		return v;
+	}	
+
+	public static int[] determineMaximumSupportedFramerate(Camera.Parameters parameters) {
+		int[] maxFps = new int[]{0,0};
+		String supportedFpsRangesStr = "Supported frame rates: ";
+		List<int[]> supportedFpsRanges = parameters.getSupportedPreviewFpsRange();
+		for (Iterator<int[]> it = supportedFpsRanges.iterator(); it.hasNext();) {
+			int[] interval = it.next();
+			supportedFpsRangesStr += interval[0]+"-"+interval[1]+"fps"+(it.hasNext()?", ":"");
+			if (interval[1]/1000>maxFps[1]) {
+				maxFps = interval; 
+			}
+		}
+		Log.v(TAG,supportedFpsRangesStr);
+		return maxFps;
+	}
+	
 }

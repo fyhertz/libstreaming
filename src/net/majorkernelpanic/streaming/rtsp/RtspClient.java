@@ -139,7 +139,7 @@ public class RtspClient {
 		mBufferedReader = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
 		mOutputStream = mSocket.getOutputStream();
 		mSession.setDestination(InetAddress.getByName(mHost));
-
+		
 		sendRequestAnnounce();
 		sendRequestSetup();
 		sendRequestRecord();

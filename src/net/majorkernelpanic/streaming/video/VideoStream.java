@@ -27,10 +27,13 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.concurrent.Semaphore;
 
 import net.majorkernelpanic.streaming.MediaStream;
 import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
 import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
@@ -56,25 +59,26 @@ public abstract class VideoStream extends MediaStream {
 	private static HashMap<String,SparseArray<ArrayList<String>>> sSupportedColorFormats = new HashMap<String, SparseArray<ArrayList<String>>>(); 
 
 	protected VideoQuality mQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
+	protected VideoQuality mActualQuality = mQuality.clone(); 
 	protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
 	protected SurfaceHolder mSurfaceHolder = null;
+	protected SharedPreferences mSettings = null;
 	protected int mVideoEncoder, mCameraId = 0;
 	protected Camera mCamera;
+	protected CameraFifo mCameraFifo;
+
+
 	protected boolean mCameraOpenedManually = true;
 	protected boolean mFlashState = false;
 	protected boolean mSurfaceReady = false;
 	protected boolean mUnlocked = false;
 	protected boolean mPreviewStarted = false;
 
-	protected int mEncoderColorFormat = 0;
-	protected String mEncoderName = null;
-	protected int mCameraImageFormat = 0;
-
-	// The FPS really achieved when asking for a certain FPS 
-	protected int mActualFramerate = 0;
-	// The FPS we need to use with the Camera API to obtain the desired FPS
-	protected int mCorrectedFramerate = 0;
-	// The maximum possible FPS, depends on the resolution and on the Camera
+	protected CodecManager.Codecs mCodecs;
+	protected String mMimeType;
+	protected String mEncoderName;
+	protected int mEncoderColorFormat;
+	protected int mCameraImageFormat;
 	protected int mMaxFps = 0;	
 
 	/** 
@@ -92,55 +96,32 @@ public abstract class VideoStream extends MediaStream {
 	@SuppressLint("InlinedApi")
 	public VideoStream(int camera) {
 		super();
-		mCameraImageFormat = ImageFormat.YV12;
 		setCamera(camera);
-		if ((sSuggestedMode&MODE_MEDIACODEC_API)!=0) {
-			int yuvPlanar = MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar;
-			int yuvSemiPlanar = MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar;
-			ArrayList<String> codecs;
+	}
 
-			// Finds the supported color formats by encoders of the phone.
-			SparseArray<ArrayList<String>> list = findSupportedColorFormats("video/avc");
+	/**
+	 * Called by subclasses. 
+	 */
+	protected void init(String mimeType) {
+		mCameraImageFormat = ImageFormat.NV21;
+		mMimeType = mimeType;
 
-			if (list.get(yuvPlanar) == null && 
-					list.get(yuvSemiPlanar) == null) {
-				Log.e(TAG,"No color format supported !");
-				// Fallback on the MediaReocrder API
-				setMode(MODE_MEDIARECORDER_API);
-				return;
-			}
+		if (sSuggestedMode == MODE_MEDIACODEC_API) {
+			mCodecs = CodecManager.Selector.findCodecsFormMimeType(mMimeType, false);
 
-			// We don't want to use the sofware encoder OMX.google.h264.encoder because
-			// it is not using the hardware capabilities of the phone
-			try {
-				codecs = (ArrayList<String>) list.get(yuvPlanar).clone();
-				codecs.remove("OMX.google.h264.encoder");
-				mEncoderColorFormat = yuvPlanar;
-				mEncoderName = codecs.get(0);
-			} catch (Exception e0) {
+			if (mCodecs.hardwareCodec == null && mCodecs.softwareCodec == null ) {
+				mMode = MODE_MEDIARECORDER_API;
+				Log.e(TAG,"No encoder can be used on this phone, we will use the MediaRecorder API");
 
-				try {
-					codecs = (ArrayList<String>) list.get(yuvSemiPlanar).clone();
-					codecs.remove("OMX.google.h264.encoder");
-					mEncoderColorFormat = yuvSemiPlanar;
-					mEncoderName = codecs.get(0);
-				} catch (Exception e1) {
-
-					// If not, we will use another one
-					if (list.get(yuvPlanar) != null) {
-						mEncoderColorFormat = yuvPlanar;
-						mEncoderName = list.get(yuvPlanar).get(0);
-					} else if (list.get(yuvSemiPlanar) != null) {
-						mEncoderColorFormat = yuvSemiPlanar;
-						mEncoderName = list.get(yuvSemiPlanar).get(0);
-					}
-
+			} else {
+				if (mCodecs.hardwareCodec != null) {
+					mEncoderColorFormat = mCodecs.hardwareColorFormat;
+					mEncoderName = mCodecs.hardwareCodec;
+				} else {
+					mEncoderColorFormat = mCodecs.softwareColorFormat;
+					mEncoderName = mCodecs.softwareCodec;	
 				}
-
 			}
-
-			Log.v(TAG, "Selected encoder: "+mEncoderName);
-			Log.v(TAG, "Selected clolor format: "+mEncoderColorFormat);
 
 		}
 	}
@@ -330,6 +311,14 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/**
+	 * Some data (SPS and PPS params) needs to be stored when {@link #generateSessionDescription()} is called 
+	 * @param prefs The SharedPreferences that will be used to save SPS and PPS parameters
+	 */
+	public void setPreferences(SharedPreferences prefs) {
+		mSettings = prefs;
+	}	
+
+	/**
 	 * Starts the stream.
 	 * This will also open the camera and dispay the preview 
 	 * if {@link #startPreview()} has not aready been called.
@@ -342,8 +331,10 @@ public abstract class VideoStream extends MediaStream {
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mCamera != null) {
-			if ((mMode&MODE_MEDIACODEC_API)!=0) {
-				mCamera.setPreviewCallback(null);
+			if (mMode == MODE_MEDIACODEC_API) {
+				if (mCameraFifo != null) {
+					mCameraFifo.stop();
+				}
 			}
 			super.stop();
 			// We need to restart the preview
@@ -414,7 +405,9 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
 		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
 		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
-		mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+
+		// The bandwidth actually consumed is often above what was requested 
+		mMediaRecorder.setVideoEncodingBitRate((int)(mQuality.bitrate*0.8));
 
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
@@ -487,49 +480,17 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 
-		final ColorFormatTranslator convertor = new ColorFormatTranslator(mCameraImageFormat,mEncoderColorFormat,mQuality.resX,mQuality.resY);
-		
 		mMediaCodec = MediaCodec.createByCodecName(mEncoderName);
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
-		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
-		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualFramerate!=0?mActualFramerate:mQuality.framerate);	
+		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mActualQuality.resX, mActualQuality.resY);
+		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mActualQuality.bitrate);
+		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualQuality.framerate);	
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,mEncoderColorFormat);
-		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 4);
-		mediaFormat.setInteger("stride", convertor.getYStride());
-		mediaFormat.setInteger("slice-height", convertor.getUVStride());
+		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 		mMediaCodec.start();
 
-		final ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-
-		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
-
-		mCamera.setPreviewCallbackWithBuffer(new Camera.PreviewCallback() {
-			private long now = System.nanoTime()/1000, oldnow = 0;
-			private int bufferIndex;
-			@Override
-			public void onPreviewFrame(byte[] data, Camera camera) {
-				oldnow = now;
-				now = System.nanoTime()/1000;
-				//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
-				try {
-					bufferIndex = mMediaCodec.dequeueInputBuffer(0);
-					if (bufferIndex>=0) {
-						byte[] buffer = convertor.translate(data);
-						int min = inputBuffers[bufferIndex].capacity()<buffer.length?inputBuffers[bufferIndex].capacity():buffer.length;
-						inputBuffers[bufferIndex].clear();
-						inputBuffers[bufferIndex].put(buffer, 0, min);
-						Log.d(TAG, "Encoder: "+inputBuffers[bufferIndex].capacity()+" Camera: "+buffer.length+" Cv: "+convertor.getBufferSize());
-						mMediaCodec.queueInputBuffer(bufferIndex, 0, min, now, 0);
-					} else {
-						Log.e(TAG,"No buffer available !");
-					}
-				} catch (IllegalStateException e) {
-				} finally {
-					mCamera.addCallbackBuffer(data);
-				}
-			}
-		});
+		mCameraFifo = new CameraFifo();
+		mCameraFifo.start();
 
 		try {
 			// mReceiver.getInputStream contains the data from the camera
@@ -579,21 +540,29 @@ public abstract class VideoStream extends MediaStream {
 				}
 			});
 
-			Parameters parameters = mCamera.getParameters();
-
-			if (mFlashState) {
-				if (parameters.getFlashMode()==null) {
-					// The phone has no flash or the choosen camera can not toggle the flash
-					throw new IllegalStateException("Can't turn the flash on !");
-				} else {
-					parameters.setFlashMode(mFlashState?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
-				}
-			}
 
 			try {
+				Parameters parameters = mCamera.getParameters();
+
+				if (mFlashState) {
+					if (parameters.getFlashMode()==null) {
+						// The phone has no flash or the choosen camera can not toggle the flash
+						throw new IllegalStateException("Can't turn the flash on !");
+					} else {
+						parameters.setFlashMode(mFlashState?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
+					}
+				}
+
+				int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+				VideoQuality quality = new VideoQuality(320,240);
+				quality = VideoQuality.determineClosestSupportedResolution(parameters, mActualQuality);
+				
+				parameters.setPreviewFpsRange(max[0], max[1]);
+				parameters.setPreviewSize(quality.resX, quality.resY);
 				mCamera.setParameters(parameters);
 				mCamera.setDisplayOrientation(mQuality.orientation);
 				mCamera.setPreviewDisplay(mSurfaceHolder);
+
 			} catch (RuntimeException e) {
 				destroyCamera();
 				throw e;
@@ -626,19 +595,34 @@ public abstract class VideoStream extends MediaStream {
 				mPreviewStarted = false;
 				mCamera.stopPreview();
 			}
+
 			Parameters parameters = mCamera.getParameters();
+			
+			mActualQuality.resX = mQuality.resX;
+			mActualQuality.resY = mQuality.resY;
+			mActualQuality.bitrate = mQuality.bitrate;
+
+			// Hack needed for now because there are weird artefacts at lower resolutions (when resX or resY os not a multiple of 16)
+			if (mActualQuality.resX<352) {
+				mActualQuality.resX = 352;
+				mActualQuality.resY = 288;
+			}
+
+			mActualQuality = VideoQuality.determineClosestSupportedResolution(parameters, mActualQuality);
+			int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+			
 			parameters.setPreviewFormat(mCameraImageFormat);
-			determineClosestSupportedResolution(parameters);
-			parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-			determineClosestSupportedFramerate(parameters);
-			//parameters.setPreviewFpsRange((mQuality.framerate-10)*1000,(mQuality.framerate+10)*1000);
-			parameters.setPreviewFrameRate(mQuality.framerate);
+			parameters.setPreviewSize(mActualQuality.resX, mActualQuality.resY);
+			parameters.setPreviewFpsRange(max[0], max[1]);
+			
 			try {
+				Log.e(TAG,"FPS: "+mActualQuality.framerate+" X: "+mActualQuality.resX+" Y: "+mActualQuality.resY);
 				mCamera.setParameters(parameters);
 				mCamera.setDisplayOrientation(mQuality.orientation);
 				mCamera.setPreviewDisplay(mSurfaceHolder);
 				mCamera.startPreview();
-				mPreviewStarted = false;
+				mPreviewStarted = true;
+				measureActualFramerate();
 			} catch (RuntimeException e) {
 				destroyCamera();
 				throw e;
@@ -694,69 +678,6 @@ public abstract class VideoStream extends MediaStream {
 		return list;
 	}
 
-	/** 
-	 * Checks if the requested resolution is supported by the camera.
-	 * If not, it modifies it by supported parameters. 
-	 **/
-	protected void determineClosestSupportedResolution(Camera.Parameters parameters) {
-		int minDist = Integer.MAX_VALUE, newResX = mQuality.resX, newResY = mQuality.resY;
-		String supportedSizesStr = "Supported resolutions: ";
-		List<Size> supportedSizes = parameters.getSupportedPreviewSizes();
-		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
-			Size size = it.next();
-			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");
-			int dist = Math.abs(mQuality.resX - size.width);
-			if (dist<minDist) {
-				minDist = dist;
-				newResX = size.width;
-				newResY = size.height;
-			}
-		}
-		Log.v(TAG,supportedSizesStr);
-		mQuality.resX = newResX;
-		mQuality.resY = newResY;
-	}
-
-	/** 
-	 * Checks if the framerate is supported by the camera.
-	 * If not, it modifies it by supported parameters. 
-	 **/	
-	protected void determineClosestSupportedFramerate(Camera.Parameters parameters) {
-		// Frame rates
-		String supportedFrameRatesStr = "Supported frame rates: ";
-		List<Integer> supportedFrameRates = parameters.getSupportedPreviewFrameRates();
-		for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
-			supportedFrameRatesStr += it.next()+"fps"+(it.hasNext()?", ":"");
-		}
-		Log.v(TAG,supportedFrameRatesStr);
-
-		// Frame rates
-		String supportedFpsRangesStr = "Supported frame rates: ";
-		int maxFps = 0;
-		List<int[]> supportedFpsRanges = parameters.getSupportedPreviewFpsRange();
-		for (Iterator<int[]> it = supportedFpsRanges.iterator(); it.hasNext();) {
-			int[] interval = it.next();
-			supportedFpsRangesStr += interval[0]+"-"+interval[1]+"fps"+(it.hasNext()?", ":"");
-			if (interval[1]/1000>maxFps) maxFps = interval[1]/1000; 
-		}
-		this.mMaxFps = maxFps;
-		Log.v(TAG,supportedFpsRangesStr);
-
-		int minDist = Integer.MAX_VALUE, newFps = mQuality.framerate;
-		if (!supportedFrameRates.contains(mQuality.framerate)) {
-			for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
-				int fps = it.next();
-				int dist = Math.abs(fps - mQuality.framerate);
-				if (dist<minDist) {
-					minDist = dist;
-					newFps = fps;
-				}
-			}
-			Log.v(TAG,"Frame rate modified: "+mQuality.framerate+"->"+newFps);
-			mQuality.framerate = newFps;
-		}
-	}
-
 	protected void lockCamera() {
 		if (mUnlocked) {
 			Log.d(TAG,"Locking camera");
@@ -779,6 +700,173 @@ public abstract class VideoStream extends MediaStream {
 			}
 			mUnlocked = true;
 		}
+	}
+
+
+	/**
+	 * Computes the average frame rate at which the preview callback is called.
+	 * We will then use this average framerate with the MediaCodec.  
+	 * Blocks the thread in which this function is called.
+	 */
+	private void measureActualFramerate() {
+
+		if (mSettings != null) {
+			String key = PREF_PREFIX+"fps"+mQuality.framerate+","+mCameraImageFormat+","+mQuality.resX+mQuality.resY;
+			if (mSettings.contains(key)) {
+				mActualQuality.framerate = mSettings.getInt(key, 0);
+				Log.d(TAG,"Actual framerate: "+mActualQuality.framerate);
+				return;
+			}
+		}
+		
+		final Semaphore lock = new Semaphore(0);
+
+		final Camera.PreviewCallback callback = new Camera.PreviewCallback() {
+			int i = 0, t = 0;
+			long now, oldnow, count = 0;
+			@Override
+			public void onPreviewFrame(byte[] data, Camera camera) {
+				i++;
+				now = System.nanoTime()/1000;
+				if (i>3) {
+					t += now - oldnow;
+					count++;
+				}
+				if (i>15) {
+					mActualQuality.framerate = (int) (1000000/(t/count)+1);
+					Log.d(TAG,"Actual framerate: "+mActualQuality.framerate);
+					lock.release();
+				}
+				oldnow = now;
+			}
+		};
+
+		mCamera.setPreviewCallback(callback);
+
+		try {
+			lock.acquire();
+		} catch (InterruptedException e) {}
+
+		mCamera.setPreviewCallback(null);
+
+		if (mSettings != null) {
+			Editor editor = mSettings.edit();
+			editor.putInt(PREF_PREFIX+"fps"+mQuality.framerate+","+mCameraImageFormat+","+mQuality.resX+mQuality.resY, mActualQuality.framerate);
+			editor.commit();
+		}
+
+	}	
+
+	private class CameraFifo {
+
+		private final int MAX = 10;
+
+		private CodecManager.NV21Translator mConvertor = null;
+		private byte[][] mBuffers = new byte[MAX][];
+		private long[] mTimestamps = new long[MAX];
+		private Thread mThread = null;
+		private int mHead, mTail;
+		private Semaphore mAvailable;
+		private Semaphore mRemaining;
+		private boolean mRunning; 
+
+		public void start() {
+			if (mThread == null) {
+
+				mHead = 0;
+				mTail = 0;
+				mAvailable = new Semaphore(0);
+				mRemaining = new Semaphore(MAX);
+
+				mRunning = true;
+				mThread = new Thread(mRunnable);
+				mThread.start();
+
+				mConvertor = new CodecManager.NV21Translator(mEncoderName, mEncoderColorFormat, mActualQuality.resX, mActualQuality.resY);
+				for (int i=0;i<MAX;i++) mCamera.addCallbackBuffer(new byte[mConvertor.getBufferSize()]);
+				mCamera.setPreviewCallbackWithBuffer(mCameraCallback);
+
+			}
+		} 
+
+		public void stop() {
+			if (mThread != null) {
+				mCamera.setPreviewCallback(null);
+				mRunning = false;
+				mThread.interrupt();
+				try {
+					mThread.join();
+				} catch (InterruptedException e) {}
+				mThread = null;
+			}
+		}
+
+		private void queue(byte[] buffer, long ts) {
+			try {
+				mRemaining.acquire();
+			} catch (InterruptedException e) {}
+			mBuffers[mHead] = buffer;
+			mTimestamps[mHead] = ts;
+			mHead++;
+			if (mHead>=MAX) mHead = 0;
+			mAvailable.release();
+		}
+
+		/**
+		 * This will be called from the main thread, doing the color format conversion and feeding the encoder 
+		 * from there was too long, that is why this FIFO is needed
+		 */
+		Camera.PreviewCallback mCameraCallback = new Camera.PreviewCallback() {
+			private long now = System.nanoTime()/1000, oldnow = now;
+			private int i=0;
+			@Override
+			public void onPreviewFrame(byte[] data, Camera camera) {
+				now = System.nanoTime()/1000;
+				if (i++>2) {
+					i = 0;
+					//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
+				}
+				oldnow = now;
+				queue(data, now);
+			}
+		};
+
+		/**
+		 * Thread in which we do the conversion between color formats and we feed the MediaCodec
+		 */
+		private Runnable mRunnable = new Runnable() {
+			@SuppressLint("NewApi")
+			@Override
+			public void run() {
+				ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
+
+				while (mRunning && !Thread.interrupted()) {
+					//Log.d(TAG, "a: "+mRemaining.availablePermits());
+					try {
+						mAvailable.acquire();
+					} catch (InterruptedException e) {
+						break;
+					}
+
+					try {
+						int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
+						if (bufferIndex>=0) {
+							mConvertor.translate(mBuffers[mTail], inputBuffers[bufferIndex]);
+							mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), mTimestamps[mTail], 0);
+						} else {
+							Log.e(TAG,"No buffer available !");
+						}
+					} finally {
+						mCamera.addCallbackBuffer(mBuffers[mTail]);
+						mTail++;
+						if (mTail>=MAX) mTail = 0;
+						mRemaining.release();
+					}
+
+				}
+			}
+		};
+
 	}
 
 }

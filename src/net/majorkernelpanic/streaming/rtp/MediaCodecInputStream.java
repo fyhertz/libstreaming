@@ -69,7 +69,6 @@ public class MediaCodecInputStream extends InputStream {
 	public int read(byte[] buffer, int offset, int length) throws IOException {
 		int min = 0;
 
-		if (mClosed) throw new IOException("This InputStream was closed");
 		try {
 			if (mBuffer==null) {
 				while (!Thread.interrupted() && !mClosed) {
@@ -93,6 +92,8 @@ public class MediaCodecInputStream extends InputStream {
 					}
 				}			
 			}
+			
+			if (mClosed) throw new IOException("This InputStream was closed");
 			
 			min = length < mBufferInfo.size - mBuffer.position() ? length : mBufferInfo.size - mBuffer.position(); 
 			mBuffer.get(buffer, offset, min);

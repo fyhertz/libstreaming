@@ -27,6 +27,7 @@ import java.net.MulticastSocket;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import net.majorkernelpanic.streaming.rtcp.SenderReport;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -48,6 +49,8 @@ public class RtpSocket implements Runnable {
 	private byte[][] mBuffers;
 	private long[] mTimestamps;
 
+	private SenderReport mReport;
+	
 	private Semaphore mBufferRequested, mBufferCommitted;
 	private Thread mThread;
 
@@ -65,16 +68,14 @@ public class RtpSocket implements Runnable {
 	 * @throws IOException
 	 */
 	public RtpSocket() throws IOException {
-
-		mCacheSize = 0;
+		
+		mCacheSize = 00;
 		mBufferCount = 300; // TODO: reajust that when the FIFO is full 
-		mBufferIn = 0;
-		mBufferOut = 0;
 		mBuffers = new byte[mBufferCount][];
 		mPackets = new DatagramPacket[mBufferCount];
-		mTimestamps = new long[mBufferCount];
-		mBufferRequested = new Semaphore(mBufferCount);
-		mBufferCommitted = new Semaphore(0);
+		mReport = new SenderReport();
+		
+		resetFifo();
 
 		for (int i=0; i<mBufferCount; i++) {
 
@@ -100,10 +101,20 @@ public class RtpSocket implements Runnable {
 		}
 
 		mSocket = new MulticastSocket();
-		mTime = mOldTime = SystemClock.elapsedRealtime();
 
 	}
 
+	private void resetFifo() {
+		mCount = 0;
+		mBufferIn = 0;
+		mBufferOut = 0;
+		mTimestamps = new long[mBufferCount];
+		mBufferRequested = new Semaphore(mBufferCount);
+		mBufferCommitted = new Semaphore(0);
+		mTime = mOldTime = SystemClock.elapsedRealtime();
+		mReport.reset();
+	}
+	
 	/** Closes the underlying socket. */
 	public void close() {
 		mSocket.close();
@@ -115,6 +126,7 @@ public class RtpSocket implements Runnable {
 		for (int i=0;i<mBufferCount;i++) {
 			setLong(mBuffers[i], ssrc,8,12);
 		}
+		mReport.setSSRC(mSsrc);
 	}
 
 	/** Returns the SSRC of the stream. */
@@ -138,12 +150,13 @@ public class RtpSocket implements Runnable {
 	}
 
 	/** Sets the destination address and to which the packets will be sent. */
-	public void setDestination(InetAddress dest, int dport) {
+	public void setDestination(InetAddress dest, int dport, int rtcpPort) {
 		mPort = dport;
 		for (int i=0;i<mBufferCount;i++) {
 			mPackets[i].setPort(dport);
 			mPackets[i].setAddress(dest);
 		}
+		mReport.setDestination(dest, rtcpPort);
 	}
 
 	public int getPort() {
@@ -154,8 +167,12 @@ public class RtpSocket implements Runnable {
 		return mSocket.getLocalPort();
 	}
 
+	public SenderReport getRtcpSocket() {
+		return mReport;
+	}
+	
 	/** 
-	 * Returns an available buffer from the FIFO, it can then directly be modified. 
+	 * Returns an available buffer from the FIFO, it can then be modified. 
 	 * Call {@link #commitBuffer(int)} to send it over the network. 
 	 * @throws InterruptedException 
 	 **/
@@ -165,28 +182,40 @@ public class RtpSocket implements Runnable {
 		return mBuffers[mBufferIn];
 	}
 
-	/** Sends the RTP packet over the network. */
-	public void commitBuffer(int length) throws IOException {
-
-		updateSequence();
-		mPackets[mBufferIn].setLength(length);
-
-		mOctetCount += length;
-		mTime = SystemClock.elapsedRealtime();
-		if (mTime - mOldTime > 1500) {
-			mBitRate = mOctetCount*8000/(mTime-mOldTime);
-			mOctetCount = 0;
-			mOldTime = mTime;
-		}
-
-		mBufferCommitted.release();
-		if (++mBufferIn>=mBufferCount) mBufferIn = 0;
+	/** Puts the buffer back into the FIFO without sending the packet. */
+	public void commitBuffer() throws IOException {
 
 		if (mThread == null) {
 			mThread = new Thread(this);
 			mThread.start();
 		}
+		
+		if (++mBufferIn>=mBufferCount) mBufferIn = 0;
+		mBufferCommitted.release();
 
+	}	
+	
+	/** Sends the RTP packet over the network. */
+	public void commitBuffer(int length) throws IOException {
+		updateSequence();
+		mPackets[mBufferIn].setLength(length);
+
+		mOctetCount += length;
+		mTime = SystemClock.elapsedRealtime();
+		if (mTime - mOldTime > 5000) {
+			mBitRate = mOctetCount*8000/(mTime-mOldTime);
+			mOctetCount = 0;
+			mOldTime = mTime;
+		}
+
+		if (++mBufferIn>=mBufferCount) mBufferIn = 0;
+		mBufferCommitted.release();
+
+		if (mThread == null) {
+			mThread = new Thread(this);
+			mThread.start();
+		}		
+		
 	}
 
 	/** Returns an approximation of the bitrate of the RTP stream in bit per seconde. */
@@ -223,16 +252,16 @@ public class RtpSocket implements Runnable {
 			long delta = 0;
 			while (mBufferCommitted.tryAcquire(4,TimeUnit.SECONDS)) {
 				if (mOldTimestamp != 0) {
-					// We use our knowledge of the clock rate of the stream and the difference between two timestamp to
-					// compute the temporal length of the packet.
+					// We use our knowledge of the clock rate of the stream and the difference between two timestamps to
+					// compute the time lapse that the packet represents.
 					if ((mTimestamps[mBufferOut]-mOldTimestamp)>0) {
 						stats.push(mTimestamps[mBufferOut]-mOldTimestamp);
 						long d = stats.average()/1000000;
 						//Log.d(TAG,"delay: "+d+" d: "+(mTimestamps[mBufferOut]-mOldTimestamp)/1000000);
 						// We ensure that packets are sent at a constant and suitable rate no matter how the RtpSocket is used.
-						//Thread.sleep(d);
+						if (mCacheSize>0) Thread.sleep(d);
 					} else if ((mTimestamps[mBufferOut]-mOldTimestamp)<0) {
-						Log.e(TAG,"WHAAAT ???");
+						Log.e(TAG, "TS: "+mTimestamps[mBufferOut]+" OLD: "+mOldTimestamp);
 					}
 					delta += mTimestamps[mBufferOut]-mOldTimestamp;
 					if (delta>500000000 || delta<0) {
@@ -240,6 +269,7 @@ public class RtpSocket implements Runnable {
 						delta = 0;
 					}
 				}
+				mReport.update(mPackets[mBufferOut].getLength(), System.nanoTime(),(mTimestamps[mBufferOut]/100L)*(mClock/1000L)/10000L);
 				mOldTimestamp = mTimestamps[mBufferOut];
 				if (mCount++>30) mSocket.send(mPackets[mBufferOut]);
 				if (++mBufferOut>=mBufferCount) mBufferOut = 0;
@@ -249,6 +279,7 @@ public class RtpSocket implements Runnable {
 			e.printStackTrace();
 		}
 		mThread = null;
+		resetFifo();
 	}
 
 	private void setLong(byte[] buffer, long n, int begin, int end) {

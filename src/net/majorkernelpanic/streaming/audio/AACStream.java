@@ -294,9 +294,11 @@ public class AACStream extends AudioStream {
 			mQuality.samplingRate = 16000;
 		}
 		
+		String key = PREF_PREFIX+"aac-"+mQuality.samplingRate;
+		
 		if (mSettings!=null) {
-			if (mSettings.contains("aac-"+mQuality.samplingRate)) {
-				String[] s = mSettings.getString("aac-"+mQuality.samplingRate, "").split(",");
+			if (mSettings.contains(key)) {
+				String[] s = mSettings.getString(key, "").split(",");
 				mActualSamplingRate = Integer.valueOf(s[0]);
 				mConfig = Integer.valueOf(s[1]);
 				mChannel = Integer.valueOf(s[2]);
@@ -368,7 +370,7 @@ public class AACStream extends AudioStream {
 
 		if (mSettings!=null) {
 			Editor editor = mSettings.edit();
-			editor.putString("aac-"+mQuality.samplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
+			editor.putString(key, mActualSamplingRate+","+mConfig+","+mChannel);
 			editor.commit();
 		}
 

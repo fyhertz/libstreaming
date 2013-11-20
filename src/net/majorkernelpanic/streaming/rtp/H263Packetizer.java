@@ -113,14 +113,6 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 					buffer[rtphl] = 0;
 				}
 				if (j>0) {
-					// We send one RTCP Sender Report every 5 secs
-					delta += duration/1000000;
-					if (intervalBetweenReports>0) {
-						if (delta>=intervalBetweenReports && duration/1000000>10) {
-							delta = 0;
-							report.send(System.nanoTime(),ts*90/1000000);
-						}
-					}
 					// We have found the end of the frame
 					stats.push(duration);
 					ts+= stats.average(); duration = 0;

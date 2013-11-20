@@ -20,11 +20,9 @@
 
 package net.majorkernelpanic.streaming.rtp;
 
-import java.io.FileOutputStream;
 import java.io.IOException;
 
 import android.annotation.SuppressLint;
-import android.os.Environment;
 import android.util.Log;
 
 /**
@@ -50,7 +48,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	private byte[] sps = null, pps = null;
 	private int count = 0;
 	private int streamType = 1;
-	private FileOutputStream fos = null;
 
 
 	public H264Packetizer() throws IOException {
@@ -89,16 +86,13 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		stats.reset();
 		count = 0;
 
-		if (is instanceof MediaCodecInputStream) streamType = 1; else streamType = 0;
-
-		final String FILE = Environment.getExternalStorageDirectory().getPath()+"/record.h264";
-
-		try {
-			fos = new FileOutputStream(FILE);
-		} catch (Exception e1) {
-			Log.e(TAG, "Can't record stream in "+FILE);
-			return;
-		}		
+		if (is instanceof MediaCodecInputStream) {
+			streamType = 1;
+			socket.setCacheSize(0);
+		} else {
+			streamType = 0;	
+			socket.setCacheSize(400);
+		}
 
 		try {
 			while (!Thread.interrupted()) {
@@ -108,20 +102,11 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 				send();
 				// We measure how long it took to receive NAL units from the phone
 				duration = System.nanoTime() - oldtime;
-
-				// We regulary send RTSP Sender Report to the decoder
-				delta += duration/1000000;
-				if (intervalBetweenReports>0) {
-					if (delta>=intervalBetweenReports) {
-						// We send a Sender Report
-						report.send(oldtime+duration,(ts/100)*90/10000);
-					}
-				}
-
-				// Every 5 secondes, we send two packets containing NALU type 7 (sps) and 8 (pps)
+				
+				// Every 3 secondes, we send two packets containing NALU type 7 (sps) and 8 (pps)
 				// Those should allow the H264 stream to be decoded even if no SDP was sent to the decoder.				
 				delta2 += duration/1000000;
-				if (delta2>5000) {
+				if (delta2>3000) {
 					delta2 = 0;
 					if (sps != null) {
 						buffer = socket.requestBuffer();
@@ -188,8 +173,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			naluLength = is.available()+1;
 		}
 
-		fos.write(header,0,5); 
-		
 		// Parses the NAL unit type
 		type = header[0]&0x1F;
 
@@ -211,7 +194,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			buffer = socket.requestBuffer();
 			buffer[rtphl] = header[4];
 			len = fill(buffer, rtphl+1,  naluLength-1);
-			fos.write(buffer, rtphl+1, naluLength-1);
 			socket.updateTimestamp(ts);
 			socket.markNextPacket();
 			super.send(naluLength+rtphl);
@@ -233,7 +215,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 				buffer[rtphl+1] = header[1];
 				socket.updateTimestamp(ts);
 				if ((len = fill(buffer, rtphl+2,  naluLength-sum > MAXPACKETSIZE-rtphl-2 ? MAXPACKETSIZE-rtphl-2 : naluLength-sum  ))<0) return; sum += len;
-				fos.write(buffer, rtphl+2, len);
 				// Last packet before next NAL
 				if (sum >= naluLength) {
 					// End bit on
@@ -285,6 +266,11 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 					oldtime = System.nanoTime();
 					Log.e(TAG,"A NAL unit may have been found in the bit stream !");
 					break;
+				}
+				if (naluLength==0) {
+					Log.e(TAG,"NAL unit with NULL size found...");
+				} else if (header[3]==0xFF && header[2]==0xFF && header[1]==0xFF && header[0]==0xFF) {
+					Log.e(TAG,"NAL unit with 0xFFFFFFFF size found...");
 				}
 			}
 
