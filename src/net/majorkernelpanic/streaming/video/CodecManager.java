@@ -39,7 +39,9 @@ public class CodecManager {
 
 	public static final int[] SUPPORTED_COLOR_FORMATS = {
 		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar,
-		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar
+		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar,
+		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar,
+		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar
 	};
 
 	/**
@@ -270,7 +272,7 @@ public class CodecManager {
 		public void translate(byte[] data, ByteBuffer buffer) {
 			if (data.length>buffer.capacity()) return;
 			buffer.clear();
-			
+
 			// HANDLES THE CASE OF THE OMX.qcom.video.encoder.avc H.264 ENCODER
 			// It may need some padding before the Chroma pane
 			if (mMode == 1) {
@@ -282,7 +284,7 @@ public class CodecManager {
 						padding = 0;
 
 					// We need to interleave the U and V channel
-					
+
 					buffer.put(data, 0, mYSize); // Y
 					buffer.position(buffer.position()+padding);
 					for (i = 0; i < mUVSize; i++) {
@@ -370,10 +372,10 @@ public class CodecManager {
 					if ((mWidth==640 && mHeight==384) || (mWidth==384 && mHeight==256) || 
 							(mWidth==640 && mHeight==480) || (mWidth==1280 && mHeight==720)) 
 						padding = 0;
-					
+
 					buffer.put(data, 0, mHeight*mWidth);
 					buffer.position(buffer.position()+padding);
-					
+
 					// Swaps the Cb and Cr panes
 					for (i = mWidth*mHeight; i < mBufferSize; i+=2) {
 						buffer.put(data[i+1]);
@@ -393,7 +395,8 @@ public class CodecManager {
 
 			// HANDLES THE CASE OF NICE ENCODERS
 
-			if (mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar) {
+			if (mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar ||
+					mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar) {
 				// Y pane
 				buffer.put(data, 0, mHeight*mWidth);
 				// De-interleave Cb and Cr
@@ -402,7 +405,8 @@ public class CodecManager {
 				return;
 			}
 
-			else if (mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
+			else if (mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar ||
+					mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar) {
 				buffer.put(data, 0, mHeight*mWidth);
 				// Swaps the Cb and Cr panes
 				for (i = mWidth*mHeight; i < mBufferSize; i += 2) {
@@ -415,7 +419,7 @@ public class CodecManager {
 			// If we do not handle the color format of the encoder we simply return the input
 			buffer.put(data, 0, data.length);
 			return;
-			
+
 		}		
 
 	}

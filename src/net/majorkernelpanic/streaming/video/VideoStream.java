@@ -554,8 +554,8 @@ public abstract class VideoStream extends MediaStream {
 				}
 
 				int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
-				VideoQuality quality = new VideoQuality(320,240);
-				quality = VideoQuality.determineClosestSupportedResolution(parameters, mActualQuality);
+				VideoQuality quality = new VideoQuality(352,288);
+				quality = VideoQuality.determineClosestSupportedResolution(parameters, quality);
 				
 				parameters.setPreviewFpsRange(max[0], max[1]);
 				parameters.setPreviewSize(quality.resX, quality.resY);
