@@ -40,9 +40,6 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable {
 
 	private final static String TAG = "AACLATMPacketizer";
 
-	// Maximum size of RTP packets
-	private final static int MAXPACKETSIZE = 1400;
-
 	private Thread t;
 
 	public AACLATMPacketizer() throws IOException {

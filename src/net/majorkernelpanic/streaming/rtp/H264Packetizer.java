@@ -39,8 +39,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 
 	public final static String TAG = "H264Packetizer";
 
-	private final static int MAXPACKETSIZE = 1400;
-
 	private Thread t = null;
 	private int naluLength = 0;
 	private long delay = 0, oldtime = 0;

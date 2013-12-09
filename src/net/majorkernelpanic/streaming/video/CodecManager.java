@@ -37,21 +37,6 @@ public class CodecManager {
 
 	public final static String TAG = "CodecManager";
 
-	public static final int[] SUPPORTED_COLOR_FORMATS = {
-		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar,
-		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar,
-		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar,
-		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar
-	};
-
-	/**
-	 * There currently is no way to know if an encoder is software or hardware from the MediaCodecInfo class,
-	 * so we need to maintain a list of known software encoders.
-	 */
-	public static final String[] SOFTWARE_ENCODERS = {
-		"OMX.google.h264.encoder"
-	};
-
 	/**
 	 * Contains a list of encoders and color formats that we may use with a {@link CodecManager.YV12Translator}.  
 	 */
@@ -70,6 +55,7 @@ public class CodecManager {
 	 * @param The mime type
 	 */
 	public static void findSupportedColorFormats(String mimeType) {
+		if (Build.VERSION.SDK_INT<16) return;
 		Selector.findSupportedColorFormats(mimeType);
 	}
 
@@ -78,6 +64,21 @@ public class CodecManager {
 	 */
 	static class Selector {
 
+		public static final int[] SUPPORTED_COLOR_FORMATS = {
+			MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar,
+			MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar,
+			MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar,
+			MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar
+		};		
+		
+		/**
+		 * There currently is no way to know if an encoder is software or hardware from the MediaCodecInfo class,
+		 * so we need to maintain a list of known software encoders.
+		 */
+		public static final String[] SOFTWARE_ENCODERS = {
+			"OMX.google.h264.encoder"
+		};		
+		
 		private static HashMap<String,SparseArray<ArrayList<String>>> sHardwareCodecs = new HashMap<String, SparseArray<ArrayList<String>>>();
 		private static HashMap<String,SparseArray<ArrayList<String>>> sSoftwareCodecs = new HashMap<String, SparseArray<ArrayList<String>>>();
 
@@ -153,14 +154,14 @@ public class CodecManager {
 			}
 
 			return list;
-		}			
+		}
 
 		/** 
 		 * Returns an associative array of the supported color formats and the names of the encoders for a given mime type
 		 * This can take up to sec on certain phones the first time you run it...
 		 **/
 		@SuppressLint("NewApi")
-		static void findSupportedColorFormats(String mimeType) {
+		static synchronized void findSupportedColorFormats(String mimeType) {
 			SparseArray<ArrayList<String>> softwareCodecs = new SparseArray<ArrayList<String>>();
 			SparseArray<ArrayList<String>> hardwareCodecs = new SparseArray<ArrayList<String>>();
 
@@ -252,7 +253,7 @@ public class CodecManager {
 			// Handles the case of the OMX.qcom.video.encoder.avc encoder which do not behave properly on some devices before 4.3
 			if (encoderName.equalsIgnoreCase("OMX.qcom.video.encoder.avc") && mApiLevel<18) mMode = 1;
 
-			// Mode 0 is used by difault, it assumes that the encoder works properly...
+			// Mode 0 is used by default, it assumes that the encoder works properly...
 			else mMode = 0;
 
 		}
@@ -348,12 +349,14 @@ public class CodecManager {
 			// Mode 1 handles the case of the OMX.qcom.video.encoder.avc encoder which do not behave properly on some devices before 4.3
 			if (encoderName.equalsIgnoreCase("OMX.qcom.video.encoder.avc") && mApiLevel<18) mMode = 1;
 
-			// Handles the case of the OMX.SEC.avc.enc present in the S3 
-			else if (encoderName.equalsIgnoreCase("OMX.SEC.avc.enc") && mApiLevel<18) mMode = 2;				
+			// Handles the case of the OMX.SEC.avc.enc present in the S3
+			// Probably those models: GT-I9300, GT-I9305, GT-I9305N, GT-I9305T
+			boolean s3 = android.os.Build.MODEL.startsWith("GT-I930"); 
+			if (encoderName.equalsIgnoreCase("OMX.SEC.avc.enc") && s3 && mApiLevel<18) mMode = 2;				
 
 			// Mode 0 is used by difault, it assumes that the encoder works properly...
 			else mMode = 0;
-
+			
 		}
 
 		public int getBufferSize() {
@@ -388,7 +391,13 @@ public class CodecManager {
 			// HANDLES THE CASE OF OMX.SEC.avc.enc ON THE S3
 			else if (mMode == 2) {
 				if (mOutputColorFormat == MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar) {
-					buffer.put(data, 0, data.length);
+					//buffer.put(data, 0, data.length);
+					buffer.put(data, 0, mHeight*mWidth);
+					// Swaps the Cb and Cr panes
+					for (i = mWidth*mHeight; i < mBufferSize; i += 2) {
+						buffer.put(data[i+1]);
+						buffer.put(data[i]);
+					}
 					return;
 				}
 			}

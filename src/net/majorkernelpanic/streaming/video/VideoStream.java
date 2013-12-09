@@ -25,8 +25,6 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
 import java.util.concurrent.Semaphore;
 
 import net.majorkernelpanic.streaming.MediaStream;
@@ -38,12 +36,12 @@ import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
-import android.hardware.Camera.Size;
 import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
+import android.os.Looper;
 import android.util.Log;
 import android.util.SparseArray;
 import android.view.SurfaceHolder;
@@ -65,7 +63,8 @@ public abstract class VideoStream extends MediaStream {
 	protected SharedPreferences mSettings = null;
 	protected int mVideoEncoder, mCameraId = 0;
 	protected Camera mCamera;
-	protected CameraFifo mCameraFifo;
+	protected Thread mCameraThread;
+	protected Looper mCameraLooper;
 
 
 	protected boolean mCameraOpenedManually = true;
@@ -332,9 +331,7 @@ public abstract class VideoStream extends MediaStream {
 	public synchronized void stop() {
 		if (mCamera != null) {
 			if (mMode == MODE_MEDIACODEC_API) {
-				if (mCameraFifo != null) {
-					mCameraFifo.stop();
-				}
+				mCamera.setPreviewCallbackWithBuffer(null);
 			}
 			super.stop();
 			// We need to restart the preview
@@ -489,9 +486,36 @@ public abstract class VideoStream extends MediaStream {
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 		mMediaCodec.start();
 
-		mCameraFifo = new CameraFifo();
-		mCameraFifo.start();
+		final CodecManager.NV21Translator convertor = new CodecManager.NV21Translator(mEncoderName, mEncoderColorFormat, mActualQuality.resX, mActualQuality.resY);
+		
+		Camera.PreviewCallback callback = new Camera.PreviewCallback() {
+			long now = System.nanoTime()/1000, oldnow = now, i=0;
+			ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
+			@Override
+			public void onPreviewFrame(byte[] data, Camera camera) {
+				now = System.nanoTime()/1000;
+				if (i++>3) {
+					i = 0;
+					//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
+				}
+				try {
+					int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
+					if (bufferIndex>=0) {
+						convertor.translate(data, inputBuffers[bufferIndex]);
+						mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
+					} else {
+						Log.e(TAG,"No buffer available !");
+					}
+				} finally {
+					mCamera.addCallbackBuffer(data);
+				}				
+				oldnow = now;
+			}
+		};
 
+		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
+		mCamera.setPreviewCallbackWithBuffer(callback);
+		
 		try {
 			// mReceiver.getInputStream contains the data from the camera
 			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
@@ -516,12 +540,40 @@ public abstract class VideoStream extends MediaStream {
 
 	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
 
+	/**
+	 * Opens the camera in a new Looper thread so that the preview callback is not called from the main thread
+	 * If an exception is thrown in this Looper thread, we bring it back into the main thread.
+	 * @throws RuntimeException Might happen if another app is already using the camera.
+	 */
+	private void openCamera() throws RuntimeException {
+		final Semaphore lock = new Semaphore(0);
+		final RuntimeException[] exception = new RuntimeException[1]; 
+		mCameraThread = new Thread(new Runnable() {
+			@Override
+			public void run() {
+				Looper.prepare();
+				mCameraLooper = Looper.myLooper();
+				try {
+					mCamera = Camera.open(mCameraId);
+				} catch (RuntimeException e) {
+					exception[0] = e;
+				} finally {
+					lock.release();
+					Looper.loop();
+				}
+			}
+		});
+		mCameraThread.start();
+		lock.acquireUninterruptibly();
+		if (exception[0] != null) throw exception[0];
+	}
+	
 	protected synchronized void createCamera() throws RuntimeException, IOException {
 		if (mSurfaceHolder == null || mSurfaceHolder.getSurface() == null || !mSurfaceReady)
 			throw new IllegalStateException("Invalid surface holder !");
 
 		if (mCamera == null) {
-			mCamera = Camera.open(mCameraId);
+			openCamera();
 			mUnlocked = false;
 			mCamera.setErrorCallback(new Camera.ErrorCallback() {
 				@Override
@@ -584,6 +636,7 @@ public abstract class VideoStream extends MediaStream {
 				Log.e(TAG,e.getMessage()!=null?e.getMessage():"unknown error");
 			}
 			mCamera = null;
+			mCameraLooper.quit();
 			mUnlocked = false;
 			mPreviewStarted = false;
 		}	
@@ -603,17 +656,17 @@ public abstract class VideoStream extends MediaStream {
 			mActualQuality.bitrate = mQuality.bitrate;
 
 			// Hack needed for now because there are weird artefacts at lower resolutions (when resX or resY os not a multiple of 16)
-			if (mActualQuality.resX<352) {
+			/*if (mActualQuality.resX<352) {
 				mActualQuality.resX = 352;
 				mActualQuality.resY = 288;
-			}
+			}*/
 
 			mActualQuality = VideoQuality.determineClosestSupportedResolution(parameters, mActualQuality);
 			int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
 			
 			parameters.setPreviewFormat(mCameraImageFormat);
 			parameters.setPreviewSize(mActualQuality.resX, mActualQuality.resY);
-			parameters.setPreviewFpsRange(max[0], max[1]);
+			//parameters.setPreviewFpsRange(max[0], max[1]);
 			
 			try {
 				Log.e(TAG,"FPS: "+mActualQuality.framerate+" X: "+mActualQuality.resX+" Y: "+mActualQuality.resY);
@@ -711,7 +764,7 @@ public abstract class VideoStream extends MediaStream {
 	private void measureActualFramerate() {
 
 		if (mSettings != null) {
-			String key = PREF_PREFIX+"fps"+mQuality.framerate+","+mCameraImageFormat+","+mQuality.resX+mQuality.resY;
+			String key = PREF_PREFIX+"fps-"+mQuality.framerate+","+mCameraImageFormat+","+mQuality.resX+","+mQuality.resY;
 			if (mSettings.contains(key)) {
 				mActualQuality.framerate = mSettings.getInt(key, 0);
 				Log.d(TAG,"Actual framerate: "+mActualQuality.framerate);
@@ -822,9 +875,9 @@ public abstract class VideoStream extends MediaStream {
 			@Override
 			public void onPreviewFrame(byte[] data, Camera camera) {
 				now = System.nanoTime()/1000;
-				if (i++>2) {
+				if (i++>3) {
 					i = 0;
-					//Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
+					Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
 				}
 				oldnow = now;
 				queue(data, now);

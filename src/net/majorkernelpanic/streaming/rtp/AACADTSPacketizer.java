@@ -40,9 +40,6 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 
 	private final static String TAG = "AACADTSPacketizer";
 
-	// Maximum size of RTP packets
-	private final static int MAXPACKETSIZE = 1400;
-
 	private Thread t;
 	private int samplingRate = 8000;
 

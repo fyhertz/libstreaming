@@ -37,6 +37,9 @@ import net.majorkernelpanic.streaming.rtcp.SenderReport;
 abstract public class AbstractPacketizer {
 
 	protected static final int rtphl = RtpSocket.RTP_HEADER_LENGTH;
+	
+	// Maximum size of RTP packets
+	protected final static int MAXPACKETSIZE = RtpSocket.MTU-28;
 
 	protected RtpSocket socket = null;
 	protected InputStream is = null;
