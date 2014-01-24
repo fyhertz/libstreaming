@@ -46,13 +46,13 @@ public abstract class MediaStream implements Stream {
 
 	/** MediaStream uses the new MediaCodec API introduced in JB 4.1 to stream audio/video. */
 	public static final byte MODE_MEDIACODEC_API = 0x02;
-	
+
 	/** MediaStream uses the new features of the MediaCodec API introduced in JB 4.3 to stream audio/video. */
 	public static final byte MODE_MEDIACODEC_API_2 = 0x05;
 
 	/** Prefix that will be used for all shared preferences saved by libstreaming */
 	protected static final String PREF_PREFIX = "libstreaming-";
-	
+
 	/** The packetizer that will read the output of the camera and send RTP packets over the networkd. */
 	protected AbstractPacketizer mPacketizer = null;
 
@@ -83,11 +83,11 @@ public abstract class MediaStream implements Stream {
 			Log.i(TAG,"Phone does not support the MediaCodec API");
 		}
 	}
-	
+
 	public MediaStream() {
 		mMode = sSuggestedMode;
 	}
-	
+
 	/** 
 	 * Sets the destination ip address of the stream.
 	 * @param dest The destination address of the stream 
@@ -160,7 +160,7 @@ public abstract class MediaStream implements Stream {
 	 * If the mode is set to {@link #MODE_MEDIARECORDER_API}, video is forwarded to a UDP socket.
 	 * @param mode Either {@link #MODE_MEDIARECORDER_API} or {@link #MODE_MEDIACODEC_API} 
 	 */
-	public void setMode(byte mode) throws IllegalStateException {
+	public void setStreamingMethod(byte mode) throws IllegalStateException {
 		if (mStreaming) throw new IllegalStateException("Can't be called while streaming !");
 		this.mMode = mode;
 	}
@@ -202,7 +202,7 @@ public abstract class MediaStream implements Stream {
 		} else {
 			encodeWithMediaRecorder();
 		}
-		
+
 	}
 
 	/** Stops the stream. */
@@ -213,9 +213,9 @@ public abstract class MediaStream implements Stream {
 				if (mMode==MODE_MEDIARECORDER_API) {
 					mMediaRecorder.stop();
 					mMediaRecorder.release();
+					mMediaRecorder = null;
 					closeSockets();
 					mPacketizer.stop();
-					mMediaRecorder = null;
 				} else {
 					mPacketizer.stop();
 					mMediaCodec.stop();
@@ -230,9 +230,9 @@ public abstract class MediaStream implements Stream {
 	}
 
 	protected abstract void encodeWithMediaRecorder() throws IOException;
-	
+
 	protected abstract void encodeWithMediaCodec() throws IOException;
-	
+
 	/**
 	 * Returns the SSRC of the underlying {@link net.majorkernelpanic.streaming.rtp.RtpSocket}.
 	 * @return the SSRC of the stream
@@ -256,21 +256,32 @@ public abstract class MediaStream implements Stream {
 		}
 
 		mReceiver = new LocalSocket();
-		mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId) );
+		mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId));
 		mReceiver.setReceiveBufferSize(500000);
+		mReceiver.setSoTimeout(3000);
 		mSender = mLss.accept();
 		mSender.setSendBufferSize(500000);
 	}
 
 	protected void closeSockets() {
 		try {
-			mSender.close();
-			mSender = null;
 			mReceiver.close();
-			mReceiver = null;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			mSender.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
 			mLss.close();
-			mLss = null;
-		} catch (Exception ignore) {}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		mLss = null;
+		mSender = null;
+		mReceiver = null;
 	}
 
 }

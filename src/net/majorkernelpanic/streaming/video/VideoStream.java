@@ -23,11 +23,11 @@ package net.majorkernelpanic.streaming.video;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.concurrent.Semaphore;
 
 import net.majorkernelpanic.streaming.MediaStream;
+import net.majorkernelpanic.streaming.hw.EncoderDebugger;
+import net.majorkernelpanic.streaming.hw.NV21Convertor;
 import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
@@ -37,13 +37,10 @@ import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
 import android.media.MediaCodec;
-import android.media.MediaCodecInfo;
-import android.media.MediaCodecList;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Looper;
 import android.util.Log;
-import android.util.SparseArray;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
 
@@ -53,8 +50,6 @@ import android.view.SurfaceHolder.Callback;
 public abstract class VideoStream extends MediaStream {
 
 	protected final static String TAG = "VideoStream";
-
-	private static HashMap<String,SparseArray<ArrayList<String>>> sSupportedColorFormats = new HashMap<String, SparseArray<ArrayList<String>>>(); 
 
 	protected VideoQuality mQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
 	protected VideoQuality mActualQuality = mQuality.clone(); 
@@ -73,7 +68,6 @@ public abstract class VideoStream extends MediaStream {
 	protected boolean mUnlocked = false;
 	protected boolean mPreviewStarted = false;
 
-	protected CodecManager.Codecs mCodecs;
 	protected String mMimeType;
 	protected String mEncoderName;
 	protected int mEncoderColorFormat;
@@ -104,25 +98,6 @@ public abstract class VideoStream extends MediaStream {
 	protected void init(String mimeType) {
 		mCameraImageFormat = ImageFormat.NV21;
 		mMimeType = mimeType;
-
-		if (sSuggestedMode == MODE_MEDIACODEC_API) {
-			mCodecs = CodecManager.Selector.findCodecsFormMimeType(mMimeType, false);
-
-			if (mCodecs.hardwareCodec == null && mCodecs.softwareCodec == null ) {
-				mMode = MODE_MEDIARECORDER_API;
-				Log.e(TAG,"No encoder can be used on this phone, we will use the MediaRecorder API");
-
-			} else {
-				if (mCodecs.hardwareCodec != null) {
-					mEncoderColorFormat = mCodecs.hardwareColorFormat;
-					mEncoderName = mCodecs.hardwareCodec;
-				} else {
-					mEncoderColorFormat = mCodecs.softwareColorFormat;
-					mEncoderName = mCodecs.softwareCodec;	
-				}
-			}
-
-		}
 	}
 
 	/**
@@ -372,7 +347,7 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/**
-	 * Encoding of the audio/video is done by a MediaRecorder.
+	 * Video encoding is done by a MediaRecorder.
 	 */
 	protected void encodeWithMediaRecorder() throws IOException {
 
@@ -380,16 +355,19 @@ public abstract class VideoStream extends MediaStream {
 		createSockets();
 
 		// Opens the camera if needed
+		destroyCamera();
 		createCamera();
 
 		// Stops the preview if needed
-		if (mPreviewStarted) {
+		/*if (mPreviewStarted) {
 			lockCamera();
 			try {
 				mCamera.stopPreview();
-			} catch (Exception e) {}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 			mPreviewStarted = false;
-		}
+		}*/
 
 		// Unlock the camera if needed
 		unlockCamera();
@@ -445,7 +423,7 @@ public abstract class VideoStream extends MediaStream {
 
 
 	/**
-	 * Encoding of the audio/video is done by a MediaCodec.
+	 * Video encoding is done by a MediaCodec.
 	 */
 	protected void encodeWithMediaCodec() throws RuntimeException, IOException {
 		if ((mMode&MODE_MEDIACODEC_API_2)!=0) {
@@ -458,7 +436,7 @@ public abstract class VideoStream extends MediaStream {
 	}	
 
 	/**
-	 * Encoding of the audio/video is done by a MediaCodec.
+	 * Video encoding is done by a MediaCodec.
 	 */
 	@SuppressLint("NewApi")
 	protected void encodeWithMediaCodecMethod1() throws RuntimeException, IOException {
@@ -477,17 +455,18 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 
-		mMediaCodec = MediaCodec.createByCodecName(mEncoderName);
+		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mActualQuality.resX, mActualQuality.resY);
+		final NV21Convertor convertor = debugger.getNV21Convertor();
+		
+		mMediaCodec = MediaCodec.createByCodecName(debugger.getEncoderName());
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mActualQuality.resX, mActualQuality.resY);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mActualQuality.bitrate);
 		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualQuality.framerate);	
-		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,mEncoderColorFormat);
+		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,debugger.getEncoderColorFormat());
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
 		mMediaCodec.start();
 
-		final CodecManager.NV21Translator convertor = new CodecManager.NV21Translator(mEncoderName, mEncoderColorFormat, mActualQuality.resX, mActualQuality.resY);
-		
 		Camera.PreviewCallback callback = new Camera.PreviewCallback() {
 			long now = System.nanoTime()/1000, oldnow = now, i=0;
 			ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
@@ -501,7 +480,8 @@ public abstract class VideoStream extends MediaStream {
 				try {
 					int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
 					if (bufferIndex>=0) {
-						convertor.translate(data, inputBuffers[bufferIndex]);
+						inputBuffers[bufferIndex].clear();
+						convertor.convert(data, inputBuffers[bufferIndex]);
 						mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
 					} else {
 						Log.e(TAG,"No buffer available !");
@@ -531,7 +511,8 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/**
-	 * Encoding of the audio/video is done by a MediaCodec.
+	 * Video encoding is done by a MediaCodec.
+	 * But here we will use the buffer-to-surface methode
 	 */
 	@SuppressLint({ "InlinedApi", "NewApi" })	
 	protected void encodeWithMediaCodecMethod2() throws RuntimeException, IOException {
@@ -655,12 +636,6 @@ public abstract class VideoStream extends MediaStream {
 			mActualQuality.resY = mQuality.resY;
 			mActualQuality.bitrate = mQuality.bitrate;
 
-			// Hack needed for now because there are weird artefacts at lower resolutions (when resX or resY os not a multiple of 16)
-			/*if (mActualQuality.resX<352) {
-				mActualQuality.resX = 352;
-				mActualQuality.resY = 288;
-			}*/
-
 			mActualQuality = VideoQuality.determineClosestSupportedResolution(parameters, mActualQuality);
 			int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
 			
@@ -684,51 +659,6 @@ public abstract class VideoStream extends MediaStream {
 				throw e;
 			}
 		}
-	}
-
-	/** 
-	 * Returns an associative array of the supported color formats and the names of the encoders for a given mime type
-	 * The goal here will be to check if either YUV420SemiPlanar or YUV420Planar color formats 
-	 * are supported by one of the encoders of the phone.
-	 * This can take up to sec to return apparently !
-	 **/
-	@SuppressLint("NewApi")
-	static protected SparseArray<ArrayList<String>> findSupportedColorFormats(String mimeType) {
-		SparseArray<ArrayList<String>> list = new SparseArray<ArrayList<String>>();
-
-		if (sSupportedColorFormats.containsKey(mimeType)) {
-			return sSupportedColorFormats.get(mimeType); 
-		}
-
-		Log.v(TAG,"Searching supported color formats for mime type "+mimeType);
-
-		// We loop through the encoders, apparently this can take up to a sec (testes on a GS3)
-		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
-			MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
-			if (!codecInfo.isEncoder()) continue;
-
-			String[] types = codecInfo.getSupportedTypes();
-			for (int i = 0; i < types.length; i++) {
-				if (types[i].equalsIgnoreCase(mimeType)) {
-					MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
-					// And through the color formats supported
-					for (int k = 0; k < capabilities.colorFormats.length; k++) {
-						int format = capabilities.colorFormats[k];
-						if (list.get(format) == null) list.put(format, new ArrayList<String>());
-						list.get(format).add(codecInfo.getName());
-					}
-				}
-			}
-		}
-
-		// Logs the supported color formats on the phone
-		StringBuilder e = new StringBuilder();
-		e.append("Supported color formats on this phone: ");
-		for (int i=0;i<list.size();i++) e.append(list.keyAt(i)+(i==list.size()-1?".":", "));
-		Log.v(TAG, e.toString());
-
-		sSupportedColorFormats.put(mimeType, list);
-		return list;
 	}
 
 	protected void lockCamera() {
@@ -809,117 +739,5 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 	}	
-
-	private class CameraFifo {
-
-		private final int MAX = 10;
-
-		private CodecManager.NV21Translator mConvertor = null;
-		private byte[][] mBuffers = new byte[MAX][];
-		private long[] mTimestamps = new long[MAX];
-		private Thread mThread = null;
-		private int mHead, mTail;
-		private Semaphore mAvailable;
-		private Semaphore mRemaining;
-		private boolean mRunning; 
-
-		public void start() {
-			if (mThread == null) {
-
-				mHead = 0;
-				mTail = 0;
-				mAvailable = new Semaphore(0);
-				mRemaining = new Semaphore(MAX);
-
-				mRunning = true;
-				mThread = new Thread(mRunnable);
-				mThread.start();
-
-				mConvertor = new CodecManager.NV21Translator(mEncoderName, mEncoderColorFormat, mActualQuality.resX, mActualQuality.resY);
-				for (int i=0;i<MAX;i++) mCamera.addCallbackBuffer(new byte[mConvertor.getBufferSize()]);
-				mCamera.setPreviewCallbackWithBuffer(mCameraCallback);
-
-			}
-		} 
-
-		public void stop() {
-			if (mThread != null) {
-				mCamera.setPreviewCallback(null);
-				mRunning = false;
-				mThread.interrupt();
-				try {
-					mThread.join();
-				} catch (InterruptedException e) {}
-				mThread = null;
-			}
-		}
-
-		private void queue(byte[] buffer, long ts) {
-			try {
-				mRemaining.acquire();
-			} catch (InterruptedException e) {}
-			mBuffers[mHead] = buffer;
-			mTimestamps[mHead] = ts;
-			mHead++;
-			if (mHead>=MAX) mHead = 0;
-			mAvailable.release();
-		}
-
-		/**
-		 * This will be called from the main thread, doing the color format conversion and feeding the encoder 
-		 * from there was too long, that is why this FIFO is needed
-		 */
-		Camera.PreviewCallback mCameraCallback = new Camera.PreviewCallback() {
-			private long now = System.nanoTime()/1000, oldnow = now;
-			private int i=0;
-			@Override
-			public void onPreviewFrame(byte[] data, Camera camera) {
-				now = System.nanoTime()/1000;
-				if (i++>3) {
-					i = 0;
-					Log.d(TAG,"Measured: "+1000000L/(now-oldnow)+" fps.");
-				}
-				oldnow = now;
-				queue(data, now);
-			}
-		};
-
-		/**
-		 * Thread in which we do the conversion between color formats and we feed the MediaCodec
-		 */
-		private Runnable mRunnable = new Runnable() {
-			@SuppressLint("NewApi")
-			@Override
-			public void run() {
-				ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
-
-				while (mRunning && !Thread.interrupted()) {
-					//Log.d(TAG, "a: "+mRemaining.availablePermits());
-					try {
-						mAvailable.acquire();
-					} catch (InterruptedException e) {
-						break;
-					}
-
-					try {
-						int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
-						if (bufferIndex>=0) {
-							mConvertor.translate(mBuffers[mTail], inputBuffers[bufferIndex]);
-							mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), mTimestamps[mTail], 0);
-						} else {
-							Log.e(TAG,"No buffer available !");
-						}
-					} finally {
-						mCamera.addCallbackBuffer(mBuffers[mTail]);
-						mTail++;
-						if (mTail>=MAX) mTail = 0;
-						mRemaining.release();
-					}
-
-				}
-			}
-		};
-
-	}
 
 }

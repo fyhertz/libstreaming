@@ -198,11 +198,11 @@ public class UriParser {
 		Session session = builder.build();
 		
 		if (videoApi>0 && session.getVideoTrack() != null) {
-			session.getVideoTrack().setMode(videoApi);
+			session.getVideoTrack().setStreamingMethod(videoApi);
 		}
 		
 		if (audioApi>0 && session.getAudioTrack() != null) {
-			session.getAudioTrack().setMode(audioApi);
+			session.getAudioTrack().setStreamingMethod(audioApi);
 		}
 		
 		return session;
