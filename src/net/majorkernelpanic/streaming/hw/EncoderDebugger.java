@@ -62,7 +62,7 @@ public class EncoderDebugger {
 	 * If this is set to false the test will be run only once and the result 
 	 * will be saved in the shared preferences. 
 	 */
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	
 	/** Set this to true to see more logs. */
 	private static final boolean VERBOSE = false;
@@ -298,8 +298,9 @@ public class EncoderDebugger {
 			if (Build.VERSION.SDK_INT>lastSdk || VERSION>lastVersion) {
 				return true;
 			}
+		} else {
+			return true;
 		}
-
 		return false;
 	}
 
