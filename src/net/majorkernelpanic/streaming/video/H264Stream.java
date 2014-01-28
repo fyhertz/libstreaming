@@ -171,7 +171,7 @@ public class H264Stream extends VideoStream {
 			mMediaRecorder.setMaxDuration(1000);
 			//mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
-			mMediaRecorder.setPreviewDisplay(mSurfaceHolder.getSurface());
+			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
 			mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
 			mMediaRecorder.setVideoFrameRate(mQuality.framerate);
 			mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);

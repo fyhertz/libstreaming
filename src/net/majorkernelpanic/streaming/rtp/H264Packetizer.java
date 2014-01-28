@@ -185,7 +185,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			}
 		}
 
-		Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay/1000000+" type: "+type);
+		//Log.d(TAG,"- Nal unit length: " + naluLength + " delay: "+delay/1000000+" type: "+type);
 
 		// Small NAL unit => Single NAL unit 
 		if (naluLength<=MAXPACKETSIZE-rtphl-2) {

@@ -35,7 +35,8 @@ public class CodecManager {
 		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar,
 		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar,
 		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar,
-		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar
+		MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedPlanar,
+		MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar
 	};		
 
 	private static Codec[] sEncoders = null;

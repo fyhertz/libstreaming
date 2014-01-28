@@ -197,7 +197,7 @@ public abstract class MediaStream implements Stream {
 		if (mRtpPort<=0 || mRtcpPort<=0)
 			throw new IllegalStateException("No destination ports set for the stream !");
 
-		if ((mMode&MODE_MEDIACODEC_API)!=0) {
+		if (mMode != MODE_MEDIARECORDER_API) {
 			encodeWithMediaCodec();
 		} else {
 			encodeWithMediaRecorder();

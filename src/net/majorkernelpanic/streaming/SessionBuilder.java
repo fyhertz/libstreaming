@@ -27,6 +27,7 @@ import net.majorkernelpanic.streaming.audio.AACStream;
 import net.majorkernelpanic.streaming.audio.AMRNBStream;
 import net.majorkernelpanic.streaming.audio.AudioQuality;
 import net.majorkernelpanic.streaming.audio.AudioStream;
+import net.majorkernelpanic.streaming.gl.SurfaceView;
 import net.majorkernelpanic.streaming.video.H263Stream;
 import net.majorkernelpanic.streaming.video.H264Stream;
 import net.majorkernelpanic.streaming.video.VideoQuality;
@@ -34,8 +35,6 @@ import net.majorkernelpanic.streaming.video.VideoStream;
 import android.content.Context;
 import android.hardware.Camera.CameraInfo;
 import android.preference.PreferenceManager;
-import android.util.Log;
-import android.view.SurfaceHolder;
 
 /**
  * Call {@link #getInstance()} to get access to the SessionBuilder.
@@ -71,7 +70,7 @@ public class SessionBuilder {
 	private int mCamera = CameraInfo.CAMERA_FACING_BACK;
 	private int mTimeToLive = 64;
 	private boolean mFlash = false;
-	private SurfaceHolder mSurfaceHolder = null;
+	private SurfaceView mSurfaceView = null;
 	private InetAddress mOrigin = null;
 	private InetAddress mDestination = null;
 
@@ -138,7 +137,7 @@ public class SessionBuilder {
 			VideoStream video = session.getVideoTrack();
 			video.setFlashState(mFlash);
 			video.setVideoQuality(VideoQuality.merge(mVideoQuality,video.getVideoQuality()));
-			video.setPreviewDisplay(mSurfaceHolder);
+			video.setSurfaceView(mSurfaceView);
 			video.setDestinationPorts(5006);
 		}
 
@@ -213,14 +212,13 @@ public class SessionBuilder {
 	}
 
 	/** 
-	 * Sets the Surface required by MediaRecorder to record video. 
-	 * @param surfaceHolder A SurfaceHolder wrapping a valid surface
+	 * Sets the SurfaceView required to preview the video stream. 
 	 **/
-	public SessionBuilder setSurfaceHolder(SurfaceHolder surfaceHolder) {
-		mSurfaceHolder = surfaceHolder;
+	public SessionBuilder setSurfaceView(SurfaceView surfaceView) {
+		mSurfaceView = surfaceView;
 		return this;
-	}
-
+	}	
+	
 	/** Returns the context set with {@link #setContext(Context)}*/
 	public Context getContext() {
 		return mContext;	
@@ -266,11 +264,12 @@ public class SessionBuilder {
 		return mFlash;
 	}
 
-	/** Returns the SurfaceHolder set with {@link #setSurfaceHolder(SurfaceHolder)}. */
-	public SurfaceHolder getSurfaceHolder() {
-		return mSurfaceHolder;
+	/** Returns the SurfaceView set with {@link #setSurfaceView(SurfaceView)}. */
+	public SurfaceView getSurfaceView() {
+		return mSurfaceView;
 	}
-
+	
+	
 	/** Returns the time to live set with {@link #setTimeToLive(int)}. */
 	public int getTimeToLive() {
 		return mTimeToLive;
@@ -281,7 +280,7 @@ public class SessionBuilder {
 		return new SessionBuilder()
 		.setDestination(mDestination)
 		.setOrigin(mOrigin)
-		.setSurfaceHolder(mSurfaceHolder)
+		.setSurfaceView(mSurfaceView)
 		.setVideoQuality(mVideoQuality)
 		.setVideoEncoder(mVideoEncoder)
 		.setFlashEnabled(mFlash)

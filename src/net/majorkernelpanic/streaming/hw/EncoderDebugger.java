@@ -455,6 +455,7 @@ public class EncoderDebugger {
 		switch (colorFormat) {
 		case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420SemiPlanar:
 		case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420PackedSemiPlanar:
+		case MediaCodecInfo.CodecCapabilities.COLOR_TI_FormatYUV420PackedSemiPlanar:
 			planar = false;
 			break;	
 		case MediaCodecInfo.CodecCapabilities.COLOR_FormatYUV420Planar:
