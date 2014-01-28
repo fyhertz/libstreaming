@@ -156,6 +156,7 @@ public class RtspClient {
 				mHandler = new Handler();
 				signal.release();
 				Looper.loop();
+				Log.e(TAG,"Thread stopped !");
 			}
 		}).start();		
 
@@ -227,8 +228,10 @@ public class RtspClient {
 		mHandler.post(new Runnable () {
 			@Override
 			public void run() {
-				if (mState == STATE_STARTED) return;
+				if (mState != STATE_STOPPED) return;
 				mState = STATE_STARTING;
+				
+				Log.d(TAG,"Connecting to RTSP server...");
 				
 				// If the user calls some methods to configure the client, it won't modify its behavior until the stream is restarted
 				mParameters = mTmpParameters.clone();
@@ -238,6 +241,7 @@ public class RtspClient {
 					mAddress = InetAddress.getByName(mParameters.host);
 				} catch (Exception e) {
 					postMessage(MESSAGE_CONNECTION_FAILED, e);
+					mState = STATE_STOPPED;
 					return;
 				}
 
@@ -245,7 +249,10 @@ public class RtspClient {
 					if (mParameters.session == null) mParameters.session = SessionBuilder.getInstance().build();
 					mParameters.session.setDestination(mAddress);
 				} catch (Exception e) {
+					mParameters.session = null;
 					postMessage(MESSAGE_START_FAILED, e);
+					mState = STATE_STOPPED;
+					return;
 				}
 				
 				try {
@@ -444,7 +451,6 @@ public class RtspClient {
 		String request = "TEARDOWN rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" + addHeaders();
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 		mOutputStream.write(request.getBytes("UTF-8"));
-		Response.parseResponse(mBufferedReader);
 	}
 	
 	/**

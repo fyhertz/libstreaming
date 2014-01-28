@@ -62,7 +62,7 @@ public class EncoderDebugger {
 	 * If this is set to false the test will be run only once and the result 
 	 * will be saved in the shared preferences. 
 	 */
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 	
 	/** Set this to true to see more logs. */
 	private static final boolean VERBOSE = false;
