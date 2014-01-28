@@ -52,6 +52,7 @@ public class SurfaceView extends android.view.SurfaceView implements Runnable, O
 	}
 	
 	public void startGLThread() {
+		Log.d(TAG,"Thread started.");
 		if (mTextureManager == null) {
 			mTextureManager = new TextureManager();
 		}
@@ -73,6 +74,7 @@ public class SurfaceView extends android.view.SurfaceView implements Runnable, O
 		mLock.release();
 
 		try {
+			long ts = 0, oldts = 0;
 			while (mRunning) {
 				synchronized (mSyncObject) {
 					mSyncObject.wait(2500);
@@ -87,6 +89,10 @@ public class SurfaceView extends android.view.SurfaceView implements Runnable, O
 						if (mCodecSurfaceManager != null) {
 							mCodecSurfaceManager.makeCurrent();
 							mTextureManager.drawFrame();
+							oldts = ts;
+							ts = mTextureManager.getSurfaceTexture().getTimestamp();
+							//Log.d(TAG,"FPS: "+(1000000000/(ts-oldts)));
+							mCodecSurfaceManager.setPresentationTime(ts);
 							mCodecSurfaceManager.swapBuffer();
 						}
 						

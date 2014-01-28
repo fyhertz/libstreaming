@@ -97,7 +97,7 @@ public class H264Stream extends VideoStream {
 
 	// Should not be called by the UI thread
 	private MP4Config testH264() throws IllegalStateException, IOException {
-		if ((mMode&MODE_MEDIACODEC_API)!=0) return testMediaCodecAPI();
+		if (mMode != MODE_MEDIARECORDER_API) return testMediaCodecAPI();
 		else return testMediaRecorderAPI();
 	}
 

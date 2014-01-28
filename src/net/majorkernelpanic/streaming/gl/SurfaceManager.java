@@ -5,7 +5,9 @@ import android.opengl.EGL14;
 import android.opengl.EGLConfig;
 import android.opengl.EGLContext;
 import android.opengl.EGLDisplay;
+import android.opengl.EGLExt;
 import android.opengl.EGLSurface;
+import android.opengl.GLES20;
 import android.view.Surface;
 
 @SuppressLint("NewApi")
@@ -14,14 +16,14 @@ public class SurfaceManager {
 	public final static String TAG = "TextureManager";
 
 	private static final int EGL_RECORDABLE_ANDROID = 0x3142;
-	
+
 	private EGLContext mEGLContext = null;
 	private EGLContext mEGLSharedContext = null;
 	private EGLSurface mEGLSurface = null;
 	private EGLDisplay mEGLDisplay = null;
 
 	private Surface mSurface;
-	
+
 	/**
 	 * Creates an EGL context and an EGL surface.
 	 */
@@ -30,7 +32,7 @@ public class SurfaceManager {
 		mEGLSharedContext = manager.mEGLContext;
 		eglSetup();
 	}
-	
+
 	/**
 	 * Creates an EGL context and an EGL surface.
 	 */
@@ -43,11 +45,19 @@ public class SurfaceManager {
 		if (!EGL14.eglMakeCurrent(mEGLDisplay, mEGLSurface, mEGLSurface, mEGLContext))
 			throw new RuntimeException("eglMakeCurrent failed");
 	}
-	
+
 	public void swapBuffer() {
 		EGL14.eglSwapBuffers(mEGLDisplay, mEGLSurface);
 	}
-	
+
+	/**
+	 * Sends the presentation time stamp to EGL.  Time is expressed in nanoseconds.
+	 */
+	public void setPresentationTime(long nsecs) {
+		EGLExt.eglPresentationTimeANDROID(mEGLDisplay, mEGLSurface, nsecs);
+		checkEglError("eglPresentationTimeANDROID");
+	}
+
 	/**
 	 * Prepares EGL.  We want a GLES 2.0 context and a surface that supports recording.
 	 */
@@ -60,35 +70,46 @@ public class SurfaceManager {
 		if (!EGL14.eglInitialize(mEGLDisplay, version, 0, version, 1)) {
 			throw new RuntimeException("unable to initialize EGL14");
 		}
-	
+
 		// Configure EGL for recording and OpenGL ES 2.0.
-		int[] attribList = {
-				EGL14.EGL_RED_SIZE, 8,
-				EGL14.EGL_GREEN_SIZE, 8,
-				EGL14.EGL_BLUE_SIZE, 8,
-				EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
-				EGL_RECORDABLE_ANDROID, 1,
-				EGL14.EGL_NONE
-		};
+		int[] attribList;
+		if (mEGLSharedContext == null) {
+			attribList = new int[] {
+					EGL14.EGL_RED_SIZE, 8,
+					EGL14.EGL_GREEN_SIZE, 8,
+					EGL14.EGL_BLUE_SIZE, 8,
+					EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+					EGL14.EGL_NONE
+			};
+		} else {
+			attribList = new int[] {
+					EGL14.EGL_RED_SIZE, 8,
+					EGL14.EGL_GREEN_SIZE, 8,
+					EGL14.EGL_BLUE_SIZE, 8,
+					EGL14.EGL_RENDERABLE_TYPE, EGL14.EGL_OPENGL_ES2_BIT,
+					EGL_RECORDABLE_ANDROID, 1,
+					EGL14.EGL_NONE
+			};	
+		}
 		EGLConfig[] configs = new EGLConfig[1];
 		int[] numConfigs = new int[1];
 		EGL14.eglChooseConfig(mEGLDisplay, attribList, 0, configs, 0, configs.length,
 				numConfigs, 0);
 		checkEglError("eglCreateContext RGB888+recordable ES2");
-	
+
 		// Configure context for OpenGL ES 2.0.
 		int[] attrib_list = {
 				EGL14.EGL_CONTEXT_CLIENT_VERSION, 2,
 				EGL14.EGL_NONE
 		};
-		
+
 		if (mEGLSharedContext == null) {
 			mEGLContext = EGL14.eglCreateContext(mEGLDisplay, configs[0], EGL14.EGL_NO_CONTEXT, attrib_list, 0);
 		} else {
 			mEGLContext = EGL14.eglCreateContext(mEGLDisplay, configs[0], mEGLSharedContext, attrib_list, 0);
 		}
 		checkEglError("eglCreateContext");
-		
+
 		// Create a window surface, and attach it to the Surface we received.
 		int[] surfaceAttribs = {
 				EGL14.EGL_NONE
@@ -96,7 +117,10 @@ public class SurfaceManager {
 		mEGLSurface = EGL14.eglCreateWindowSurface(mEGLDisplay, configs[0], mSurface,
 				surfaceAttribs, 0);
 		checkEglError("eglCreateWindowSurface");
-	
+
+        GLES20.glDisable(GLES20.GL_DEPTH_TEST);
+        GLES20.glDisable(GLES20.GL_CULL_FACE);
+		
 	}
 
 	/**
@@ -115,8 +139,9 @@ public class SurfaceManager {
 		mEGLDisplay = EGL14.EGL_NO_DISPLAY;
 		mEGLContext = EGL14.EGL_NO_CONTEXT;
 		mEGLSurface = EGL14.EGL_NO_SURFACE;
+		mSurface.release();
 	}
-	
+
 	/**
 	 * Checks for EGL errors. Throws an exception if one is found.
 	 */
@@ -126,8 +151,8 @@ public class SurfaceManager {
 			throw new RuntimeException(msg + ": EGL error: 0x" + Integer.toHexString(error));
 		}
 	}
-	
-	
-	
-	
+
+
+
+
 }

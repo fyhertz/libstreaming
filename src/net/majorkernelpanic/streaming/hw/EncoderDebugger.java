@@ -167,8 +167,8 @@ public class EncoderDebugger {
 			mNV21.setColorPanesReversed(mPreferences.getBoolean(PREF_PREFIX+resolution+"reversed", false));
 			mEncoderName = mPreferences.getString(PREF_PREFIX+resolution+"encoderName", "");
 			mEncoderColorFormat = mPreferences.getInt(PREF_PREFIX+resolution+"colorFormat", 0);
-			mB64PPS = mPreferences.getString(PREF_PREFIX+resolution+"sps", "");
-			mB64SPS = mPreferences.getString(PREF_PREFIX+resolution+"pps", "");
+			mB64PPS = mPreferences.getString(PREF_PREFIX+resolution+"pps", "");
+			mB64SPS = mPreferences.getString(PREF_PREFIX+resolution+"sps", "");
 
 			return;
 		}

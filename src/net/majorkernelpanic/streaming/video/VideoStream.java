@@ -478,6 +478,7 @@ public abstract class VideoStream extends MediaStream {
 			ByteBuffer[] inputBuffers = mMediaCodec.getInputBuffers();
 			@Override
 			public void onPreviewFrame(byte[] data, Camera camera) {
+				oldnow = now;
 				now = System.nanoTime()/1000;
 				if (i++>3) {
 					i = 0;
@@ -495,7 +496,6 @@ public abstract class VideoStream extends MediaStream {
 				} finally {
 					mCamera.addCallbackBuffer(data);
 				}				
-				oldnow = now;
 			}
 		};
 
