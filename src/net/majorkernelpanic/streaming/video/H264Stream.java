@@ -120,8 +120,8 @@ public class H264Stream extends VideoStream {
 
 	// Should not be called by the UI thread
 	private MP4Config testMediaRecorderAPI() throws RuntimeException, IOException {
-		String key = "h264-mr"+mEncoderName+"-"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
-		
+		String key = PREF_PREFIX+"h264-mr-"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
+	
 		if (mSettings != null) {
 			if (mSettings.contains(key)) {
 				String[] s = mSettings.getString(key, "").split(",");
@@ -163,20 +163,19 @@ public class H264Stream extends VideoStream {
 		unlockCamera();
 
 		try {
-
+			
 			mMediaRecorder = new MediaRecorder();
 			mMediaRecorder.setCamera(mCamera);
 			mMediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
 			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
-			mMediaRecorder.setMaxDuration(10000);
-			//mMediaRecorder.setMaxFileSize(Integer.MAX_VALUE);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
-			//mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
+			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
 			mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
 			mMediaRecorder.setVideoFrameRate(mQuality.framerate);
-			mMediaRecorder.setVideoEncodingBitRate(mQuality.bitrate);
+			mMediaRecorder.setVideoEncodingBitRate((int)(mQuality.bitrate*0.8));
 			mMediaRecorder.setOutputFile(TESTFILE);
-
+			mMediaRecorder.setMaxDuration(3000);
+			
 			// We wait a little and stop recording
 			mMediaRecorder.setOnInfoListener(new MediaRecorder.OnInfoListener() {
 				public void onInfo(MediaRecorder mr, int what, int extra) {
