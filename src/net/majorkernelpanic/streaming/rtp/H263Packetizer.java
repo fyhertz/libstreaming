@@ -40,12 +40,12 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 
 	private Thread t;
 
-	public H263Packetizer() throws IOException {
+	public H263Packetizer() {
 		super();
 		socket.setClockFrequency(90000);
 	}
 
-	public void start() throws IOException {
+	public void start() {
 		if (t==null) {
 			t = new Thread(this);
 			t.start();

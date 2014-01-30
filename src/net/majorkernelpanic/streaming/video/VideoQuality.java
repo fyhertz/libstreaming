@@ -47,11 +47,8 @@ public class VideoQuality {
 	 * @param resY The vertical resolution
 	 */
 	public VideoQuality(int resX, int resY) {
-		this.framerate = framerate;
-		this.bitrate = bitrate;
 		this.resX = resX;
 		this.resY = resY;
-		this.orientation = orientation;
 	}	
 	
 	/**
@@ -88,7 +85,7 @@ public class VideoQuality {
 	public int bitrate = 0;
 	public int resX = 0;
 	public int resY = 0;
-	public int orientation = 90;
+	public int orientation = 0;
 
 	public boolean equals(VideoQuality quality) {
 		if (quality==null) return false;
@@ -155,37 +152,6 @@ public class VideoQuality {
 		
 		return v;
 	}
-
-	/** 
-	 * Checks if the framerate is supported by the camera.
-	 * If not, it modifies it by a supported one. 
-	 **/	
-	public static VideoQuality determineClosestSupportedFramerate(Camera.Parameters parameters, VideoQuality quality) {
-		VideoQuality v = quality.clone();
-		int minDist = Integer.MAX_VALUE;
-		
-		// Frame rates
-		String supportedFrameRatesStr = "Supported frame rates: ";
-		List<Integer> supportedFrameRates = parameters.getSupportedPreviewFrameRates();
-		for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
-			supportedFrameRatesStr += it.next()+"fps"+(it.hasNext()?", ":"");
-		}
-		Log.v(TAG,supportedFrameRatesStr);
-
-		if (!supportedFrameRates.contains(quality.framerate)) {
-			for (Iterator<Integer> it = supportedFrameRates.iterator(); it.hasNext();) {
-				int fps = it.next();
-				int dist = Math.abs(fps - quality.framerate);
-				if (dist<minDist) {
-					minDist = dist;
-					v.framerate = fps;
-				}
-			}
-			Log.v(TAG,"Frame rate modified: "+quality.framerate+"->"+v.framerate);
-		}
-		
-		return v;
-	}	
 
 	public static int[] determineMaximumSupportedFramerate(Camera.Parameters parameters) {
 		int[] maxFps = new int[]{0,0};

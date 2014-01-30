@@ -33,7 +33,6 @@ import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
-import android.graphics.ImageFormat;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.Parameters;
@@ -54,8 +53,8 @@ public abstract class VideoStream extends MediaStream {
 
 	protected final static String TAG = "VideoStream";
 
-	protected VideoQuality mQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
-	protected VideoQuality mActualQuality = mQuality.clone(); 
+	protected VideoQuality mRequestedQuality = VideoQuality.DEFAULT_VIDEO_QUALITY.clone();
+	protected VideoQuality mQuality = mRequestedQuality.clone(); 
 	protected SurfaceHolder.Callback mSurfaceHolderCallback = null;
 	protected SurfaceView mSurfaceView = null;
 	protected SharedPreferences mSettings = null;
@@ -93,15 +92,7 @@ public abstract class VideoStream extends MediaStream {
 		super();
 		setCamera(camera);
 	}
-
-	/**
-	 * Called by subclasses. 
-	 */
-	protected void init(String mimeType) {
-		mCameraImageFormat = ImageFormat.NV21;
-		mMimeType = mimeType;
-	}
-
+	
 	/**
 	 * Sets the camera that will be used to capture video.
 	 * You can call this method at any time and changes will take effect next time you start the stream.
@@ -113,7 +104,7 @@ public abstract class VideoStream extends MediaStream {
 		for (int i=0;i<numberOfCameras;i++) {
 			Camera.getCameraInfo(i, cameraInfo);
 			if (cameraInfo.facing == camera) {
-				this.mCameraId = i;
+				mCameraId = i;
 				break;
 			}
 		}
@@ -224,56 +215,19 @@ public abstract class VideoStream extends MediaStream {
 		setFlashState(!mFlashState);
 	}
 
+	/** Indicates whether or not the flash of the phone is on. */
 	public boolean getFlashState() {
 		return mFlashState;
 	}
 
 	/** 
-	 * Modifies the resolution of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #start()}.
-	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
-	 * @param width Width of the stream
-	 * @param height height of the stream
-	 */
-	public void setVideoSize(int width, int height) {
-		if (mQuality.resX != width || mQuality.resY != height) {
-			mQuality.resX = width;
-			mQuality.resY = height;
-		}
-	}
-
-	/** 
-	 * Modifies the framerate of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #start()}.
-	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
-	 * @param rate Framerate of the stream
-	 */	
-	public void setVideoFramerate(int rate) {
-		if (mQuality.framerate != rate) {
-			mQuality.framerate = rate;
-		}
-	}
-
-	/** 
-	 * Modifies the bitrate of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #start()}.
-	 * {@link #setVideoQuality(VideoQuality)} may be more convenient.
-	 * @param bitrate Bitrate of the stream in bit per second
-	 */	
-	public void setVideoEncodingBitrate(int bitrate) {
-		if (mQuality.bitrate != bitrate) {
-			mQuality.bitrate = bitrate;
-		}
-	}
-
-	/** 
-	 * Modifies the quality of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #start()}.
+	 * Sets the configuration of the stream. You can call this method at any time 
+	 * and changes will take effect next time you call {@link #configure()}.
 	 * @param videoQuality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality videoQuality) {
-		if (!mQuality.equals(videoQuality)) {
-			mQuality = videoQuality.clone();
+		if (!mRequestedQuality.equals(videoQuality)) {
+			mRequestedQuality = videoQuality.clone();
 		}
 	}
 
@@ -281,20 +235,11 @@ public abstract class VideoStream extends MediaStream {
 	 * Returns the quality of the stream.  
 	 */
 	public VideoQuality getVideoQuality() {
-		return mQuality;
+		return mRequestedQuality;
 	}	
 
-	/** 
-	 * Modifies the videoEncoder of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #start()}.
-	 * @param videoEncoder Encoder of the stream
-	 */
-	protected void setVideoEncoder(int videoEncoder) {
-		this.mVideoEncoder = videoEncoder;
-	}
-
 	/**
-	 * Some data (SPS and PPS params) needs to be stored when {@link #generateSessionDescription()} is called 
+	 * Some data (SPS and PPS params) needs to be stored when {@link #getSessionDescription()} is called 
 	 * @param prefs The SharedPreferences that will be used to save SPS and PPS parameters
 	 */
 	public void setPreferences(SharedPreferences prefs) {
@@ -381,11 +326,11 @@ public abstract class VideoStream extends MediaStream {
 		mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 		mMediaRecorder.setVideoEncoder(mVideoEncoder);
 		mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
-		mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
-		mMediaRecorder.setVideoFrameRate(mQuality.framerate);
+		mMediaRecorder.setVideoSize(mRequestedQuality.resX,mRequestedQuality.resY);
+		mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
 
 		// The bandwidth actually consumed is often above what was requested 
-		mMediaRecorder.setVideoEncodingBitRate((int)(mQuality.bitrate*0.8));
+		mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
 
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
@@ -408,19 +353,15 @@ public abstract class VideoStream extends MediaStream {
 		} catch (IOException e) {
 			Log.e(TAG,"Couldn't skip mp4 header :/");
 			stop();
+			throw e;
 		}
 
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(mReceiver.getInputStream());
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
-		}
+		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
+		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+		mPacketizer.setInputStream(mReceiver.getInputStream());
+		mPacketizer.start();
+		
+		mStreaming = true;
 
 	}
 
@@ -461,13 +402,13 @@ public abstract class VideoStream extends MediaStream {
 			}
 		}
 
-		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mActualQuality.resX, mActualQuality.resY);
+		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
 		final NV21Convertor convertor = debugger.getNV21Convertor();
 
 		mMediaCodec = MediaCodec.createByCodecName(debugger.getEncoderName());
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mActualQuality.resX, mActualQuality.resY);
-		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mActualQuality.bitrate);
-		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualQuality.framerate);	
+		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
+		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
+		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);	
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT,debugger.getEncoderColorFormat());
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
@@ -502,17 +443,12 @@ public abstract class VideoStream extends MediaStream {
 		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
 		mCamera.setPreviewCallbackWithBuffer(callback);
 
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
-		}
+		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
+		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+		mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
+		mPacketizer.start();
+		
+		mStreaming = true;
 
 	}
 
@@ -529,12 +465,12 @@ public abstract class VideoStream extends MediaStream {
 		createCamera();
 		updateCamera();
 
-		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mActualQuality.resX, mActualQuality.resY);
+		EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
 
 		mMediaCodec = MediaCodec.createByCodecName(debugger.getEncoderName());
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mActualQuality.resX, mActualQuality.resY);
-		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mActualQuality.bitrate);
-		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mActualQuality.framerate);	
+		MediaFormat mediaFormat = MediaFormat.createVideoFormat("video/avc", mQuality.resX, mQuality.resY);
+		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, mQuality.bitrate);
+		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, mQuality.framerate);	
 		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, MediaCodecInfo.CodecCapabilities.COLOR_FormatSurface);
 		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
 		mMediaCodec.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
@@ -542,19 +478,16 @@ public abstract class VideoStream extends MediaStream {
 		((SurfaceView)mSurfaceView).addMediaCodecSurface(surface);
 		mMediaCodec.start();
 		
-		try {
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
-		}
+		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
+		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+		mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
+		mPacketizer.start();
+		
+		mStreaming = true;
 
 	}
 
-	public abstract String generateSessionDescription() throws IllegalStateException, IOException;
+	public abstract String getSessionDescription() throws IllegalStateException;
 
 	/**
 	 * Opens the camera in a new Looper thread so that the preview callback is not called from the main thread
@@ -587,8 +520,8 @@ public abstract class VideoStream extends MediaStream {
 	protected synchronized void createCamera() throws RuntimeException, IOException {
 		if (mSurfaceView == null)
 			throw new IllegalStateException("Invalid surface view !");
-		//if (mMode != MODE_MEDIACODEC_API_2 && (mSurfaceView.getHolder() == null || !mSurfaceReady)) 
-		//	throw new IllegalStateException("Invalid surface view !");
+		if (mMode != MODE_MEDIACODEC_API_2 && (mSurfaceView.getHolder() == null || !mSurfaceReady)) 
+			throw new IllegalStateException("Invalid surface view !");
 
 		if (mCamera == null) {
 			openCamera();
@@ -611,6 +544,7 @@ public abstract class VideoStream extends MediaStream {
 			});
 
 			try {
+				
 				Parameters parameters = mCamera.getParameters();
 				if (mFlashState) {
 					if (parameters.getFlashMode()==null) {
@@ -621,12 +555,13 @@ public abstract class VideoStream extends MediaStream {
 					}
 				}
 
-				int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
 				VideoQuality quality = new VideoQuality(352,288);
 				quality = VideoQuality.determineClosestSupportedResolution(parameters, quality);
-
+				int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+				
 				parameters.setPreviewFpsRange(max[0], max[1]);
 				parameters.setPreviewSize(quality.resX, quality.resY);
+				parameters.setRecordingHint(true);
 				mCamera.setParameters(parameters);
 				mCamera.setDisplayOrientation(mQuality.orientation);
 				
@@ -670,22 +605,16 @@ public abstract class VideoStream extends MediaStream {
 			}
 
 			Parameters parameters = mCamera.getParameters();
-
-			mActualQuality.resX = mQuality.resX;
-			mActualQuality.resY = mQuality.resY;
-			mActualQuality.bitrate = mQuality.bitrate;
-
-			mActualQuality = VideoQuality.determineClosestSupportedResolution(parameters, mActualQuality);
+			mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
 			int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
-
 			parameters.setPreviewFormat(mCameraImageFormat);
-			parameters.setPreviewSize(mActualQuality.resX, mActualQuality.resY);
-			//parameters.setPreviewFpsRange(max[0], max[1]);
+			parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+			parameters.setPreviewFpsRange(max[0], max[1]);
 
 			try {
-				Log.e(TAG,"FPS: "+mActualQuality.framerate+" X: "+mActualQuality.resX+" Y: "+mActualQuality.resY);
+				Log.e(TAG,"FPS: "+mQuality.framerate+" X: "+mQuality.resX+" Y: "+mQuality.resY);
 				mCamera.setParameters(parameters);
-				mCamera.setDisplayOrientation(mQuality.orientation);
+				mCamera.setDisplayOrientation(mRequestedQuality.orientation);
 				mCamera.startPreview();
 				mPreviewStarted = true;
 				measureActualFramerate();
@@ -727,17 +656,16 @@ public abstract class VideoStream extends MediaStream {
 	 * Blocks the thread in which this function is called.
 	 */
 	private void measureActualFramerate() {
+		final Semaphore lock = new Semaphore(0);
 
 		if (mSettings != null) {
-			String key = PREF_PREFIX+"fps-"+mQuality.framerate+","+mCameraImageFormat+","+mQuality.resX+","+mQuality.resY;
+			String key = PREF_PREFIX+"fps-"+mRequestedQuality.framerate+","+mCameraImageFormat+","+mRequestedQuality.resX+","+mRequestedQuality.resY;
 			if (mSettings.contains(key)) {
-				mActualQuality.framerate = mSettings.getInt(key, 0);
-				Log.d(TAG,"Actual framerate: "+mActualQuality.framerate);
+				mQuality.framerate = mSettings.getInt(key, 0);
+				Log.d(TAG,"Actual framerate: "+mQuality.framerate);
 				return;
 			}
 		}
-
-		final Semaphore lock = new Semaphore(0);
 
 		final Camera.PreviewCallback callback = new Camera.PreviewCallback() {
 			int i = 0, t = 0;
@@ -751,8 +679,8 @@ public abstract class VideoStream extends MediaStream {
 					count++;
 				}
 				if (i>15) {
-					mActualQuality.framerate = (int) (1000000/(t/count)+1);
-					Log.d(TAG,"Actual framerate: "+mActualQuality.framerate);
+					mQuality.framerate = (int) (1000000/(t/count)+1);
+					Log.d(TAG,"Actual framerate: "+mQuality.framerate);
 					lock.release();
 				}
 				oldnow = now;
@@ -769,7 +697,7 @@ public abstract class VideoStream extends MediaStream {
 
 		if (mSettings != null) {
 			Editor editor = mSettings.edit();
-			editor.putInt(PREF_PREFIX+"fps"+mQuality.framerate+","+mCameraImageFormat+","+mQuality.resX+mQuality.resY, mActualQuality.framerate);
+			editor.putInt(PREF_PREFIX+"fps"+mRequestedQuality.framerate+","+mCameraImageFormat+","+mRequestedQuality.resX+mRequestedQuality.resY, mQuality.framerate);
 			editor.commit();
 		}
 

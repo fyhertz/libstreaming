@@ -23,8 +23,11 @@ package net.majorkernelpanic.streaming.audio;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
+import net.majorkernelpanic.streaming.mp4.MP4Config;
 import net.majorkernelpanic.streaming.rtp.AMRNBPacketizer;
+import net.majorkernelpanic.streaming.rtp.H264Packetizer;
 import android.media.MediaRecorder;
+import android.util.Base64;
 
 /**
  * A class for streaming AMR-NB from the microphone of an android device using RTP.
@@ -33,7 +36,7 @@ import android.media.MediaRecorder;
  */
 public class AMRNBStream extends AudioStream {
 
-	public AMRNBStream() throws IOException {
+	public AMRNBStream() {
 		super();
 
 		mPacketizer = new AMRNBPacketizer();
@@ -49,14 +52,29 @@ public class AMRNBStream extends AudioStream {
 		}
 		
 		setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
-		setAudioSamplingRate(mQuality.samplingRate);
 		
 	}
 
 	/**
+	 * Starts the stream.
+	 */
+	public synchronized void start() throws IllegalStateException, IOException {
+		checkConfigured();
+		if (!mStreaming) {
+			super.start();
+		}
+	}
+	
+	public synchronized void configure() throws IllegalStateException, IOException {
+		super.configure();
+		mMode = MODE_MEDIARECORDER_API;
+		mQuality = mRequestedQuality.clone();
+	}
+	
+	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */	
-	public String generateSessionDescription() {
+	public String getSessionDescription() {
 		return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 				"a=rtpmap:96 AMR/8000\r\n" +
 				"a=fmtp:96 octet-align=1;\r\n";

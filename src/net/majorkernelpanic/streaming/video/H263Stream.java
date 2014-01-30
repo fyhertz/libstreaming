@@ -23,6 +23,7 @@ package net.majorkernelpanic.streaming.video;
 import java.io.IOException;
 
 import net.majorkernelpanic.streaming.rtp.H263Packetizer;
+import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
 
@@ -42,30 +43,42 @@ public class H263Stream extends VideoStream {
 	 */
 	public H263Stream() throws IOException {
 		this(CameraInfo.CAMERA_FACING_BACK);
-		// TODO: Implement H.263 streaming with the MediaCodec API and remove this line.
-		setStreamingMethod(MODE_MEDIARECORDER_API);
 	}	
-		
+
 	/**
 	 * Constructs the H.263 stream.
 	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT 
 	 * @throws IOException
 	 */	
-	public H263Stream(int cameraId) throws IOException {
+	public H263Stream(int cameraId) {
 		super(cameraId);
-		setVideoEncoder(MediaRecorder.VideoEncoder.H263);
+		mCameraImageFormat = ImageFormat.NV21;
+		mVideoEncoder = MediaRecorder.VideoEncoder.H263;
 		mPacketizer = new H263Packetizer();
 	}
 
 	/**
+	 * Starts the stream.
+	 */
+	public synchronized void start() throws IllegalStateException, IOException {
+		checkConfigured();
+		if (!mStreaming) {
+			super.start();
+		}
+	}
+	
+	public synchronized void configure() throws IllegalStateException, IOException {
+		super.configure();
+		mMode = MODE_MEDIARECORDER_API;
+		mQuality = mRequestedQuality.clone();
+	}
+	
+	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */
-	public String generateSessionDescription() throws IllegalStateException,
-	IOException {
-
+	public String getSessionDescription() {
 		return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 				"a=rtpmap:96 H263-1998/90000\r\n";
-
 	}
 
 }

@@ -49,12 +49,12 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	private int streamType = 1;
 
 
-	public H264Packetizer() throws IOException {
+	public H264Packetizer() {
 		super();
 		socket.setClockFrequency(90000);
 	}
 
-	public void start() throws IOException {
+	public void start() {
 		if (t == null) {
 			t = new Thread(this);
 			t.start();

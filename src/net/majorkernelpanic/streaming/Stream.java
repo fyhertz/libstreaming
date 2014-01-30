@@ -28,7 +28,20 @@ import java.net.InetAddress;
  */
 public interface Stream {
 
+	/**
+	 * Configures the stream.
+	 */
+	public void configure() throws IllegalStateException, IOException;
+	
+	/**
+	 * Starts the stream.
+	 * This method can only be called after {@link Stream#configure()}.
+	 */
 	public void start() throws IllegalStateException, IOException;
+	
+	/**
+	 * Stops the stream.
+	 */
 	public void stop();
 
 	/**
@@ -73,20 +86,24 @@ public interface Stream {
 	 **/
 	public int[] getDestinationPorts();
 	
+
+	/**
+	 * Returns the SSRC of the underlying {@link net.majorkernelpanic.streaming.rtp.RtpSocket}.
+	 * @return the SSRC of the stream.
+	 */
 	public int getSSRC();
 
 	/**
-	 * Returns an approximation of the bitrate of the stream in bit per seconde. 
+	 * Returns an approximation of the bit rate consumed by the stream in bit per seconde.
 	 */
 	public long getBitrate();
 	
 	/**
-	 * The SSRC identifier of the stream.
-	 * @return The SSRC
-	 * @throws IllegalStateException
-	 * @throws IOException
+	 * Returns a description of the stream using SDP. 
+	 * This method can only be called after {@link Stream#configure()}.
+	 * @throws IllegalStateException Thrown when {@link Stream#configure()} wa not called.
 	 */
-	public String generateSessionDescription() throws IllegalStateException, IOException;
+	public String getSessionDescription() throws IllegalStateException;
 
 	public boolean isStreaming();
 

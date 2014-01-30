@@ -47,7 +47,7 @@ abstract public class AbstractPacketizer {
 	
 	protected long ts = 0;
 
-	public AbstractPacketizer() throws IOException {
+	public AbstractPacketizer() {
 		int ssrc = new Random().nextInt();
 		ts = new Random().nextInt();
 		socket = new RtpSocket();
@@ -90,7 +90,7 @@ abstract public class AbstractPacketizer {
 	}
 
 	/** Starts the packetizer. */
-	public abstract void start() throws IOException;
+	public abstract void start();
 
 	/** Stops the packetizer. */
 	public abstract void stop();

@@ -43,7 +43,7 @@ public class AACADTSPacketizer extends AbstractPacketizer implements Runnable {
 	private Thread t;
 	private int samplingRate = 8000;
 
-	public AACADTSPacketizer() throws IOException {
+	public AACADTSPacketizer() {
 		super();
 	}
 

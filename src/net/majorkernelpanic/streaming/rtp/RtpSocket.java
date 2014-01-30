@@ -67,7 +67,7 @@ public class RtpSocket implements Runnable {
 	 * This RTP socket implements a buffering mechanism relying on a FIFO of buffers and a Thread.
 	 * @throws IOException
 	 */
-	public RtpSocket() throws IOException {
+	public RtpSocket() {
 		
 		mCacheSize = 00;
 		mBufferCount = 300; // TODO: reajust that when the FIFO is full 
@@ -101,8 +101,12 @@ public class RtpSocket implements Runnable {
 
 		}
 
+		try {
 		mSocket = new MulticastSocket();
-
+		} catch (Exception e) {
+			throw new RuntimeException(e.getMessage());
+		}
+		
 	}
 
 	private void resetFifo() {

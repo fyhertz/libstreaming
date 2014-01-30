@@ -42,7 +42,7 @@ public class AACLATMPacketizer extends AbstractPacketizer implements Runnable {
 
 	private Thread t;
 
-	public AACLATMPacketizer() throws IOException {
+	public AACLATMPacketizer() {
 		super();
 		socket.setCacheSize(0);
 	}

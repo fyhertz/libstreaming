@@ -30,6 +30,7 @@ import net.majorkernelpanic.streaming.mp4.MP4Config;
 import net.majorkernelpanic.streaming.rtp.H264Packetizer;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences.Editor;
+import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
 import android.os.Environment;
@@ -48,13 +49,14 @@ public class H264Stream extends VideoStream {
 	public final static String TAG = "H264Stream";
 
 	private Semaphore mLock = new Semaphore(0);
+	private MP4Config mConfig;
 
 	/**
 	 * Constructs the H.264 stream.
 	 * Uses CAMERA_FACING_BACK by default.
 	 * @throws IOException
 	 */
-	public H264Stream() throws IOException {
+	public H264Stream() {
 		this(CameraInfo.CAMERA_FACING_BACK);
 	}
 
@@ -63,24 +65,22 @@ public class H264Stream extends VideoStream {
 	 * @param cameraId Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT
 	 * @throws IOException
 	 */
-	public H264Stream(int cameraId) throws IOException {
+	public H264Stream(int cameraId) {
 		super(cameraId);
-		//setStreamingMethod(MODE_MEDIARECORDER_API);
-		init("video/avc");
-		setVideoEncoder(MediaRecorder.VideoEncoder.H264);
+		mMimeType = "video/avc";
+		mCameraImageFormat = ImageFormat.NV21;
+		mVideoEncoder = MediaRecorder.VideoEncoder.H264;
 		mPacketizer = new H264Packetizer();
 	}
 
 	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
-	 * Will fail if called when streaming.
 	 */
-	public synchronized  String generateSessionDescription() throws IllegalStateException, IOException {
-		MP4Config config = testH264();
-
+	public synchronized String getSessionDescription() throws IllegalStateException {
+		if (mConfig == null) throw new IllegalStateException("You need to call configure() first !");
 		return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 		"a=rtpmap:96 H264/90000\r\n" +
-		"a=fmtp:96 packetization-mode=1;profile-level-id="+config.getProfileLevel()+";sprop-parameter-sets="+config.getB64SPS()+","+config.getB64PPS()+";\r\n";
+		"a=fmtp:96 packetization-mode=1;profile-level-id="+mConfig.getProfileLevel()+";sprop-parameter-sets="+mConfig.getB64SPS()+","+mConfig.getB64PPS()+";\r\n";
 	}	
 
 	/**
@@ -88,31 +88,46 @@ public class H264Stream extends VideoStream {
 	 * This will also open the camera and dispay the preview if {@link #startPreview()} has not aready been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
-		MP4Config config = testH264();
-		byte[] pps = Base64.decode(config.getB64PPS(), Base64.NO_WRAP);
-		byte[] sps = Base64.decode(config.getB64SPS(), Base64.NO_WRAP);
-		((H264Packetizer)mPacketizer).setStreamParameters(pps, sps);
-		super.start();
+		checkConfigured();
+		if (!mStreaming) {
+			byte[] pps = Base64.decode(mConfig.getB64PPS(), Base64.NO_WRAP);
+			byte[] sps = Base64.decode(mConfig.getB64SPS(), Base64.NO_WRAP);
+			((H264Packetizer)mPacketizer).setStreamParameters(pps, sps);
+			super.start();
+		}
 	}
 
-	// Should not be called by the UI thread
+	public void configure() throws IllegalStateException, IOException {
+		super.configure();
+		mConfig = testH264();
+		mMode = mRequestedMode;
+		mQuality = mRequestedQuality.clone();
+	}
+	
+	/** 
+	 * Tests if streaming with the given configuration (bit rate, frame rate, resolution) is possible 
+	 * and determines the pps and sps. Should not be called by the UI thread.
+	 **/
 	private MP4Config testH264() throws IllegalStateException, IOException {
 		if (mMode != MODE_MEDIARECORDER_API) return testMediaCodecAPI();
 		else return testMediaRecorderAPI();
 	}
 
-	// Should not be called by the UI thread
 	@SuppressLint("NewApi")
 	private MP4Config testMediaCodecAPI() throws RuntimeException, IOException {
 		createCamera();
 		updateCamera();
 		try {
-			EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mActualQuality.resX, mActualQuality.resY);
+			if (mQuality.resX>=640) {
+				// Using the MediaCodec API with the buffer method for high resolutions is too slow
+				mMode = MODE_MEDIARECORDER_API;
+			}
+			EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
 			return new MP4Config(debugger.getB64SPS(), debugger.getB64PPS());
 		} catch (Exception e) {
 			// Fallback on the old streaming method using the MediaRecorder API
 			Log.e(TAG,"Resolution not supported with the MediaCodec API, we fallback on the old streamign method.");
-			setStreamingMethod(MODE_MEDIARECORDER_API);
+			mMode = MODE_MEDIARECORDER_API;
 			return testH264();
 		}
 	}
@@ -120,7 +135,7 @@ public class H264Stream extends VideoStream {
 
 	// Should not be called by the UI thread
 	private MP4Config testMediaRecorderAPI() throws RuntimeException, IOException {
-		String key = PREF_PREFIX+"h264-mr-"+mQuality.framerate+","+mQuality.resX+","+mQuality.resY;
+		String key = PREF_PREFIX+"h264-mr-"+mRequestedQuality.framerate+","+mRequestedQuality.resX+","+mRequestedQuality.resY;
 	
 		if (mSettings != null) {
 			if (mSettings.contains(key)) {
@@ -128,7 +143,7 @@ public class H264Stream extends VideoStream {
 				return new MP4Config(s[0],s[1],s[2]);
 			}
 		}
-
+		
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");
 		}
@@ -170,9 +185,9 @@ public class H264Stream extends VideoStream {
 			mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
 			mMediaRecorder.setVideoEncoder(mVideoEncoder);
 			mMediaRecorder.setPreviewDisplay(mSurfaceView.getHolder().getSurface());
-			mMediaRecorder.setVideoSize(mQuality.resX,mQuality.resY);
-			mMediaRecorder.setVideoFrameRate(mQuality.framerate);
-			mMediaRecorder.setVideoEncodingBitRate((int)(mQuality.bitrate*0.8));
+			mMediaRecorder.setVideoSize(mRequestedQuality.resX,mRequestedQuality.resY);
+			mMediaRecorder.setVideoFrameRate(mRequestedQuality.framerate);
+			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
 			mMediaRecorder.setOutputFile(TESTFILE);
 			mMediaRecorder.setMaxDuration(3000);
 			

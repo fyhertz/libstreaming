@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
+import java.nio.channels.IllegalSelectorException;
 
 import android.os.SystemClock;
 import android.util.Log;
@@ -48,7 +49,7 @@ public class SenderReport {
 		this.ssrc = ssrc;
 	}
 	
-	public SenderReport() throws IOException {
+	public SenderReport() {
 
 		/*							     Version(2)  Padding(0)					 					*/
 		/*									 ^		  ^			PT = 0	    						*/
@@ -72,7 +73,11 @@ public class SenderReport {
 		/* Byte 20,21,22,23  ->  packet count				 	 */
 		/* Byte 24,25,26,27  ->  octet count			         */
 
-		usock = new MulticastSocket();
+		try {
+			usock = new MulticastSocket();
+		} catch (IOException e) {
+			throw new RuntimeException(e.getMessage());
+		}
 		upack = new DatagramPacket(buffer, 1);
 
 		// By default we sent one report every 5 secconde

@@ -14,7 +14,8 @@ public abstract class AudioStream  extends MediaStream {
 	protected int mAudioSource;
 	protected int mOutputFormat;
 	protected int mAudioEncoder;
-	protected AudioQuality mQuality = AudioQuality.DEFAULT_AUDIO_QUALITY.clone();
+	protected AudioQuality mRequestedQuality = AudioQuality.DEFAULT_AUDIO_QUALITY.clone();
+	protected AudioQuality mQuality = mRequestedQuality.clone();
 	
 	public AudioStream() {
 		setAudioSource(MediaRecorder.AudioSource.CAMCORDER);
@@ -23,13 +24,9 @@ public abstract class AudioStream  extends MediaStream {
 	public void setAudioSource(int audioSource) {
 		mAudioSource = audioSource;
 	}
-	
-	public void setAudioSamplingRate(int samplingRate) {
-		mQuality.samplingRate = samplingRate;
-	}
 
 	public void setAudioQuality(AudioQuality quality) {
-		mQuality = quality;
+		mRequestedQuality = quality;
 	}
 	
 	/** 
@@ -38,14 +35,6 @@ public abstract class AudioStream  extends MediaStream {
 	public AudioQuality getAudioQuality() {
 		return mQuality;
 	}	
-	
-	/**
-	 * Sets the encoding bit rate for the stream.
-	 * @param bitRate bit rate in bit per second
-	 */
-	public void setAudioEncodingBitRate(int bitRate) {
-		mQuality.bitRate = bitRate;
-	}
 	
 	protected void setAudioEncoder(int audioEncoder) {
 		mAudioEncoder = audioEncoder;

@@ -46,7 +46,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 	private Thread t;
 
-	public AMRNBPacketizer() throws IOException {
+	public AMRNBPacketizer() {
 		super();
 		socket.setClockFrequency(samplingRate);
 	}
