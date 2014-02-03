@@ -139,7 +139,7 @@ public class AACStream extends AudioStream {
 		// If he did, we force a reasonable one: 16 kHz
 		if (i>12) mQuality.samplingRate = 16000;
 
-		if (mMode != mRequestedMode) {
+		if (mMode != mRequestedMode || mPacketizer==null) {
 			mMode = mRequestedMode;
 			if (mMode == MODE_MEDIARECORDER_API) {
 				mPacketizer = new AACADTSPacketizer();

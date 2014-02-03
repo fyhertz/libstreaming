@@ -93,7 +93,17 @@ public class EncoderDebugger {
 	private byte[][] mVideo, mDecodedVideo;
 	private String mB64PPS, mB64SPS;
 
-	public static EncoderDebugger debug(Context context, int width, int height) {
+	public synchronized static void asyncDebug(final Context context, final int width, final int height) {
+		new Thread(new Runnable() {
+			@Override
+			public void run() {
+				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+				debug(prefs, width, height);
+			}
+		}).start();
+	}
+	
+	public synchronized static EncoderDebugger debug(Context context, int width, int height) {
 		SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
 		return debug(prefs, width, height);
 	}

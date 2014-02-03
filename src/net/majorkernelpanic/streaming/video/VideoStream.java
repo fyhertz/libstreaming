@@ -274,10 +274,12 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	public synchronized void startPreview() 
-			throws CameraInUseException, InvalidSurfaceException, ConfNotSupportedException, RuntimeException {
+			throws CameraInUseException, InvalidSurfaceException, 
+			ConfNotSupportedException, RuntimeException {
 		mCameraOpenedManually = true;
 		if (!mPreviewStarted) {
 			createCamera();
+			updateCamera();
 			try {
 				mCamera.startPreview();
 				mPreviewStarted = true;
@@ -531,6 +533,7 @@ public abstract class VideoStream extends MediaStream {
 			throw new InvalidSurfaceException("Invalid surface !");
 		if (mSurfaceView.getHolder() == null || !mSurfaceReady) 
 			throw new InvalidSurfaceException("Invalid surface !");
+
 		if (mCamera == null) {
 			openCamera();
 			mUnlocked = false;
@@ -553,24 +556,14 @@ public abstract class VideoStream extends MediaStream {
 
 			try {
 
+				// If the phone has a flash, we turn it on/off according to mFlashEnabled
+				// setRecordingHint(true) is a very nice optimisation if you plane to only use the Camera for recording
 				Parameters parameters = mCamera.getParameters();
-				if (mFlashEnabled) {
-					if (parameters.getFlashMode()==null) {
-						// The phone has no flash or the choosen camera can not toggle the flash
-					} else {
-						parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
-					}
+				if (parameters.getFlashMode()!=null) {
+					parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
 				}
-
-				VideoQuality quality = new VideoQuality(352,288);
-				quality = VideoQuality.determineClosestSupportedResolution(parameters, quality);
-				int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
-
-				parameters.setPreviewFpsRange(max[0], max[1]);
-				parameters.setPreviewSize(quality.resX, quality.resY);
 				parameters.setRecordingHint(true);
 				mCamera.setParameters(parameters);
-				mCamera.setDisplayOrientation(mQuality.orientation);
 
 				try {
 					if (mMode == MODE_MEDIACODEC_API_2) {
@@ -587,6 +580,7 @@ public abstract class VideoStream extends MediaStream {
 				destroyCamera();
 				throw e;
 			}
+
 		}
 	}
 
@@ -607,30 +601,27 @@ public abstract class VideoStream extends MediaStream {
 		}	
 	}
 
-	protected synchronized void updateCamera() throws IOException, RuntimeException {
-		if (mMode != MODE_MEDIARECORDER_API) {
+	protected synchronized void updateCamera() throws RuntimeException {
+		if (mPreviewStarted) {
+			mPreviewStarted = false;
+			mCamera.stopPreview();
+		}
 
-			if (mPreviewStarted) {
-				mPreviewStarted = false;
-				mCamera.stopPreview();
-			}
+		Parameters parameters = mCamera.getParameters();
+		mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
+		int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+		parameters.setPreviewFormat(mCameraImageFormat);
+		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
+		parameters.setPreviewFpsRange(max[0], max[1]);
 
-			Parameters parameters = mCamera.getParameters();
-			mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
-			int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
-			parameters.setPreviewFormat(mCameraImageFormat);
-			parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-			parameters.setPreviewFpsRange(max[0], max[1]);
-
-			try {
-				mCamera.setParameters(parameters);
-				mCamera.setDisplayOrientation(mQuality.orientation);
-				mCamera.startPreview();
-				mPreviewStarted = true;
-			} catch (RuntimeException e) {
-				destroyCamera();
-				throw e;
-			}
+		try {
+			mCamera.setParameters(parameters);
+			mCamera.setDisplayOrientation(mQuality.orientation);
+			mCamera.startPreview();
+			mPreviewStarted = true;
+		} catch (RuntimeException e) {
+			destroyCamera();
+			throw e;
 		}
 	}
 

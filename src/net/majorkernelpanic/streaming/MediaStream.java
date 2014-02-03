@@ -66,7 +66,7 @@ public abstract class MediaStream implements Stream {
 	protected InetAddress mDestination;
 	protected LocalSocket mReceiver, mSender = null;
 	private LocalServerSocket mLss = null;
-	private int mSocketId;
+	private int mSocketId, mTTL = 64;
 
 	protected MediaRecorder mMediaRecorder;
 	protected MediaCodec mMediaCodec;
@@ -131,7 +131,7 @@ public abstract class MediaStream implements Stream {
 	 * @throws IOException
 	 */
 	public void setTimeToLive(int ttl) throws IOException {
-		mPacketizer.setTimeToLive(ttl);
+		mTTL = ttl;
 	}
 
 	/** 
@@ -209,6 +209,8 @@ public abstract class MediaStream implements Stream {
 		if (mRtpPort<=0 || mRtcpPort<=0)
 			throw new IllegalStateException("No destination ports set for the stream !");
 
+		mPacketizer.setTimeToLive(mTTL);
+		
 		if (mMode != MODE_MEDIARECORDER_API) {
 			encodeWithMediaCodec();
 		} else {
