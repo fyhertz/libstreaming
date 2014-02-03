@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
+import net.majorkernelpanic.streaming.exceptions.StorageUnavailableException;
 import net.majorkernelpanic.streaming.hw.EncoderDebugger;
 import net.majorkernelpanic.streaming.mp4.MP4Config;
 import net.majorkernelpanic.streaming.rtp.H264Packetizer;
@@ -88,7 +90,7 @@ public class H264Stream extends VideoStream {
 	 * This will also open the camera and dispay the preview if {@link #startPreview()} has not aready been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
-		checkConfigured();
+		configure();
 		if (!mStreaming) {
 			byte[] pps = Base64.decode(mConfig.getB64PPS(), Base64.NO_WRAP);
 			byte[] sps = Base64.decode(mConfig.getB64SPS(), Base64.NO_WRAP);
@@ -97,11 +99,11 @@ public class H264Stream extends VideoStream {
 		}
 	}
 
-	public void configure() throws IllegalStateException, IOException {
+	public synchronized void configure() throws IllegalStateException, IOException {
 		super.configure();
-		mConfig = testH264();
 		mMode = mRequestedMode;
 		mQuality = mRequestedQuality.clone();
+		mConfig = testH264();
 	}
 	
 	/** 
@@ -132,7 +134,6 @@ public class H264Stream extends VideoStream {
 		}
 	}
 
-
 	// Should not be called by the UI thread
 	private MP4Config testMediaRecorderAPI() throws RuntimeException, IOException {
 		String key = PREF_PREFIX+"h264-mr-"+mRequestedQuality.framerate+","+mRequestedQuality.resX+","+mRequestedQuality.resY;
@@ -145,16 +146,23 @@ public class H264Stream extends VideoStream {
 		}
 		
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
-			throw new IllegalStateException("No external storage or external storage not ready !");
+			throw new StorageUnavailableException("No external storage or external storage not ready !");
 		}
 
 		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.mp4";
-
+		
 		Log.i(TAG,"Testing H264 support... Test file saved at: "+TESTFILE);
 
+		try {
+			File file = new File(TESTFILE);
+			file.createNewFile();
+		} catch (IOException e) {
+			throw new StorageUnavailableException(e.getMessage());
+		}
+		
 		// Save flash state & set it to false so that led remains off while testing h264
-		boolean savedFlashState = mFlashState;
-		mFlashState = false;
+		boolean savedFlashState = mFlashEnabled;
+		mFlashEnabled = false;
 
 		boolean cameraOpen = mCamera!=null;
 		createCamera();
@@ -218,6 +226,10 @@ public class H264Stream extends VideoStream {
 			} else {
 				Log.d(TAG,"MediaRecorder callback was not called after 6 seconds... :(");
 			}
+		} catch (IOException e) {
+			throw new ConfNotSupportedException(e.getMessage());
+		} catch (RuntimeException e) {
+			throw new ConfNotSupportedException(e.getMessage());
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
@@ -229,7 +241,7 @@ public class H264Stream extends VideoStream {
 			lockCamera();
 			if (!cameraOpen) destroyCamera();
 			// Restore flash state
-			mFlashState = savedFlashState;
+			mFlashEnabled = savedFlashState;
 		}
 
 		// Retrieve SPS & PPS & ProfileId with MP4Config

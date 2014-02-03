@@ -40,6 +40,7 @@ import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.Stream;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
 
@@ -134,7 +135,7 @@ public class RtspClient {
 	 * RTSP server (for example your Wowza Media Server).
 	 */
 	public interface Callback {
-		public void onStatusUpdate(int message, Exception exception);
+		public void onRtspStatusUpdate(int message, Exception exception);
 	}
 
 	public RtspClient() {
@@ -148,18 +149,13 @@ public class RtspClient {
 		mState = STATE_STOPPED;
 
 		final Semaphore signal = new Semaphore(0);
-
-		new Thread(new Runnable() {
+		new HandlerThread("net.majorkernelpanic.streaming.RtspClient"){
 			@Override
-			public void run() {
-				Looper.prepare();
+			protected void onLooperPrepared() {
 				mHandler = new Handler();
 				signal.release();
-				Looper.loop();
-				Log.e(TAG,"Thread stopped !");
 			}
-		}).start();		
-
+		}.start();
 		signal.acquireUninterruptibly();
 		
 	}
@@ -246,7 +242,7 @@ public class RtspClient {
 				}
 
 				try {
-					if (mParameters.session == null) mParameters.session = SessionBuilder.getInstance().build();
+					if (mParameters.session == null) throw new IllegalStateException("setSession() has not been called !");
 					mParameters.session.setDestination(mAddress);
 				} catch (Exception e) {
 					mParameters.session = null;
@@ -254,6 +250,15 @@ public class RtspClient {
 					mState = STATE_STOPPED;
 					return;
 				}
+				
+				try {
+					mParameters.session.configure();
+				} catch (Exception e) {
+					mParameters.session = null;
+					postMessage(MESSAGE_START_FAILED, e);
+					mState = STATE_STOPPED;
+					return;
+				}				
 				
 				try {
 					tryConnection();
@@ -301,12 +306,7 @@ public class RtspClient {
 
 	public void release() {
 		stopStream();
-		mHandler.post(new Runnable () {
-			@Override
-			public void run() {
-				Looper.myLooper().quit();
-			}
-		});
+		mHandler.getLooper().quit();
 	}
 	
 	private void abord() {
@@ -537,7 +537,7 @@ public class RtspClient {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onStatusUpdate(message, null); 
+					mCallback.onRtspStatusUpdate(message, null); 
 				}
 			}
 		});
@@ -548,7 +548,7 @@ public class RtspClient {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onStatusUpdate(message, e); 
+					mCallback.onRtspStatusUpdate(message, e); 
 				}
 			}
 		});

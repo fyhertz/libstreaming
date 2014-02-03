@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,11 +23,8 @@ package net.majorkernelpanic.streaming.audio;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
-import net.majorkernelpanic.streaming.mp4.MP4Config;
 import net.majorkernelpanic.streaming.rtp.AMRNBPacketizer;
-import net.majorkernelpanic.streaming.rtp.H264Packetizer;
 import android.media.MediaRecorder;
-import android.util.Base64;
 
 /**
  * A class for streaming AMR-NB from the microphone of an android device using RTP.
@@ -59,7 +56,7 @@ public class AMRNBStream extends AudioStream {
 	 * Starts the stream.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
-		checkConfigured();
+		configure();
 		if (!mStreaming) {
 			super.start();
 		}

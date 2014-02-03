@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -139,17 +139,14 @@ public class SurfaceView extends android.view.SurfaceView implements Runnable, O
 	@Override
 	public void surfaceChanged(SurfaceHolder holder, int format, int width,
 			int height) {
-
 	}
 
 	@Override
 	public void surfaceCreated(SurfaceHolder holder) {
-		Log.e(TAG, "Surface created 1");
 	}
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
-		Log.e(TAG, "Surface destroyed 1");
 		if (mThread != null) {
 			mThread.interrupt();
 		}

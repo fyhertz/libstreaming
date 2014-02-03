@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,14 +26,18 @@ import java.util.concurrent.Semaphore;
 
 import net.majorkernelpanic.streaming.audio.AudioQuality;
 import net.majorkernelpanic.streaming.audio.AudioStream;
+import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
+import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
+import net.majorkernelpanic.streaming.exceptions.StorageUnavailableException;
+import net.majorkernelpanic.streaming.exceptions.InvalidSurfaceException;
 import net.majorkernelpanic.streaming.gl.SurfaceView;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 import net.majorkernelpanic.streaming.video.VideoStream;
 import android.content.Context;
 import android.net.wifi.WifiManager;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
-import android.util.Log;
 
 /**
  * This class makes use of all the streaming package.
@@ -45,6 +49,26 @@ public class Session {
 
 	public final static String TAG = "Session";
 
+	public final static int STREAM_VIDEO = 0x01;
+	
+	public final static int STREAM_AUDIO = 0x00;
+	
+	public final static int MESSAGE_PREVIEW_STARTED = 0x06;
+	
+	public final static int MESSAGE_STREAM_STARTED = 0x07;
+	
+	public final static int ERROR_CAMERA_ALREADY_IN_USE = 0x00;
+	
+	public final static int ERROR_CONFIGURATION_NOT_SUPPORTED = 0x01;
+	
+	public final static int ERROR_STORAGE_NOT_READY = 0x02;
+	
+	public final static int ERROR_CAMERA_HAS_NO_FLASH = 0x03;
+	
+	public final static int ERROR_INVALID_SURFACE = 0x04;	
+	
+	public final static int ERROR_OTHER = 0x05;
+	
 	private InetAddress mOrigin;
 	private InetAddress mDestination;
 	private int mTimeToLive = 64;
@@ -73,20 +97,14 @@ public class Session {
 		}
 
 		final Semaphore signal = new Semaphore(0);
-
-		new Thread(new Runnable() {
+		new HandlerThread("net.majorkernelpanic.streaming.Session"){
 			@Override
-			public void run() {
-				Looper.prepare();
+			protected void onLooperPrepared() {
 				mHandler = new Handler();
 				signal.release();
-				Looper.loop();
-				Log.e(TAG,"Thread stopped !");
 			}
-		}).start();		
-
-		signal.acquireUninterruptibly();	
-
+		}.start();
+		signal.acquireUninterruptibly();
 	}
 
 	/**
@@ -98,11 +116,8 @@ public class Session {
 		/** Called periodically when streaming. */
 		public void onBitrareUpdate(long bitrate);
 
-		/** Called when the camera of the phone is alread being used by some app. */
-		public void onCameraInUse();
-
 		/** Called when some error occurs. */
-		public void onError(Exception e);
+		public void onSessionStatusUpdate(int reason, int streamType, Exception e);
 
 	}
 
@@ -125,7 +140,7 @@ public class Session {
 
 	public void removeVideoTrack() {
 		if (mVideoStream != null) {
-			mVideoStream.stop();
+			mVideoStream.stopPreview();
 			mVideoStream = null;
 		}
 	}
@@ -147,6 +162,14 @@ public class Session {
 		mContext = context;
 	}
 
+	/**
+	 * Sets the callback interface that will be called by the {@link Session}.
+	 * @param callback The implementation of the {@link Callback} interface
+	 */
+	public void setCallback(Callback callback) {
+		mCallback = callback;
+	}	
+	
 	/** 
 	 * The origin address of the session.
 	 * It appears in the sessionn description.
@@ -158,7 +181,7 @@ public class Session {
 
 	/** 
 	 * The destination address for all the streams of the session.
-	 * You must stop all tracks before calling this method.
+	 * Changes will be taken into account the next time you start the session.
 	 * @param destination The destination address
 	 */
 	public void setDestination(InetAddress destination) {
@@ -167,7 +190,7 @@ public class Session {
 
 	/** 
 	 * Set the TTL of all packets sent during the session.
-	 * You must call this method before adding tracks to the session.
+	 * Changes will be taken into account the next time you start the session.
 	 * @param ttl The Time To Live
 	 */
 	public void setTimeToLive(int ttl) {
@@ -187,7 +210,7 @@ public class Session {
 	
 	/**
 	 * Sets a Surface to show a preview of recorded media (video). 
-	 * You can call this method at any time and changes will take effect next time you call {@link #start()}.
+	 * You can call this method at any time and changes will take effect next time you call {@link #start()} or {@link #startPreview()}.
 	 */
 	public void setSurfaceView(final SurfaceView view) {
 		mHandler.post(new Runnable() {
@@ -242,27 +265,12 @@ public class Session {
 		return sessionDescription.toString();
 	}
 
+	/** Returns the destination set with {@link #setDestination(InetAddress)}. */
 	public InetAddress getDestination() {
 		return mDestination;
 	}
 
-	public boolean trackExists(int id) {
-		if (id==0) 
-			return mAudioStream!=null;
-		else
-			return mVideoStream!=null;
-	}
-
-	public Stream getTrack(int id) {
-		if (id==0)
-			return mAudioStream;
-		else
-			return mVideoStream;
-	}
-
-	/**
-	 * Returns an approximation of the bandwidth consumed by the session in bit per seconde. 
-	 */
+	/** Returns an approximation of the bandwidth consumed by the session in bit per seconde. */
 	public long getBitrate() {
 		long sum = 0;
 		if (mAudioStream != null) sum += mAudioStream.getBitrate();
@@ -290,10 +298,18 @@ public class Session {
 				if (stream!=null && !stream.isStreaming()) {
 					try {
 						stream.configure();
+					} catch (CameraInUseException e) {
+						postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
+					} catch (StorageUnavailableException e) {
+						postError(ERROR_STORAGE_NOT_READY , id, e);
+					} catch (ConfNotSupportedException e) {
+						postError(ERROR_CONFIGURATION_NOT_SUPPORTED , id, e);
+					} catch (InvalidSurfaceException e) {
+						postError(ERROR_INVALID_SURFACE , id, e);						
 					} catch (IOException e) {
-						postError(e);
-					} catch (IllegalStateException e) {
-						postError(e);
+						postError(ERROR_OTHER, id, e);
+					} catch (RuntimeException e) {
+						postError(ERROR_OTHER, id, e);
 					}
 				}
 			}				
@@ -314,17 +330,28 @@ public class Session {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
-				if (!isStreaming()) mMainHandler.post(mUpdateBitrate);
+				if (!isStreaming()) {
+					mHandler.post(mUpdateBitrate);
+				}
 				Stream stream = id==0 ? mAudioStream : mVideoStream;
 				if (stream!=null && !stream.isStreaming()) {
 					try {
 						stream.setTimeToLive(mTimeToLive);
 						stream.setDestinationAddress(mDestination);
 						stream.start();
+						postMessage(MESSAGE_STREAM_STARTED, id);
+					} catch (CameraInUseException e) {
+						postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
+					} catch (StorageUnavailableException e) {
+						postError(ERROR_STORAGE_NOT_READY , id, e);
+					} catch (ConfNotSupportedException e) {
+						postError(ERROR_CONFIGURATION_NOT_SUPPORTED , id, e);
+					} catch (InvalidSurfaceException e) {
+						postError(ERROR_INVALID_SURFACE , id, e);
 					} catch (IOException e) {
-						postError(e);
+						postError(ERROR_OTHER, id, e);
 					} catch (RuntimeException e) {
-						postError(e);
+						postError(ERROR_OTHER, id, e);
 					}
 				}
 			}				
@@ -371,6 +398,39 @@ public class Session {
 		stop(1);
 	}
 
+	public void startPreview() {
+		mHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mVideoStream != null) {
+					try {
+						mVideoStream.startPreview();
+						postMessage(MESSAGE_PREVIEW_STARTED, STREAM_VIDEO);
+					} catch (CameraInUseException e) {
+						postError(ERROR_CAMERA_ALREADY_IN_USE , STREAM_VIDEO, e);
+					} catch (ConfNotSupportedException e) {
+						postError(ERROR_CONFIGURATION_NOT_SUPPORTED , STREAM_VIDEO, e);
+					} catch (InvalidSurfaceException e) {
+						postError(ERROR_INVALID_SURFACE , STREAM_VIDEO, e);
+					} catch (RuntimeException e) {
+						postError(ERROR_OTHER, STREAM_VIDEO, e);
+					}
+				}
+			}
+		});
+	}
+	
+	public void stopPreview() {
+		mHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mVideoStream != null) {
+					mVideoStream.stopPreview();
+				}
+			}
+		});
+	}	
+	
 	public void switchCamera() {
 		mHandler.post(new Runnable() {
 			@Override
@@ -378,14 +438,26 @@ public class Session {
 				if (mVideoStream != null) {
 					try {
 						mVideoStream.switchCamera();
-					} catch (RuntimeException e) {
-						postError(e);
+						postMessage(MESSAGE_PREVIEW_STARTED, STREAM_VIDEO);
+					} catch (CameraInUseException e) {
+						postError(ERROR_CAMERA_ALREADY_IN_USE , STREAM_VIDEO, e);
+					} catch (ConfNotSupportedException e) {
+						postError(ERROR_CONFIGURATION_NOT_SUPPORTED , STREAM_VIDEO, e);
+					} catch (InvalidSurfaceException e) {
+						postError(ERROR_INVALID_SURFACE , STREAM_VIDEO, e);
 					} catch (IOException e) {
-						postError(e);
+						postError(ERROR_OTHER, STREAM_VIDEO, e);
+					} catch (RuntimeException e) {
+						postError(ERROR_OTHER, STREAM_VIDEO, e);
 					}
 				}
 			}
 		});
+	}
+	
+	public int getCamera() {
+		return mVideoStream != null ? mVideoStream.getCamera() : 0;
+				
 	}
 	
 	public void toggleFlash() {
@@ -396,7 +468,7 @@ public class Session {
 					try {
 						mVideoStream.toggleFlash();
 					} catch (RuntimeException e) {
-						postError(e);
+						postError(ERROR_CAMERA_HAS_NO_FLASH, STREAM_VIDEO, e);
 					}
 				}
 			}
@@ -404,32 +476,70 @@ public class Session {
 	}	
 	
 	/** Deletes all existing tracks & release associated resources. */
-	public void flush() {
+	public void release() {
 		removeAudioTrack();
 		removeVideoTrack();
+		mHandler.getLooper().quit();
 	}
 
-	private void postError(final Exception e) {
+	private void postMessage(final int message, final int streamType) {
 		mMainHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onError(e); 
+					mCallback.onSessionStatusUpdate(message, streamType, null); 
+				}
+			}
+		});
+	}	
+	
+	private void postError(final int reason, final int streamType,final Exception e) {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onSessionStatusUpdate(reason, streamType, e); 
 				}
 			}
 		});
 	}	
 
+	private void postBitRate(final long bitrate) {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onBitrareUpdate(bitrate);
+				}
+			}
+		});
+	}		
+	
 	private Runnable mUpdateBitrate = new Runnable() {
 		@Override
 		public void run() {
 			if (isStreaming()) { 
-				if (mCallback != null) {
-					mCallback.onBitrareUpdate(getBitrate()); 
-				}
-				mMainHandler.postDelayed(mUpdateBitrate, 500);
+				postBitRate(getBitrate());
+				mHandler.postDelayed(mUpdateBitrate, 500);
+			} else {
+				postBitRate(0);
 			}
 		}
 	};
+	
+
+	public boolean trackExists(int id) {
+		if (id==0) 
+			return mAudioStream!=null;
+		else
+			return mVideoStream!=null;
+	}
+
+	public Stream getTrack(int id) {
+		if (id==0)
+			return mAudioStream;
+		else
+			return mVideoStream;
+	}
 
 }

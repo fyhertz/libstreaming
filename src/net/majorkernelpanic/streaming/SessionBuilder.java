@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,6 +73,7 @@ public class SessionBuilder {
 	private SurfaceView mSurfaceView = null;
 	private InetAddress mOrigin = null;
 	private InetAddress mDestination = null;
+	private Session.Callback mCallback = null;
 
 	// Removes the default public constructor
 	private SessionBuilder() {}
@@ -100,7 +101,7 @@ public class SessionBuilder {
 	 * @return The new Session
 	 * @throws IOException 
 	 */
-	public Session build() throws IOException {
+	public Session build() {
 		Session session;
 
 		session = new Session();
@@ -108,6 +109,7 @@ public class SessionBuilder {
 		session.setOrigin(mOrigin);
 		session.setDestination(mDestination);
 		session.setTimeToLive(mTimeToLive);
+		session.setCallback(mCallback);
 
 		switch (mAudioEncoder) {
 		case AUDIO_AAC:
@@ -219,6 +221,11 @@ public class SessionBuilder {
 		return this;
 	}	
 	
+	public SessionBuilder setCallback(Session.Callback callback) {
+		mCallback = callback;
+		return this;
+	}
+	
 	/** Returns the context set with {@link #setContext(Context)}*/
 	public Context getContext() {
 		return mContext;	
@@ -288,7 +295,8 @@ public class SessionBuilder {
 		.setTimeToLive(mTimeToLive)
 		.setAudioEncoder(mAudioEncoder)
 		.setAudioQuality(mAudioQuality)
-		.setContext(mContext);
+		.setContext(mContext)
+		.setCallback(mCallback);
 	}
 
 }
