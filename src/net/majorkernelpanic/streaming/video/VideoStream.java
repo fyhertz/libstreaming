@@ -64,6 +64,7 @@ public abstract class VideoStream extends MediaStream {
 	protected SurfaceView mSurfaceView = null;
 	protected SharedPreferences mSettings = null;
 	protected int mVideoEncoder, mCameraId = 0;
+	protected int mRequestedOrientation = 0, mOrientation = 0;
 	protected Camera mCamera;
 	protected Thread mCameraThread;
 	protected Looper mCameraLooper;
@@ -214,14 +215,21 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/** 
+	 * Sets the orientation of the preview.
+	 * @param orientation The orientation of the preview
+	 */
+	public void setPreviewOrientation(int orientation) {
+		mRequestedOrientation = orientation;
+	}
+	
+	
+	/** 
 	 * Sets the configuration of the stream. You can call this method at any time 
 	 * and changes will take effect next time you call {@link #configure()}.
 	 * @param videoQuality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality videoQuality) {
-		if (!mRequestedQuality.equals(videoQuality)) {
-			mRequestedQuality = videoQuality.clone();
-		}
+		mRequestedQuality = videoQuality.clone();
 	}
 
 	/** 
@@ -239,6 +247,15 @@ public abstract class VideoStream extends MediaStream {
 		mSettings = prefs;
 	}
 
+	/**
+	 * Configures the stream. You need to call this before calling {@link #getSessionDescription()} 
+	 * to apply your configuration of the stream.
+	 */
+	public synchronized void configure() throws IllegalStateException, IOException {
+		super.configure();
+		mOrientation = mRequestedOrientation;
+	}	
+	
 	/**
 	 * Starts the stream.
 	 * This will also open the camera and dispay the preview 
@@ -274,8 +291,11 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	public synchronized void startPreview() 
-			throws CameraInUseException, InvalidSurfaceException, 
-			ConfNotSupportedException, RuntimeException {
+			throws CameraInUseException, 
+			InvalidSurfaceException, 
+			ConfNotSupportedException, 
+			RuntimeException {
+		
 		mCameraOpenedManually = true;
 		if (!mPreviewStarted) {
 			createCamera();
@@ -616,7 +636,7 @@ public abstract class VideoStream extends MediaStream {
 
 		try {
 			mCamera.setParameters(parameters);
-			mCamera.setDisplayOrientation(mQuality.orientation);
+			mCamera.setDisplayOrientation(mOrientation);
 			mCamera.startPreview();
 			mPreviewStarted = true;
 		} catch (RuntimeException e) {

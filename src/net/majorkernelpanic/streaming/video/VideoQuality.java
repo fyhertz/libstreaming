@@ -50,22 +50,6 @@ public class VideoQuality {
 		this.resX = resX;
 		this.resY = resY;
 	}	
-	
-	/**
-	 * Represents a quality for a video stream.
-	 * @param resX The horizontal resolution
-	 * @param resY The vertical resolution
-	 * @param framerate The framerate in frame per seconds
-	 * @param bitrate The bitrate in bit per seconds
-	 * @param orientation The orientation of the video in the SurfaceView  
-	 */
-	public VideoQuality(int resX, int resY, int framerate, int bitrate, int orientation) {
-		this.framerate = framerate;
-		this.bitrate = bitrate;
-		this.resX = resX;
-		this.resY = resY;
-		this.orientation = orientation;
-	}	
 
 	/**
 	 * Represents a quality for a video stream.
@@ -85,19 +69,17 @@ public class VideoQuality {
 	public int bitrate = 0;
 	public int resX = 0;
 	public int resY = 0;
-	public int orientation = 0;
 
 	public boolean equals(VideoQuality quality) {
 		if (quality==null) return false;
 		return (quality.resX == this.resX 				&
 				quality.resY == this.resY 				&
 				quality.framerate == this.framerate	&
-				quality.bitrate == this.bitrate 		&
-				quality.orientation == this.orientation);
+				quality.bitrate == this.bitrate);
 	}
 
 	public VideoQuality clone() {
-		return new VideoQuality(resX,resY,framerate,bitrate,orientation);
+		return new VideoQuality(resX,resY,framerate,bitrate);
 	}
 
 	public static VideoQuality parseQuality(String str) {
@@ -113,17 +95,6 @@ public class VideoQuality {
 			catch (IndexOutOfBoundsException ignore) {}
 		}
 		return quality;
-	}
-
-	public static VideoQuality merge(VideoQuality videoQuality, VideoQuality withVideoQuality) {
-		if (withVideoQuality != null && videoQuality != null) {
-			if (videoQuality.resX==0) videoQuality.resX = withVideoQuality.resX;
-			if (videoQuality.resY==0) videoQuality.resY = withVideoQuality.resY;
-			if (videoQuality.framerate==0) videoQuality.framerate = withVideoQuality.framerate;
-			if (videoQuality.bitrate==0) videoQuality.bitrate = withVideoQuality.bitrate;
-			if (videoQuality.orientation==90) videoQuality.orientation = withVideoQuality.orientation;
-		}
-		return videoQuality;
 	}
 
 	/** 

@@ -29,7 +29,8 @@ import java.net.InetAddress;
 public interface Stream {
 
 	/**
-	 * Configures the stream.
+	 * Configures the stream. You need to call this before calling {@link #getSessionDescription()} 
+	 * to apply your configuration of the stream.
 	 */
 	public void configure() throws IllegalStateException, IOException;
 	

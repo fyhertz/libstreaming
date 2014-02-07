@@ -22,62 +22,76 @@ package net.majorkernelpanic.streaming;
 
 import java.io.IOException;
 import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.Semaphore;
 
 import net.majorkernelpanic.streaming.audio.AudioQuality;
 import net.majorkernelpanic.streaming.audio.AudioStream;
 import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
 import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
-import net.majorkernelpanic.streaming.exceptions.StorageUnavailableException;
 import net.majorkernelpanic.streaming.exceptions.InvalidSurfaceException;
+import net.majorkernelpanic.streaming.exceptions.StorageUnavailableException;
 import net.majorkernelpanic.streaming.gl.SurfaceView;
+import net.majorkernelpanic.streaming.rtsp.RtspClient;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 import net.majorkernelpanic.streaming.video.VideoStream;
-import android.content.Context;
-import android.net.wifi.WifiManager;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 
 /**
- * This class makes use of all the streaming package.
- * It represents a streaming session between a client and the phone.
- * A stream is designated by the word "track" in this class.
- * To add tracks to the session you need to call addVideoTrack() or addAudioTrack().
+ * You should instantiate this class with the {@link SessionBuilder}.<br />
+ * This is the class you will want to use to stream audio and or video to some peer using RTP.<br />
+ * 
+ * It holds a {@link VideoStream} and a {@link AudioStream} together and provides 
+ * syncronous and asyncrounous functions to start and stop those steams.
+ * You should implement a callback interface {@link Callback} to receive notifications and error reports.<br />
+ * 
+ * If you want to stream to a RTSP server, you will need an instance of this class and hand it to a {@link RtspClient}.
+ * 
+ * If you don't use the RTSP protocol, you will still need to send a session description to the receiver 
+ * for him to be able to decode your audio/video streams. You can obtain this session description by calling 
+ * {@link #configure()} or {@link #syncConfigure()} to configure the session with its parameters 
+ * (audio samplingrate, video resolution) and then {@link Session#getSessionDescription()}.<br />
+ * 
+ * See the example 2 here: https://github.com/fyhertz/libstreaming-examples to 
+ * see an example of how to get a SDP.<br />
+ * 
+ * See the example 3 here: https://github.com/fyhertz/libstreaming-examples to 
+ * see an example of how to stream to a RTSP server.<br />
+ * 
  */
 public class Session {
 
 	public final static String TAG = "Session";
 
 	public final static int STREAM_VIDEO = 0x01;
-	
+
 	public final static int STREAM_AUDIO = 0x00;
-	
-	public final static int MESSAGE_PREVIEW_STARTED = 0x06;
-	
-	public final static int MESSAGE_STREAM_STARTED = 0x07;
-	
+
+	/** */
 	public final static int ERROR_CAMERA_ALREADY_IN_USE = 0x00;
-	
+
 	public final static int ERROR_CONFIGURATION_NOT_SUPPORTED = 0x01;
-	
+
 	public final static int ERROR_STORAGE_NOT_READY = 0x02;
-	
+
 	public final static int ERROR_CAMERA_HAS_NO_FLASH = 0x03;
-	
-	public final static int ERROR_INVALID_SURFACE = 0x04;	
-	
-	public final static int ERROR_OTHER = 0x05;
-	
-	private InetAddress mOrigin;
-	private InetAddress mDestination;
+
+	public final static int ERROR_INVALID_SURFACE = 0x04;
+
+	public final static int ERROR_UNKNOWN_HOST = 0x05;
+
+	public final static int ERROR_OTHER = 0x06;
+
+	private String mOrigin;
+	private String mDestination;
 	private int mTimeToLive = 64;
 	private long mTimestamp;
-	private Context mContext = null;
-	private WifiManager.MulticastLock mLock = null;
 
 	private AudioStream mAudioStream = null;
 	private VideoStream mVideoStream = null;
+	private int mOrientation = 0;
 
 	private Callback mCallback;
 	private Handler mMainHandler;
@@ -90,11 +104,7 @@ public class Session {
 		long uptime = System.currentTimeMillis();
 		mMainHandler = new Handler(Looper.getMainLooper());
 		mTimestamp = (uptime/1000)<<32 & (((uptime-((uptime/1000)*1000))>>32)/1000); // NTP timestamp
-		try {
-			mOrigin = InetAddress.getLocalHost();
-		} catch (Exception ignore) {
-			mOrigin = null;
-		}
+		mOrigin = "127.0.0.1";
 
 		final Semaphore signal = new Semaphore(0);
 		new HandlerThread("net.majorkernelpanic.streaming.Session"){
@@ -113,11 +123,43 @@ public class Session {
 	 */
 	public interface Callback {
 
-		/** Called periodically when streaming. */
+		/** 
+		 * Called periodically to inform you on the bandwidth 
+		 * consumption of the streams when streaming. 
+		 */
 		public void onBitrareUpdate(long bitrate);
 
 		/** Called when some error occurs. */
-		public void onSessionStatusUpdate(int reason, int streamType, Exception e);
+		public void onSessionError(int reason, int streamType, Exception e);
+
+		/** 
+		 * Called when the previw of the {@link VideoStream}
+		 * has correctly been started.
+		 * If an error occurs while starting the preview,
+		 * {@link Callback#onSessionError(int, int, Exception)} will be
+		 * called instead of {@link Callback#onPreviewStarted()}.
+		 */
+		public void onPreviewStarted();
+
+		/** 
+		 * Called when the session has correctly been configured 
+		 * after calling {@link Session#configure()}.
+		 * If an error occurs while configuring the {@link Session},
+		 * {@link Callback#onSessionError(int, int, Exception)} will be
+		 * called instead of  {@link Callback#onSessionConfigured()}.
+		 */
+		public void onSessionConfigured();
+
+		/** 
+		 * Called when the streams of the session have correctly been started.
+		 * If an error occurs while starting the {@link Session},
+		 * {@link Callback#onSessionError(int, int, Exception)} will be
+		 * called instead of  {@link Callback#onSessionStarted()}. 
+		 */
+		public void onSessionStarted();
+
+		/** Called when the stream of the session have been stopped. */
+		public void onSessionStopped();
 
 	}
 
@@ -153,15 +195,6 @@ public class Session {
 		return mVideoStream;
 	}	
 
-	/** 
-	 * Reference to the context is needed to aquire a MulticastLock. 
-	 * If the Session has a multicast destination is address such a lock will be aquired.
-	 * @param context reference to the application context 
-	 **/
-	public void setContext(Context context) {
-		mContext = context;
-	}
-
 	/**
 	 * Sets the callback interface that will be called by the {@link Session}.
 	 * @param callback The implementation of the {@link Callback} interface
@@ -169,13 +202,13 @@ public class Session {
 	public void setCallback(Callback callback) {
 		mCallback = callback;
 	}	
-	
+
 	/** 
 	 * The origin address of the session.
 	 * It appears in the sessionn description.
 	 * @param origin The origin address
 	 */
-	public void setOrigin(InetAddress origin) {
+	public void setOrigin(String origin) {
 		mOrigin = origin;
 	}	
 
@@ -184,7 +217,7 @@ public class Session {
 	 * Changes will be taken into account the next time you start the session.
 	 * @param destination The destination address
 	 */
-	public void setDestination(InetAddress destination) {
+	public void setDestination(String destination) {
 		mDestination =  destination;
 	}
 
@@ -207,7 +240,7 @@ public class Session {
 			mVideoStream.setVideoQuality(quality);
 		}
 	}
-	
+
 	/**
 	 * Sets a Surface to show a preview of recorded media (video). 
 	 * You can call this method at any time and changes will take effect next time you call {@link #start()} or {@link #startPreview()}.
@@ -222,18 +255,37 @@ public class Session {
 			}				
 		});
 	}
+
+	/** 
+	 * Sets the orientation of the preview. You can call this method at any time 
+	 * and changes will take effect next time you call {@link #configure()}.
+	 * @param orientation The orientation of the preview
+	 */
+	public void setPreviewOrientation(int orientation) {
+		if (mVideoStream != null) {
+			mVideoStream.setPreviewOrientation(orientation);
+		}
+	}	
 	
 	/** 
 	 * Sets the configuration of the stream. You can call this method at any time 
 	 * and changes will take effect next time you call {@link #configure()}.
-	 * @param videoQuality Quality of the stream
+	 * @param audioQuality Quality of the stream
 	 */
 	public void setAudioQuality(AudioQuality quality) {
 		if (mVideoStream != null) {
 			mAudioStream.setAudioQuality(quality);
 		}
 	}
-	
+
+	/**
+	 * Returns the {@link Callback} interface that was set with 
+	 * {@link #setCallback(Callback)} or null if none was set.
+	 */
+	public Callback getCallback() {
+		return mCallback;
+	}	
+
 	/** 
 	 * Returns a Session Description that can be stored in a file or sent to a client with RTSP.
 	 * @return The Session Description.
@@ -246,10 +298,10 @@ public class Session {
 		}
 		sessionDescription.append("v=0\r\n");
 		// TODO: Add IPV6 support
-		sessionDescription.append("o=- "+mTimestamp+" "+mTimestamp+" IN IP4 "+(mOrigin==null?"127.0.0.1":mOrigin.getHostAddress())+"\r\n");
+		sessionDescription.append("o=- "+mTimestamp+" "+mTimestamp+" IN IP4 "+mOrigin+"\r\n");
 		sessionDescription.append("s=Unnamed\r\n");
 		sessionDescription.append("i=N/A\r\n");
-		sessionDescription.append("c=IN IP4 "+mDestination.getHostAddress()+"\r\n");
+		sessionDescription.append("c=IN IP4 "+mDestination+"\r\n");
 		// t=0 0 means the session is permanent (we don't know when it will stop)
 		sessionDescription.append("t=0 0\r\n");
 		sessionDescription.append("a=recvonly\r\n");
@@ -266,7 +318,7 @@ public class Session {
 	}
 
 	/** Returns the destination set with {@link #setDestination(InetAddress)}. */
-	public InetAddress getDestination() {
+	public String getDestination() {
 		return mDestination;
 	}
 
@@ -290,113 +342,179 @@ public class Session {
 	 * Configures one of the stream of the session.
 	 * @param id The id of the stream to configure
 	 **/
-	public void configure(final int id) {
+	public void configure() {
 		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
-				Stream stream = id==0 ? mAudioStream : mVideoStream;
-				if (stream!=null && !stream.isStreaming()) {
-					try {
-						stream.configure();
-					} catch (CameraInUseException e) {
-						postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
-					} catch (StorageUnavailableException e) {
-						postError(ERROR_STORAGE_NOT_READY , id, e);
-					} catch (ConfNotSupportedException e) {
-						postError(ERROR_CONFIGURATION_NOT_SUPPORTED , id, e);
-					} catch (InvalidSurfaceException e) {
-						postError(ERROR_INVALID_SURFACE , id, e);						
-					} catch (IOException e) {
-						postError(ERROR_OTHER, id, e);
-					} catch (RuntimeException e) {
-						postError(ERROR_OTHER, id, e);
-					}
-				}
-			}				
+				try {
+					syncConfigure();
+				} catch (Exception e) {};
+			}
 		});
 	}	
-	
-	/** Configures all streams. */
-	public void configure()  {
-		configure(0);
-		configure(1);
-	}	
-	
+
 	/** 
-	 * Starts one of the stream of the session.
+	 * Does the same thing as {@link #configure()}, but in a syncronous manner.
+	 * Throws exceptions in addition to calling the callback 
+	 * {@link Callback#onSessionError(int, int, Exception)} when
+	 * an error occurs.	
+	 **/
+	public void syncConfigure()  
+			throws CameraInUseException, 
+			StorageUnavailableException,
+			ConfNotSupportedException, 
+			InvalidSurfaceException, 
+			RuntimeException,
+			IOException {
+
+		for (int id=0;id<2;id++) {
+			Stream stream = id==0 ? mAudioStream : mVideoStream;
+			if (stream!=null && !stream.isStreaming()) {
+				try {
+					stream.configure();
+				} catch (CameraInUseException e) {
+					postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
+					throw e;
+				} catch (StorageUnavailableException e) {
+					postError(ERROR_STORAGE_NOT_READY , id, e);
+					throw e;
+				} catch (ConfNotSupportedException e) {
+					postError(ERROR_CONFIGURATION_NOT_SUPPORTED , id, e);
+					throw e;
+				} catch (InvalidSurfaceException e) {
+					postError(ERROR_INVALID_SURFACE , id, e);
+					throw e;
+				} catch (IOException e) {
+					postError(ERROR_OTHER, id, e);
+					throw e;
+				} catch (RuntimeException e) {
+					postError(ERROR_OTHER, id, e);
+					throw e;
+				}
+			}
+		}
+		postSessionConfigured();
+	}
+
+	/** 
+	 * Asyncronously starts all streams of the session.
+	 **/
+	public void start() {
+		mHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				try {
+					syncStart();
+				} catch (Exception e) {}
+			}				
+		});
+	}
+
+	/** 
+	 * Does the same thing as {@link #start(int)}, but in a syncronous manner. 
+	 * Throws exceptions in addition to calling the callback.
 	 * @param id The id of the stream to start
 	 **/
-	public void start(final int id) {
-		mHandler.post(new Runnable() {
-			@Override
-			public void run() {
-				if (!isStreaming()) {
+	public void syncStart(int id) 			
+			throws CameraInUseException, 
+			StorageUnavailableException,
+			ConfNotSupportedException, 
+			InvalidSurfaceException, 
+			UnknownHostException,
+			IOException {
+		
+		Stream stream = id==0 ? mAudioStream : mVideoStream;
+		if (stream!=null && !stream.isStreaming()) {
+			try {
+				InetAddress destination =  InetAddress.getByName(mDestination);
+				stream.setTimeToLive(mTimeToLive);
+				stream.setDestinationAddress(destination);
+				stream.start();
+				if (getTrack(1-id) == null || getTrack(1-id).isStreaming()) {
+					postSessionStarted();
+				}
+				if (getTrack(1-id) == null || !getTrack(1-id).isStreaming()) {
 					mHandler.post(mUpdateBitrate);
 				}
-				Stream stream = id==0 ? mAudioStream : mVideoStream;
-				if (stream!=null && !stream.isStreaming()) {
-					try {
-						stream.setTimeToLive(mTimeToLive);
-						stream.setDestinationAddress(mDestination);
-						stream.start();
-						postMessage(MESSAGE_STREAM_STARTED, id);
-					} catch (CameraInUseException e) {
-						postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
-					} catch (StorageUnavailableException e) {
-						postError(ERROR_STORAGE_NOT_READY , id, e);
-					} catch (ConfNotSupportedException e) {
-						postError(ERROR_CONFIGURATION_NOT_SUPPORTED , id, e);
-					} catch (InvalidSurfaceException e) {
-						postError(ERROR_INVALID_SURFACE , id, e);
-					} catch (IOException e) {
-						postError(ERROR_OTHER, id, e);
-					} catch (RuntimeException e) {
-						postError(ERROR_OTHER, id, e);
-					}
-				}
-			}				
-		});
-	}
-
-	/** Starts all streams. */
-	public void start()  {
-		if (mDestination.isMulticastAddress()) {
-			if (mContext != null) {
-				// Aquire a MulticastLock to allow multicasted UDP packet
-				WifiManager wifi = (WifiManager)mContext.getSystemService( Context.WIFI_SERVICE );
-				if(wifi != null){
-					mLock = wifi.createMulticastLock("net.majorkernelpanic.streaming");
-					mLock.acquire();
-				}
+			} catch (UnknownHostException e) {
+				postError(ERROR_UNKNOWN_HOST, id, e);
+				throw e;
+			} catch (CameraInUseException e) {
+				postError(ERROR_CAMERA_ALREADY_IN_USE , id, e);
+				throw e;
+			} catch (StorageUnavailableException e) {
+				postError(ERROR_STORAGE_NOT_READY , id, e);
+				throw e;
+			} catch (ConfNotSupportedException e) {
+				postError(ERROR_CONFIGURATION_NOT_SUPPORTED , id, e);
+				throw e;
+			} catch (InvalidSurfaceException e) {
+				postError(ERROR_INVALID_SURFACE , id, e);
+				throw e;
+			} catch (IOException e) {
+				postError(ERROR_OTHER, id, e);
+				throw e;
+			} catch (RuntimeException e) {
+				postError(ERROR_OTHER, id, e);
+				throw e;
 			}
 		}
-		start(0);
-		start(1);
-	}
+
+	}	
 
 	/** 
-	 * Stops one stream.
-	 * @param id The id of the stream to stop
-	 **/	
-	public void stop(int id) {
-		// Release the MulticastLock if one was previoulsy aquired
-		if (mLock != null) {
-			if (mLock.isHeld()) {
-				mLock.release();
-			}
-			mLock = null;
+	 * Does the same thing as {@link #start()}, but in a syncronous manner. 
+	 * Throws exceptions in addition to calling the callback.
+	 * @param id The id of the stream to start
+	 **/
+	public void syncStart() 			
+			throws CameraInUseException, 
+			StorageUnavailableException,
+			ConfNotSupportedException, 
+			InvalidSurfaceException, 
+			UnknownHostException,
+			IOException {
+
+		syncStart(1);
+		try {
+			syncStart(0);
+		} catch (RuntimeException e) {
+			syncStop(1);
+			throw e;
+		} catch (IOException e) {
+			syncStop(1);
+			throw e;
 		}
-		Stream stream = id==0 ? mAudioStream : mVideoStream;
-		if (stream!=null) {
-			stream.stop();
-		}
+
 	}	
 
 	/** Stops all existing streams. */
 	public void stop() {
-		stop(0);
-		stop(1);
+		mHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				syncStop();
+			}
+		});
 	}
+
+	/** 
+	 * Stops one stream in a syncronous manner.
+	 * @param id The id of the stream to stop
+	 **/	
+	private void syncStop(final int id) {
+		Stream stream = id==0 ? mAudioStream : mVideoStream;
+		if (stream!=null) {
+			stream.stop();
+		}
+	}		
+	
+	/** Stops all existing streams in a syncronous manner. */
+	public void syncStop() {
+		syncStop(0);
+		syncStop(1);
+		postSessionStopped();
+	}	
 
 	public void startPreview() {
 		mHandler.post(new Runnable() {
@@ -404,8 +522,9 @@ public class Session {
 			public void run() {
 				if (mVideoStream != null) {
 					try {
+						mVideoStream.configure();
 						mVideoStream.startPreview();
-						postMessage(MESSAGE_PREVIEW_STARTED, STREAM_VIDEO);
+						postPreviewStarted();
 					} catch (CameraInUseException e) {
 						postError(ERROR_CAMERA_ALREADY_IN_USE , STREAM_VIDEO, e);
 					} catch (ConfNotSupportedException e) {
@@ -414,12 +533,16 @@ public class Session {
 						postError(ERROR_INVALID_SURFACE , STREAM_VIDEO, e);
 					} catch (RuntimeException e) {
 						postError(ERROR_OTHER, STREAM_VIDEO, e);
+					} catch (StorageUnavailableException e) {
+						postError(ERROR_STORAGE_NOT_READY, STREAM_VIDEO, e);
+					} catch (IOException e) {
+						postError(ERROR_OTHER, STREAM_VIDEO, e);
 					}
 				}
 			}
 		});
 	}
-	
+
 	public void stopPreview() {
 		mHandler.post(new Runnable() {
 			@Override
@@ -430,7 +553,7 @@ public class Session {
 			}
 		});
 	}	
-	
+
 	public void switchCamera() {
 		mHandler.post(new Runnable() {
 			@Override
@@ -438,7 +561,7 @@ public class Session {
 				if (mVideoStream != null) {
 					try {
 						mVideoStream.switchCamera();
-						postMessage(MESSAGE_PREVIEW_STARTED, STREAM_VIDEO);
+						postPreviewStarted();
 					} catch (CameraInUseException e) {
 						postError(ERROR_CAMERA_ALREADY_IN_USE , STREAM_VIDEO, e);
 					} catch (ConfNotSupportedException e) {
@@ -454,12 +577,12 @@ public class Session {
 			}
 		});
 	}
-	
+
 	public int getCamera() {
 		return mVideoStream != null ? mVideoStream.getCamera() : 0;
-				
+
 	}
-	
+
 	public void toggleFlash() {
 		mHandler.post(new Runnable() {
 			@Override
@@ -474,7 +597,7 @@ public class Session {
 			}
 		});
 	}	
-	
+
 	/** Deletes all existing tracks & release associated resources. */
 	public void release() {
 		removeAudioTrack();
@@ -482,23 +605,56 @@ public class Session {
 		mHandler.getLooper().quit();
 	}
 
-	private void postMessage(final int message, final int streamType) {
+	private void postPreviewStarted() {
 		mMainHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onSessionStatusUpdate(message, streamType, null); 
+					mCallback.onPreviewStarted(); 
+				}
+			}
+		});
+	}
+
+	private void postSessionConfigured() {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onSessionConfigured(); 
+				}
+			}
+		});
+	}
+
+	private void postSessionStarted() {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onSessionStarted(); 
+				}
+			}
+		});
+	}		
+
+	private void postSessionStopped() {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onSessionStopped(); 
 				}
 			}
 		});
 	}	
-	
+
 	private void postError(final int reason, final int streamType,final Exception e) {
 		mMainHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onSessionStatusUpdate(reason, streamType, e); 
+					mCallback.onSessionError(reason, streamType, e); 
 				}
 			}
 		});
@@ -514,7 +670,7 @@ public class Session {
 			}
 		});
 	}		
-	
+
 	private Runnable mUpdateBitrate = new Runnable() {
 		@Override
 		public void run() {
@@ -526,7 +682,7 @@ public class Session {
 			}
 		}
 	};
-	
+
 
 	public boolean trackExists(int id) {
 		if (id==0) 

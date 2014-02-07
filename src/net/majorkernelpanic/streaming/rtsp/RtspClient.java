@@ -25,7 +25,6 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
 import java.security.MessageDigest;
@@ -37,7 +36,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.majorkernelpanic.streaming.Session;
-import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.Stream;
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -55,13 +53,10 @@ public class RtspClient {
 	public final static String TAG = "RtspClient";
 
 	/** Message sent when the connection to the RTSP server failed. */
-	public final static int MESSAGE_CONNECTION_FAILED = 0x01;
-	
-	/** Message sent when the method {@link Session#start()} failed. */
-	public final static int MESSAGE_START_FAILED = 0x02;
+	public final static int ERROR_CONNECTION_FAILED = 0x01;
 	
 	/** Message sent when the credentials are wrong. */
-	public final static int MESSAGE_WRONG_CREDENTIALS = 0x03;
+	public final static int ERROR_WRONG_CREDENTIALS = 0x03;
 	
 	/** 
 	 * Message sent when the connection with the RTSP server has been lost for 
@@ -69,7 +64,7 @@ public class RtspClient {
 	 * When the connection with the server is lost, the client will automatically try to
 	 * reconnect as long as {@link #stopStream()} is not called. 
 	 **/
-	public final static int MESSAGE_CONNECTION_LOST = 0x04;
+	public final static int ERROR_CONNECTION_LOST = 0x04;
 	
 	/**
 	 * Message sent when the connection with the RTSP server has been reestablished.
@@ -77,17 +72,6 @@ public class RtspClient {
 	 * reconnect as long as {@link #stopStream()} is not called.
 	 */
 	public final static int MESSAGE_CONNECTION_RECOVERED = 0x05;
-	
-	/** 
-	 * Message sent when the stream has successfully been started. 
-	 * That means that the RTSP server is reachable and that {@link Session#start()} worked.
-	 **/
-	public final static int MESSAGE_STREAM_STARTED = 0x06;
-	
-	/** 
-	 * Message sent when the stream has successfully been stopped. 
-	 **/
-	public final static int MESSAGE_STREAM_STOPPED = 0x07;	
 
 	private final static int STATE_STARTED = 0x00;
 	private final static int STATE_STARTING = 0x01;
@@ -122,7 +106,6 @@ public class RtspClient {
 	private Socket mSocket;
 	private String mSessionID;
 	private String mAuthorization;
-	private InetAddress mAddress;
 	private BufferedReader mBufferedReader;
 	private OutputStream mOutputStream;
 	private int mCSeq;
@@ -135,7 +118,7 @@ public class RtspClient {
 	 * RTSP server (for example your Wowza Media Server).
 	 */
 	public interface Callback {
-		public void onRtspStatusUpdate(int message, Exception exception);
+		public void onRtspUpdate(int message, Exception exception);
 	}
 
 	public RtspClient() {
@@ -221,6 +204,8 @@ public class RtspClient {
 	 * Should be called of the main thread !
 	 */
 	public void startStream() {
+		if (mTmpParameters.host == null) throw new IllegalStateException("setServerAddress(String,int) has not been called !");
+		if (mTmpParameters.session == null) throw new IllegalStateException("setSession() has not been called !");
 		mHandler.post(new Runnable () {
 			@Override
 			public void run() {
@@ -231,31 +216,12 @@ public class RtspClient {
 				
 				// If the user calls some methods to configure the client, it won't modify its behavior until the stream is restarted
 				mParameters = mTmpParameters.clone();
+				mParameters.session.setDestination(mTmpParameters.host);
 				
 				try {
-					if (mParameters.host == null) throw new IllegalStateException("setServerAddress(String,int) has not been called !");
-					mAddress = InetAddress.getByName(mParameters.host);
-				} catch (Exception e) {
-					postMessage(MESSAGE_CONNECTION_FAILED, e);
-					mState = STATE_STOPPED;
-					return;
-				}
-
-				try {
-					if (mParameters.session == null) throw new IllegalStateException("setSession() has not been called !");
-					mParameters.session.setDestination(mAddress);
+					mParameters.session.syncConfigure();
 				} catch (Exception e) {
 					mParameters.session = null;
-					postMessage(MESSAGE_START_FAILED, e);
-					mState = STATE_STOPPED;
-					return;
-				}
-				
-				try {
-					mParameters.session.configure();
-				} catch (Exception e) {
-					mParameters.session = null;
-					postMessage(MESSAGE_START_FAILED, e);
 					mState = STATE_STOPPED;
 					return;
 				}				
@@ -263,21 +229,17 @@ public class RtspClient {
 				try {
 					tryConnection();
 				} catch (Exception e) {
-					postMessage(MESSAGE_CONNECTION_FAILED, e);
+					postError(ERROR_CONNECTION_FAILED, e);
 					abord();
 					return;
 				}
 
 				try {
-					if (mParameters.session == null) mParameters.session = SessionBuilder.getInstance().build();
-					mParameters.session.setDestination(mAddress);
-					mParameters.session.start();
+					mParameters.session.syncStart();
 					mState = STATE_STARTED;
-					postMessage(MESSAGE_STREAM_STARTED);
 					mHandler.post(mConnectionMonitor);
 				} catch (Exception e) {
 					abord();
-					postMessage(MESSAGE_START_FAILED, e);
 				}
 
 			}
@@ -298,7 +260,6 @@ public class RtspClient {
 				if (mState != STATE_STOPPED) {
 					mState = STATE_STOPPING;
 					abord();
-					postMessage(MESSAGE_STREAM_STOPPED);
 				}
 			}
 		});
@@ -323,7 +284,7 @@ public class RtspClient {
 	
 	private void tryConnection() throws IOException {
 		mCSeq = 0;
-		mSocket = new Socket(mAddress, mParameters.port);
+		mSocket = new Socket(mParameters.host, mParameters.port);
 		mBufferedReader = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
 		mOutputStream = mSocket.getOutputStream();
 		sendRequestAnnounce();
@@ -470,15 +431,21 @@ public class RtspClient {
 				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"");
 	}	
 
+	/**
+	 * If the connection with the RTSP server is lost, we try to reconnect to it as
+	 * long as {@link #stopStream()} is not called.
+	 */
 	private Runnable mConnectionMonitor = new Runnable() {
 		@Override
 		public void run() {
 			if (mState == STATE_STARTED) {
 				try {
+					// We poll the RTSP server with OPTION requests
 					sendRequestOption();
 					mHandler.postDelayed(mConnectionMonitor, 6000);
 				} catch (IOException e) {
-					postMessage(MESSAGE_CONNECTION_LOST);
+					// Happens if the OPTION request fails
+					postMessage(ERROR_CONNECTION_LOST);
 					Log.e(TAG, "Connection lost with the server...");
 					mParameters.session.stop();
 					mHandler.post(mRetryConnection);
@@ -487,6 +454,7 @@ public class RtspClient {
 		}
 	};
 
+	/** Here, we try to reconnect to the RTSP. */
 	private Runnable mRetryConnection = new Runnable() {
 		@Override
 		public void run() {
@@ -500,7 +468,6 @@ public class RtspClient {
 						postMessage(MESSAGE_CONNECTION_RECOVERED);
 					} catch (Exception e) {
 						abord();
-						postMessage(MESSAGE_START_FAILED);
 					}
 				} catch (IOException e) {
 					mHandler.postDelayed(mRetryConnection,1000);
@@ -522,6 +489,7 @@ public class RtspClient {
 		return new String(hexChars);
 	}
 
+	/** Needed for the Digest Access Authentication. */
 	private String computeMd5Hash(String buffer) {
 		MessageDigest md;
 		try {
@@ -537,18 +505,18 @@ public class RtspClient {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onRtspStatusUpdate(message, null); 
+					mCallback.onRtspUpdate(message, null); 
 				}
 			}
 		});
 	}
 
-	private void postMessage(final int message, final Exception e) {
+	private void postError(final int message, final Exception e) {
 		mMainHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onRtspStatusUpdate(message, e); 
+					mCallback.onRtspUpdate(message, e); 
 				}
 			}
 		});

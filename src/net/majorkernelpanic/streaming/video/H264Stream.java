@@ -99,6 +99,10 @@ public class H264Stream extends VideoStream {
 		}
 	}
 
+	/**
+	 * Configures the stream. You need to call this before calling {@link #getSessionDescription()} to apply
+	 * your configuration of the stream.
+	 */
 	public synchronized void configure() throws IllegalStateException, IOException {
 		super.configure();
 		mMode = mRequestedMode;

@@ -102,14 +102,14 @@ public class UriParser {
 							if (!addr.isMulticastAddress()) {
 								throw new IllegalStateException("Invalid multicast address !");
 							}
-							builder.setDestination(addr);
+							builder.setDestination(param.getValue());
 						} catch (UnknownHostException e) {
 							throw new IllegalStateException("Invalid multicast address !");
 						}
 					}
 					else {
 						// Default multicast address
-						builder.setDestination(InetAddress.getByName("228.5.6.7"));
+						builder.setDestination("228.5.6.7");
 					}
 				}
 
@@ -118,7 +118,7 @@ public class UriParser {
 					if (param.getValue()!=null) {
 						try {
 							InetAddress addr = InetAddress.getByName(param.getValue());
-							builder.setDestination(addr);
+							builder.setDestination(param.getValue());
 						} catch (UnknownHostException e) {
 							throw new IllegalStateException("Invalid destination address !");
 						}

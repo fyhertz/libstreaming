@@ -62,17 +62,18 @@ public class SessionBuilder {
 	public final static int AUDIO_AAC = 5;
 
 	// Default configuration
-	private VideoQuality mVideoQuality = new VideoQuality();
-	private AudioQuality mAudioQuality = new AudioQuality();
+	private VideoQuality mVideoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
+	private AudioQuality mAudioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
 	private Context mContext;
 	private int mVideoEncoder = VIDEO_H263; 
 	private int mAudioEncoder = AUDIO_AMRNB;
 	private int mCamera = CameraInfo.CAMERA_FACING_BACK;
 	private int mTimeToLive = 64;
+	private int mOrientation = 0;
 	private boolean mFlash = false;
 	private SurfaceView mSurfaceView = null;
-	private InetAddress mOrigin = null;
-	private InetAddress mDestination = null;
+	private String mOrigin = null;
+	private String mDestination = null;
 	private Session.Callback mCallback = null;
 
 	// Removes the default public constructor
@@ -105,7 +106,6 @@ public class SessionBuilder {
 		Session session;
 
 		session = new Session();
-		session.setContext(mContext);
 		session.setOrigin(mOrigin);
 		session.setDestination(mDestination);
 		session.setTimeToLive(mTimeToLive);
@@ -138,14 +138,15 @@ public class SessionBuilder {
 		if (session.getVideoTrack()!=null) {
 			VideoStream video = session.getVideoTrack();
 			video.setFlashState(mFlash);
-			video.setVideoQuality(VideoQuality.merge(mVideoQuality,video.getVideoQuality()));
+			video.setVideoQuality(mVideoQuality);
 			video.setSurfaceView(mSurfaceView);
+			video.setPreviewOrientation(mOrientation);
 			video.setDestinationPorts(5006);
 		}
 
 		if (session.getAudioTrack()!=null) {
 			AudioStream audio = session.getAudioTrack();
-			audio.setAudioQuality(AudioQuality.merge(mAudioQuality,audio.getAudioQuality()));
+			audio.setAudioQuality(mAudioQuality);
 			audio.setDestinationPorts(5004);
 		}
 
@@ -163,23 +164,23 @@ public class SessionBuilder {
 	}
 
 	/** Sets the destination of the session. */
-	public SessionBuilder setDestination(InetAddress destination) {
+	public SessionBuilder setDestination(String destination) {
 		mDestination = destination;
 		return this; 
 	}
 
 	/** Sets the origin of the session. It appears in the SDP of the session. */
-	public SessionBuilder setOrigin(InetAddress origin) {
+	public SessionBuilder setOrigin(String origin) {
 		mOrigin = origin;
 		return this;
 	}
 
 	/** Sets the video stream quality. */
 	public SessionBuilder setVideoQuality(VideoQuality quality) {
-		mVideoQuality = VideoQuality.merge(quality, mVideoQuality);
+		mVideoQuality = quality.clone();
 		return this;
 	}
-
+	
 	/** Sets the audio encoder. */
 	public SessionBuilder setAudioEncoder(int encoder) {
 		mAudioEncoder = encoder;
@@ -188,7 +189,7 @@ public class SessionBuilder {
 	
 	/** Sets the audio quality. */
 	public SessionBuilder setAudioQuality(AudioQuality quality) {
-		mAudioQuality = AudioQuality.merge(quality, mAudioQuality);
+		mAudioQuality = quality.clone();
 		return this;
 	}
 
@@ -219,6 +220,15 @@ public class SessionBuilder {
 	public SessionBuilder setSurfaceView(SurfaceView surfaceView) {
 		mSurfaceView = surfaceView;
 		return this;
+	}
+	
+	/** 
+	 * Sets the orientation of the preview.
+	 * @param orientation The orientation of the preview
+	 */
+	public SessionBuilder setPreviewOrientation(int orientation) {
+		mOrientation = orientation;
+		return this;
 	}	
 	
 	public SessionBuilder setCallback(Session.Callback callback) {
@@ -232,12 +242,12 @@ public class SessionBuilder {
 	}
 
 	/** Returns the destination ip address set with {@link #setDestination(InetAddress)}. */
-	public InetAddress getDestination() {
+	public String getDestination() {
 		return mDestination;
 	}
 
 	/** Returns the origin ip address set with {@link #setOrigin(InetAddress)}. */
-	public InetAddress getOrigin() {
+	public String getOrigin() {
 		return mOrigin;
 	}
 
@@ -288,6 +298,7 @@ public class SessionBuilder {
 		.setDestination(mDestination)
 		.setOrigin(mOrigin)
 		.setSurfaceView(mSurfaceView)
+		.setPreviewOrientation(mOrientation)
 		.setVideoQuality(mVideoQuality)
 		.setVideoEncoder(mVideoEncoder)
 		.setFlashEnabled(mFlash)
