@@ -55,7 +55,7 @@ public class AudioQuality {
 	}
 
 	public static AudioQuality parseQuality(String str) {
-		AudioQuality quality = new AudioQuality(0,0);
+		AudioQuality quality = DEFAULT_AUDIO_QUALITY.clone();
 		if (str != null) {
 			String[] config = str.split("-");
 			try {
@@ -65,14 +65,6 @@ public class AudioQuality {
 			catch (IndexOutOfBoundsException ignore) {}
 		}
 		return quality;
-	}
-
-	public static AudioQuality merge(AudioQuality audioQuality, AudioQuality withAudioQuality) {
-		if (withAudioQuality != null && audioQuality != null) {
-			if (audioQuality.samplingRate==0) audioQuality.samplingRate = withAudioQuality.samplingRate;
-			if (audioQuality.bitRate==0) audioQuality.bitRate = withAudioQuality.bitRate;
-		}
-		return audioQuality;
 	}
 
 }

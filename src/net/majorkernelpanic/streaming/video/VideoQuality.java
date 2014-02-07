@@ -83,7 +83,7 @@ public class VideoQuality {
 	}
 
 	public static VideoQuality parseQuality(String str) {
-		VideoQuality quality = new VideoQuality(0,0,0,0);
+		VideoQuality quality = DEFAULT_VIDEO_QUALITY.clone();
 		if (str != null) {
 			String[] config = str.split("-");
 			try {

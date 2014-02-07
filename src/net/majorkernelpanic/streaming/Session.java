@@ -288,7 +288,7 @@ public class Session {
 	 * @param audioQuality Quality of the stream
 	 */
 	public void setAudioQuality(AudioQuality quality) {
-		if (mVideoStream != null) {
+		if (mAudioStream != null) {
 			mAudioStream.setAudioQuality(quality);
 		}
 	}

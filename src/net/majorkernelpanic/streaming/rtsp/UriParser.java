@@ -116,12 +116,7 @@ public class UriParser {
 				// UNICAST -> the client can use this to specify where he wants the stream to be sent
 				else if (param.getName().equalsIgnoreCase("unicast")) {
 					if (param.getValue()!=null) {
-						try {
-							InetAddress addr = InetAddress.getByName(param.getValue());
-							builder.setDestination(param.getValue());
-						} catch (UnknownHostException e) {
-							throw new IllegalStateException("Invalid destination address !");
-						}
+						builder.setDestination(param.getValue());
 					}					
 				}
 				
