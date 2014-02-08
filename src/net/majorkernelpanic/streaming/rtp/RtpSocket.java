@@ -248,7 +248,6 @@ public class RtpSocket implements Runnable {
 		try {
 			// Caches mCacheSize milliseconds of the stream in the FIFO.
 			Thread.sleep(mCacheSize);
-			Log.d(TAG,"permits: "+mBufferCommitted.availablePermits());
 			long delta = 0;
 			while (mBufferCommitted.tryAcquire(4,TimeUnit.SECONDS)) {
 				if (mOldTimestamp != 0) {

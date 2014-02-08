@@ -22,7 +22,6 @@ package net.majorkernelpanic.streaming.video;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
@@ -36,9 +35,6 @@ import android.annotation.SuppressLint;
 import android.content.SharedPreferences.Editor;
 import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
-import android.media.MediaCodec;
-import android.media.MediaCodec.BufferInfo;
-import android.media.MediaFormat;
 import android.media.MediaRecorder;
 import android.os.Environment;
 import android.service.textservice.SpellCheckerService.Session;
@@ -56,14 +52,12 @@ public class H264Stream extends VideoStream {
 
 	public final static String TAG = "H264Stream";
 
-	private SharedPreferences mSettings = null;
 	private Semaphore mLock = new Semaphore(0);
 	private MP4Config mConfig;
 
 	/**
 	 * Constructs the H.264 stream.
 	 * Uses CAMERA_FACING_BACK by default.
-	 * @throws IOException
 	 */
 	public H264Stream() {
 		this(CameraInfo.CAMERA_FACING_BACK);

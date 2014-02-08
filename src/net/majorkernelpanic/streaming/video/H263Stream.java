@@ -45,8 +45,6 @@ public class H263Stream extends VideoStream {
 	 */
 	public H263Stream() throws IOException {
 		this(CameraInfo.CAMERA_FACING_BACK);
-		// TODO: Implement H.263 streaming with the MediaCodec API and remove this line.
-		setMode(MODE_MEDIARECORDER_API);
 	}	
 
 	/**

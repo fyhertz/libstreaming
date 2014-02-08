@@ -100,43 +100,6 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	/**
-	 * Called by subclasses. 
-	 */
-	protected void init(String mimeType) {
-		mCameraImageFormat = ImageFormat.YV12;
-		mMimeType = mimeType;
-		
-		if (sSuggestedMode == MODE_MEDIACODEC_API) {
-			mCodecs = CodecManager.Selector.findCodecsFormMimeType(mMimeType, false);
-			
-			if (mCodecs.hardwareCodec == null && mCodecs.softwareCodec == null ) {
-				mMode = MODE_MEDIARECORDER_API;
-				Log.e(TAG,"No encoder can be used on this phone, we will use the MediaRecorder API");
-				
-			} else if (Build.VERSION.SDK_INT<18) {
-				if (mCodecs.softwareCodec != null) {
-					// On android 4.1 and 4.2, hardware encoders can behave oddly...
-					mEncoderColorFormat = mCodecs.softwareColorFormat;
-					mEncoderName = mCodecs.softwareCodec;					
-				} else {
-					mMode = MODE_MEDIARECORDER_API;
-					Log.e(TAG,"Not using the hardware encoder because phone is running 4.1 or 4.2, we will use the MediaRecorder API");
-				}
-				
-			} else {
-				if (mCodecs.hardwareCodec != null) {
-					mEncoderColorFormat = mCodecs.hardwareColorFormat;
-					mEncoderName = mCodecs.hardwareCodec;
-				} else {
-					mEncoderColorFormat = mCodecs.softwareColorFormat;
-					mEncoderName = mCodecs.softwareCodec;	
-				}
-			}
-			
-		}
-	}
-	
-	/**
 	 * Sets the camera that will be used to capture video.
 	 * You can call this method at any time and changes will take effect next time you start the stream.
 	 * @param camera Can be either CameraInfo.CAMERA_FACING_BACK or CameraInfo.CAMERA_FACING_FRONT

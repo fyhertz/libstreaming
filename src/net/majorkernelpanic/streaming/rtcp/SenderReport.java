@@ -29,9 +29,6 @@ import java.nio.channels.IllegalSelectorException;
 import android.os.SystemClock;
 import android.util.Log;
 
-import android.os.SystemClock;
-import android.util.Log;
-
 /**
  * Implementation of Sender Report RTCP packets.
  */
