@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
+import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
 import net.majorkernelpanic.streaming.exceptions.StorageUnavailableException;
 import net.majorkernelpanic.streaming.hw.EncoderDebugger;
@@ -36,14 +37,15 @@ import android.graphics.ImageFormat;
 import android.hardware.Camera.CameraInfo;
 import android.media.MediaRecorder;
 import android.os.Environment;
+import android.service.textservice.SpellCheckerService.Session;
 import android.util.Base64;
 import android.util.Log;
 
 /**
- * A class for streaming H.264 from the camera of an android device using RTP. 
- * Call {@link #setDestinationAddress(java.net.InetAddress)}, {@link #setDestinationPorts(int)}, 
- * {@link #setVideoSize(int, int)}, {@link #setVideoFramerate(int)} and {@link #setVideoEncodingBitrate(int)} and you're good to go.
- * You can then call {@link #start()}.
+ * A class for streaming H.264 from the camera of an android device using RTP.
+ * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
+ * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
+ * to configure the stream. You can then call {@link #start()} to start the RTP stream.
  * Call {@link #stop()} to stop the stream.
  */
 public class H264Stream extends VideoStream {

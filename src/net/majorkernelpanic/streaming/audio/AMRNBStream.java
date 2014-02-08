@@ -23,12 +23,16 @@ package net.majorkernelpanic.streaming.audio;
 import java.io.IOException;
 import java.lang.reflect.Field;
 
+import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.rtp.AMRNBPacketizer;
 import android.media.MediaRecorder;
+import android.service.textservice.SpellCheckerService.Session;
 
 /**
- * A class for streaming AMR-NB from the microphone of an android device using RTP.
- * Call {@link #setDestinationAddress(java.net.InetAddress)} & {@link #start()} and that's it !
+ * A class for streaming AAC from the camera of an android device using RTP.
+ * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
+ * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setAudioQuality(AudioQuality)}
+ * to configure the stream. You can then call {@link #start()} to start the RTP stream.
  * Call {@link #stop()} to stop the stream.
  */
 public class AMRNBStream extends AudioStream {

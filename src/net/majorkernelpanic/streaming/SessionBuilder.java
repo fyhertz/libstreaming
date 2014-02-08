@@ -241,12 +241,12 @@ public class SessionBuilder {
 		return mContext;	
 	}
 
-	/** Returns the destination ip address set with {@link #setDestination(InetAddress)}. */
+	/** Returns the destination ip address set with {@link #setDestination(String)}. */
 	public String getDestination() {
 		return mDestination;
 	}
 
-	/** Returns the origin ip address set with {@link #setOrigin(InetAddress)}. */
+	/** Returns the origin ip address set with {@link #setOrigin(String)}. */
 	public String getOrigin() {
 		return mOrigin;
 	}

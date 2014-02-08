@@ -248,7 +248,7 @@ public class Session {
 	/** 
 	 * Sets the configuration of the stream. You can call this method at any time 
 	 * and changes will take effect next time you call {@link #configure()}.
-	 * @param videoQuality Quality of the stream
+	 * @param quality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality quality) {
 		if (mVideoStream != null) {
@@ -285,7 +285,7 @@ public class Session {
 	/** 
 	 * Sets the configuration of the stream. You can call this method at any time 
 	 * and changes will take effect next time you call {@link #configure()}.
-	 * @param audioQuality Quality of the stream
+	 * @param quality Quality of the stream
 	 */
 	public void setAudioQuality(AudioQuality quality) {
 		if (mAudioStream != null) {
@@ -304,7 +304,7 @@ public class Session {
 	/** 
 	 * Returns a Session Description that can be stored in a file or sent to a client with RTSP.
 	 * @return The Session Description.
-	 * @throws IllegalStateException Thrown when {@link #setDestination(InetAddress)} has never been called.
+	 * @throws IllegalStateException Thrown when {@link #setDestination(String)} has never been called.
 	 */
 	public String getSessionDescription() {
 		StringBuilder sessionDescription = new StringBuilder();
@@ -332,7 +332,7 @@ public class Session {
 		return sessionDescription.toString();
 	}
 
-	/** Returns the destination set with {@link #setDestination(InetAddress)}. */
+	/** Returns the destination set with {@link #setDestination(String)}. */
 	public String getDestination() {
 		return mDestination;
 	}
@@ -354,8 +354,7 @@ public class Session {
 	}
 
 	/** 
-	 * Configures one of the stream of the session.
-	 * @param id The id of the stream to configure
+	 * Configures all streams of the session.
 	 **/
 	public void configure() {
 		mHandler.post(new Runnable() {
@@ -370,7 +369,7 @@ public class Session {
 
 	/** 
 	 * Does the same thing as {@link #configure()}, but in a syncronous manner.
-	 * Throws exceptions in addition to calling the callback 
+	 * Throws exceptions in addition to calling a callback 
 	 * {@link Callback#onSessionError(int, int, Exception)} when
 	 * an error occurs.	
 	 **/
@@ -426,8 +425,8 @@ public class Session {
 	}
 
 	/** 
-	 * Does the same thing as {@link #start(int)}, but in a syncronous manner. 
-	 * Throws exceptions in addition to calling the callback.
+	 * Starts a stream in a syncronous manner. 
+	 * Throws exceptions in addition to calling a callback.
 	 * @param id The id of the stream to start
 	 **/
 	public void syncStart(int id) 			
@@ -479,8 +478,7 @@ public class Session {
 
 	/** 
 	 * Does the same thing as {@link #start()}, but in a syncronous manner. 
-	 * Throws exceptions in addition to calling the callback.
-	 * @param id The id of the stream to start
+	 * Throws exceptions in addition to calling a callback.
 	 **/
 	public void syncStart() 			
 			throws CameraInUseException, 

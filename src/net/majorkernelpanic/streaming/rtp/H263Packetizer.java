@@ -71,13 +71,6 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 		boolean firstFragment = true;
 		byte[] nextBuffer;
 		stats.reset();
-		// This will skip the MPEG4 header if this step fails we can't stream anything :(
-		try {
-			skipHeader();
-		} catch (IOException e) {
-			Log.e(TAG,"Couldn't skip mp4 header :/");
-			return;
-		}	
 
 		try { 
 			while (!Thread.interrupted()) {
@@ -151,17 +144,6 @@ public class H263Packetizer extends AbstractPacketizer implements Runnable {
 
 		return sum;
 
-	}
-
-	// The InputStream may start with a header that we need to skip
-	private void skipHeader() throws IOException {
-		// Skip all atoms preceding mdat atom
-		byte[] buffer = new byte[3];
-		while (true) {
-			while (is.read() != 'm');
-			is.read(buffer,0,3);
-			if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
-		}
 	}
 
 }
