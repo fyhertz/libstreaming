@@ -382,21 +382,23 @@ public class EncoderDebugger {
 	}
 
 	private int checkPaddingNeeded() {
-		int i = 0, j = 3*mSize/2-1, l = 0;
-		int[] p = new int[NB_DECODED];
+		int i = 0, j = 3*mSize/2-1, max = 0;
+		int[] r = new int[NB_DECODED];
 		for (int k=0;k<NB_DECODED;k++) {
 			if (mDecodedVideo[k] != null) {
-				while (i<j && (mDecodedVideo[k][j-i]&0xFF)<20) i+=2;
+				i = 0;
+				while (i<j && (mDecodedVideo[k][j-i]&0xFF)<50) i+=2;
 				if (i>0) {
-					p[l] = i/2;
-					l++;
-					if (VERBOSE) Log.e(TAG,"Padding needed: "+(i/2));
+					r[k] = ((i>>6)<<6);
+					max = r[k]>max ? r[k] : max;
+					if (VERBOSE) Log.e(TAG,"Padding needed: "+r[k]);
 				} else {
 					if (VERBOSE) Log.v(TAG,"No padding needed.");
 				}
 			}
 		}
-		return p[0];
+
+		return ((max>>6)<<6);
 	}
 
 	/**
@@ -414,8 +416,9 @@ public class EncoderDebugger {
 						d = (mInitialImage[i]&0xFF) - (mDecodedVideo[j][i]&0xFF);
 						d = d<0 ? -d : d;
 						if (d>50) {
-							if (VERBOSE) Log.e(TAG,"BUG "+(i-mSize)+" d "+d);
+							//if (VERBOSE) Log.e(TAG,"BUG "+(i-mSize)+" d "+d);
 							f++;
+							break;
 						}
 					}
 
