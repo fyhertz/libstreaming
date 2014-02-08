@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,11 +41,17 @@ public class MP4Config {
 		mSPS = sps;
 	}
 
+	public MP4Config(String sps, String pps) {
+		mPPS = pps;
+		mSPS = sps;
+		mProfilLevel = MP4Parser.toHexString(Base64.decode(sps, Base64.NO_WRAP),1,3);
+	}	
+	
 	public MP4Config(byte[] sps, byte[] pps) {
 		mPPS = Base64.encodeToString(pps, 0, pps.length, Base64.NO_WRAP);
 		mSPS = Base64.encodeToString(sps, 0, sps.length, Base64.NO_WRAP);
 		mProfilLevel = MP4Parser.toHexString(sps,1,3);
-	}	
+	}
 	
 	/**
 	 * Finds sps & pps parameters inside a .mp4.

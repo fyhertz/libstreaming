@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,9 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.util.Random;
 
+import net.majorkernelpanic.streaming.audio.AudioStream;
 import net.majorkernelpanic.streaming.rtp.AbstractPacketizer;
+import net.majorkernelpanic.streaming.video.VideoStream;
 import android.annotation.SuppressLint;
 import android.media.MediaCodec;
 import android.media.MediaRecorder;
@@ -46,28 +48,29 @@ public abstract class MediaStream implements Stream {
 
 	/** MediaStream uses the new MediaCodec API introduced in JB 4.1 to stream audio/video. */
 	public static final byte MODE_MEDIACODEC_API = 0x02;
-	
+
 	/** MediaStream uses the new features of the MediaCodec API introduced in JB 4.3 to stream audio/video. */
 	public static final byte MODE_MEDIACODEC_API_2 = 0x05;
+
+	/** Prefix that will be used for all shared preferences saved by libstreaming */
+	protected static final String PREF_PREFIX = "libstreaming-";
 
 	/** The packetizer that will read the output of the camera and send RTP packets over the networkd. */
 	protected AbstractPacketizer mPacketizer = null;
 
-	protected MediaRecorder mMediaRecorder;
-	protected MediaCodec mMediaCodec;
+	protected static byte sSuggestedMode = MODE_MEDIARECORDER_API;
+	protected byte mMode, mRequestedMode;
 
-	private int mSocketId;
-
-	protected boolean mStreaming = false;
-	protected byte mMode = MODE_MEDIARECORDER_API;
-	protected static byte sSuggestedMode = MODE_MEDIARECORDER_API; 
-
-	private LocalServerSocket mLss = null;
-	protected LocalSocket mReceiver, mSender = null;
-
+	protected boolean mStreaming = false, mConfigured = false;
 	protected int mRtpPort = 0, mRtcpPort = 0;
 	protected InetAddress mDestination;
+	protected LocalSocket mReceiver, mSender = null;
+	private LocalServerSocket mLss = null;
+	private int mSocketId, mTTL = 64;
 
+	protected MediaRecorder mMediaRecorder;
+	protected MediaCodec mMediaCodec;
+	
 	static {
 		// We determine wether or not the MediaCodec API should be used
 		try {
@@ -80,11 +83,12 @@ public abstract class MediaStream implements Stream {
 			Log.i(TAG,"Phone does not support the MediaCodec API");
 		}
 	}
-	
+
 	public MediaStream() {
+		mRequestedMode = sSuggestedMode;
 		mMode = sSuggestedMode;
 	}
-	
+
 	/** 
 	 * Sets the destination ip address of the stream.
 	 * @param dest The destination address of the stream 
@@ -127,7 +131,7 @@ public abstract class MediaStream implements Stream {
 	 * @throws IOException
 	 */
 	public void setTimeToLive(int ttl) throws IOException {
-		mPacketizer.setTimeToLive(ttl);
+		mTTL = ttl;
 	}
 
 	/** 
@@ -157,9 +161,8 @@ public abstract class MediaStream implements Stream {
 	 * If the mode is set to {@link #MODE_MEDIARECORDER_API}, video is forwarded to a UDP socket.
 	 * @param mode Either {@link #MODE_MEDIARECORDER_API} or {@link #MODE_MEDIACODEC_API} 
 	 */
-	public void setMode(byte mode) throws IllegalStateException {
-		if (mStreaming) throw new IllegalStateException("Can't be called while streaming !");
-		this.mMode = mode;
+	public void setStreamingMethod(byte mode) throws IllegalStateException {
+		mRequestedMode = mode;
 	}
 
 	/**
@@ -171,7 +174,7 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/**
-	 * Returns an approximation of the bitrate of the stream in bit per seconde.
+	 * Returns an approximation of the bit rate consumed by the stream in bit per seconde.
 	 */
 	public long getBitrate() {
 		return !mStreaming ? 0 : mPacketizer.getRtpSocket().getBitrate(); 
@@ -185,47 +188,71 @@ public abstract class MediaStream implements Stream {
 		return mStreaming;
 	}
 
+	/**
+	 * Configures the stream with the settings supplied with 
+	 * {@link VideoStream#setVideoQuality(net.majorkernelpanic.streaming.video.VideoQuality)}
+	 * for a {@link VideoStream} and {@link AudioStream#setAudioQuality(net.majorkernelpanic.streaming.audio.AudioQuality)}
+	 * for a {@link AudioStream}.
+	 */
+	public synchronized void configure() throws IllegalStateException, IOException {
+		if (mStreaming) throw new IllegalStateException("Can't be called while streaming.");
+		mMode = mRequestedMode;
+		mConfigured = true;
+	}
+	
 	/** Starts the stream. */
 	public synchronized void start() throws IllegalStateException, IOException {
-
+		
 		if (mDestination==null)
 			throw new IllegalStateException("No destination ip address set for the stream !");
 
 		if (mRtpPort<=0 || mRtcpPort<=0)
 			throw new IllegalStateException("No destination ports set for the stream !");
 
-		if ((mMode&MODE_MEDIACODEC_API)!=0) {
+		mPacketizer.setTimeToLive(mTTL);
+		
+		if (mMode != MODE_MEDIARECORDER_API) {
 			encodeWithMediaCodec();
 		} else {
 			encodeWithMediaRecorder();
 		}
-		
+
 	}
 
 	/** Stops the stream. */
-	@SuppressLint("NewApi")
+	@SuppressLint("NewApi") 
 	public synchronized  void stop() {
 		if (mStreaming) {
-			mPacketizer.stop();
 			try {
 				if (mMode==MODE_MEDIARECORDER_API) {
 					mMediaRecorder.stop();
 					mMediaRecorder.release();
 					mMediaRecorder = null;
+					closeSockets();
+					mPacketizer.stop();
 				} else {
+					mPacketizer.stop();
 					mMediaCodec.stop();
 					mMediaCodec.release();
 					mMediaCodec = null;
 				}
-				closeSockets();
-			} catch (Exception ignore) {}	
+			} catch (Exception e) {
+				e.printStackTrace();
+			}	
 			mStreaming = false;
 		}
 	}
-
+ 
 	protected abstract void encodeWithMediaRecorder() throws IOException;
-	
+
 	protected abstract void encodeWithMediaCodec() throws IOException;
+	
+	/**
+	 * Returns a description of the stream using SDP. 
+	 * This method can only be called after {@link Stream#configure()}.
+	 * @throws IllegalStateException Thrown when {@link Stream#configure()} wa not called.
+	 */
+	public abstract String getSessionDescription();
 	
 	/**
 	 * Returns the SSRC of the underlying {@link net.majorkernelpanic.streaming.rtp.RtpSocket}.
@@ -234,9 +261,7 @@ public abstract class MediaStream implements Stream {
 	public int getSSRC() {
 		return getPacketizer().getSSRC();
 	}
-
-	public abstract String generateSessionDescription()  throws IllegalStateException, IOException;
-
+	
 	protected void createSockets() throws IOException {
 
 		final String LOCAL_ADDR = "net.majorkernelpanic.streaming-";
@@ -250,21 +275,32 @@ public abstract class MediaStream implements Stream {
 		}
 
 		mReceiver = new LocalSocket();
-		mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId) );
+		mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId));
 		mReceiver.setReceiveBufferSize(500000);
+		mReceiver.setSoTimeout(3000);
 		mSender = mLss.accept();
 		mSender.setSendBufferSize(500000);
 	}
 
 	protected void closeSockets() {
 		try {
-			mSender.close();
-			mSender = null;
 			mReceiver.close();
-			mReceiver = null;
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
+			mSender.close();
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		try {
 			mLss.close();
-			mLss = null;
-		} catch (Exception ignore) {}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		mLss = null;
+		mSender = null;
+		mReceiver = null;
 	}
-
+	
 }

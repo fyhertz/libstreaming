@@ -1,5 +1,8 @@
 net.majorkernelpanic.streaming
 net.majorkernelpanic.streaming.audio
+net.majorkernelpanic.streaming.exceptions
+net.majorkernelpanic.streaming.gl
+net.majorkernelpanic.streaming.hw
 net.majorkernelpanic.streaming.mp4
 net.majorkernelpanic.streaming.rtcp
 net.majorkernelpanic.streaming.rtp

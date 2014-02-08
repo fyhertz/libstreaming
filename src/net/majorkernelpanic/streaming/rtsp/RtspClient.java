@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
  * 
@@ -25,25 +25,26 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
-import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
-import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Locale;
+import java.util.concurrent.Semaphore;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import net.majorkernelpanic.streaming.Session;
-import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.Stream;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Looper;
 import android.util.Log;
 
 /**
  * RFC 2326.
- * A basic and synchronous RTSP client.
+ * A basic and asynchronous RTSP client.
  * The original purpose of this class was to implement a small RTSP client compatible with Wowza.
  * It implements Digest Access Authentication according to RFC 2069. 
  */
@@ -51,37 +52,116 @@ public class RtspClient {
 
 	public final static String TAG = "RtspClient";
 
+	/** Message sent when the connection to the RTSP server failed. */
+	public final static int ERROR_CONNECTION_FAILED = 0x01;
+	
+	/** Message sent when the credentials are wrong. */
+	public final static int ERROR_WRONG_CREDENTIALS = 0x03;
+	
+	/** 
+	 * Message sent when the connection with the RTSP server has been lost for 
+	 * some reason (for example, the user is going under a bridge).
+	 * When the connection with the server is lost, the client will automatically try to
+	 * reconnect as long as {@link #stopStream()} is not called. 
+	 **/
+	public final static int ERROR_CONNECTION_LOST = 0x04;
+	
+	/**
+	 * Message sent when the connection with the RTSP server has been reestablished.
+	 * When the connection with the server is lost, the client will automatically try to
+	 * reconnect as long as {@link #stopStream()} is not called.
+	 */
+	public final static int MESSAGE_CONNECTION_RECOVERED = 0x05;
+
+	private final static int STATE_STARTED = 0x00;
+	private final static int STATE_STARTING = 0x01;
+	private final static int STATE_STOPPING = 0x02;
+	private final static int STATE_STOPPED = 0x03;
+	private int mState = 0;
+
+	private class Parameters {
+		public String host; 
+		public String username;
+		public String password;
+		public String path;
+		public Session session;
+		public int port;
+		
+		public Parameters clone() {
+			Parameters params = new Parameters();
+			params.host = host;
+			params.username = username;
+			params.password = password;
+			params.path = path;
+			params.session = session;
+			params.port = port;
+			return params;
+		}
+	}
+	
+	
+	private Parameters mTmpParameters;
+	private Parameters mParameters;
+	
 	private Socket mSocket;
-	private String mHost;
-	private String mUsername;
-	private String mPassword;
-	private String mPath;
 	private String mSessionID;
 	private String mAuthorization;
-	private Session mSession;
 	private BufferedReader mBufferedReader;
 	private OutputStream mOutputStream;
-	private int mCSeq, mPort;
-	private boolean mRunning;
+	private int mCSeq;
+	private Callback mCallback;
+	private Handler mMainHandler;
+	private Handler mHandler;
+
+	/**
+	 * The callback interface you need to implement to know what's going on with the 
+	 * RTSP server (for example your Wowza Media Server).
+	 */
+	public interface Callback {
+		public void onRtspUpdate(int message, Exception exception);
+	}
 
 	public RtspClient() {
 		mCSeq = 0;
-		mPort = 1935;
-		mPath = "/";
+		mTmpParameters = new Parameters();
+		mTmpParameters.port = 1935;
+		mTmpParameters.path = "/";
 		mAuthorization = null;
-		mRunning = false;
+		mCallback = null;
+		mMainHandler = new Handler(Looper.getMainLooper());
+		mState = STATE_STOPPED;
+
+		final Semaphore signal = new Semaphore(0);
+		new HandlerThread("net.majorkernelpanic.streaming.RtspClient"){
+			@Override
+			protected void onLooperPrepared() {
+				mHandler = new Handler();
+				signal.release();
+			}
+		}.start();
+		signal.acquireUninterruptibly();
+		
+	}
+
+	/**
+	 * Sets the callback interface that will be called on status updates of the connection
+	 * with the RTSP server.
+	 * @param cb The implementation of the {@link Callback} interface
+	 */
+	public void setCallback(Callback cb) {
+		mCallback = cb;
 	}
 
 	/**
 	 * The {@link Session} that will be used to stream to the server.
-	 * If not called before {@link #startStream(int)}, a it will be created.
+	 * If not called before {@link #startStream()}, a it will be created.
 	 */
 	public void setSession(Session session) {
-		mSession = session;
+		mTmpParameters.session = session;
 	}
 
 	public Session getSession() {
-		return mSession;
+		return mTmpParameters.session;
 	}	
 
 	/**
@@ -90,8 +170,8 @@ public class RtspClient {
 	 * @param port The destination port
 	 */
 	public void setServerAddress(String host, int port) {
-		mPort = port;
-		mHost = host;
+		mTmpParameters.port = port;
+		mTmpParameters.host = host;
 	}
 
 	/**
@@ -101,8 +181,8 @@ public class RtspClient {
 	 * @param password The password
 	 */
 	public void setCredentials(String username, String password) {
-		mUsername = username;
-		mPassword = password;
+		mTmpParameters.username = username;
+		mTmpParameters.password = password;
 	}
 
 	/**
@@ -110,12 +190,11 @@ public class RtspClient {
 	 * @param path The path
 	 */
 	public void setStreamPath(String path) {
-		mPath = path;
+		mTmpParameters.path = path;
 	}
 
-	public synchronized boolean isStreaming() {
-		if (mSession == null) return false;
-		return mSession.isStreaming();
+	public boolean isStreaming() {
+		return mState==STATE_STARTED|mState==STATE_STARTING;
 	}
 
 	/**
@@ -123,64 +202,103 @@ public class RtspClient {
 	 * You need to call {@link #setServerAddress(String, int)} and optionnally {@link #setSession(Session)} 
 	 * and {@link #setCredentials(String, String)} before calling this.
 	 * Should be called of the main thread !
-	 * @param retries The number of retries that will be
-	 * @throws RuntimeException Thrown if wrong credentials have been provided, if an error 403 "Access Forbidden" occured, or if an error occurs with {@link Session#start()}
-	 * @throws IllegalStateException Thrown if {@link #setServerAddress(String, int)} was never called, if the server requires authentication of the client, or if an error occurs with {@link Session#start()} 
-	 * @throws UnknownHostException Thrown if the hostname specified with {@link #setServerAddress(String, int)} can't be resolved
-	 * @throws IOException Thrown if an error occurs with {@link Session#start()}
 	 */
-	public synchronized void startStream(int retries) throws RuntimeException, IllegalStateException, UnknownHostException, IOException {
+	public void startStream() {
+		if (mTmpParameters.host == null) throw new IllegalStateException("setServerAddress(String,int) has not been called !");
+		if (mTmpParameters.session == null) throw new IllegalStateException("setSession() has not been called !");
+		mHandler.post(new Runnable () {
+			@Override
+			public void run() {
+				if (mState != STATE_STOPPED) return;
+				mState = STATE_STARTING;
+				
+				Log.d(TAG,"Connecting to RTSP server...");
+				
+				// If the user calls some methods to configure the client, it won't modify its behavior until the stream is restarted
+				mParameters = mTmpParameters.clone();
+				mParameters.session.setDestination(mTmpParameters.host);
+				
+				try {
+					mParameters.session.syncConfigure();
+				} catch (Exception e) {
+					mParameters.session = null;
+					mState = STATE_STOPPED;
+					return;
+				}				
+				
+				try {
+					tryConnection();
+				} catch (Exception e) {
+					postError(ERROR_CONNECTION_FAILED, e);
+					abord();
+					return;
+				}
 
-		if (mRunning) return;
-		if (mHost == null) throw new IllegalStateException("setServerAddress(String,int) has not been called !");
-		if (mSession == null) mSession = SessionBuilder.getInstance().build();
+				try {
+					mParameters.session.syncStart();
+					mState = STATE_STARTED;
+					mHandler.post(mConnectionMonitor);
+				} catch (Exception e) {
+					abord();
+				}
 
-		mSocket = new Socket(mHost, mPort);
-		mBufferedReader = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
-		mOutputStream = mSocket.getOutputStream();
-		mSession.setDestination(InetAddress.getByName(mHost));
-		
-		sendRequestAnnounce();
-		sendRequestSetup();
-		sendRequestRecord();
-
-		try {
-			mSession.start();
-		} catch (RuntimeException e) {
-			stopStream();
-			throw e;
-		} catch (IOException e) {
-			stopStream();
-			throw e;
-		}
-
-		mRunning = true;
+			}
+		});
 
 	}
 
 	/**
 	 * Stops the stream, and informs the RTSP server.
 	 */
-	public synchronized void stopStream() {
+	public void stopStream() {
+		mHandler.post(new Runnable () {
+			@Override
+			public void run() {
+				if (mParameters != null && mParameters.session != null) {
+					mParameters.session.stop();
+				}
+				if (mState != STATE_STOPPED) {
+					mState = STATE_STOPPING;
+					abord();
+				}
+			}
+		});
+	}
 
+	public void release() {
+		stopStream();
+		mHandler.getLooper().quit();
+	}
+	
+	private void abord() {
 		try {
 			sendRequestTeardown();
 		} catch (Exception ignore) {}
 		try {
 			mSocket.close();
 		} catch (Exception ignore) {}
-
-		mSession.stop();
-		mRunning = false;
+		mHandler.removeCallbacks(mConnectionMonitor);
+		mHandler.removeCallbacks(mRetryConnection);
+		mState = STATE_STOPPED;
 	}
-
+	
+	private void tryConnection() throws IOException {
+		mCSeq = 0;
+		mSocket = new Socket(mParameters.host, mParameters.port);
+		mBufferedReader = new BufferedReader(new InputStreamReader(mSocket.getInputStream()));
+		mOutputStream = mSocket.getOutputStream();
+		sendRequestAnnounce();
+		sendRequestSetup();
+		sendRequestRecord();
+	}
+	
 	/**
 	 * Forges and sends the ANNOUNCE request 
 	 */
 	private void sendRequestAnnounce() throws IllegalStateException, SocketException, IOException {
 
-		String body = mSession.getSessionDescription();
-		String request = "ANNOUNCE rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" +
+		String body = mParameters.session.getSessionDescription();
+		String request = "ANNOUNCE rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" +
 				"CSeq: " + (++mCSeq) + "\r\n" +
 				"Content-Length: " + body.length() + "\r\n" +
 				"Content-Type: application/sdp \r\n\r\n" +
@@ -208,7 +326,7 @@ public class RtspClient {
 			String nonce, realm;
 			Matcher m;
 
-			if (mUsername == null || mPassword == null) throw new IllegalStateException("Authentication is enabled and setCredentials(String,String) was not called !");
+			if (mParameters.username == null || mParameters.password == null) throw new IllegalStateException("Authentication is enabled and setCredentials(String,String) was not called !");
 
 			try {
 				m = Response.rexegAuthenticate.matcher(response.headers.get("www-authenticate")); m.find();
@@ -218,14 +336,14 @@ public class RtspClient {
 				throw new IOException("Invalid response from server");
 			}
 
-			String uri = "rtsp://"+mHost+":"+mPort+mPath;
-			String hash1 = computeMd5Hash(mUsername+":"+m.group(1)+":"+mPassword);
+			String uri = "rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path;
+			String hash1 = computeMd5Hash(mParameters.username+":"+m.group(1)+":"+mParameters.password);
 			String hash2 = computeMd5Hash("ANNOUNCE"+":"+uri);
 			String hash3 = computeMd5Hash(hash1+":"+m.group(2)+":"+hash2);
 
-			mAuthorization = "Digest username=\""+mUsername+"\",realm=\""+realm+"\",nonce=\""+nonce+"\",uri=\""+uri+"\",response=\""+hash3+"\"\r\n";
+			mAuthorization = "Digest username=\""+mParameters.username+"\",realm=\""+realm+"\",nonce=\""+nonce+"\",uri=\""+uri+"\",response=\""+hash3+"\"\r\n";
 
-			request = "ANNOUNCE rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" +
+			request = "ANNOUNCE rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" +
 					"CSeq: " + (++mCSeq) + "\r\n" +
 					"Content-Length: " + body.length() + "\r\n" +
 					"Authorization: " + mAuthorization +
@@ -251,9 +369,9 @@ public class RtspClient {
 	 */
 	private void sendRequestSetup() throws IllegalStateException, SocketException, IOException {
 		for (int i=0;i<2;i++) {
-			Stream stream = mSession.getTrack(i);
+			Stream stream = mParameters.session.getTrack(i);
 			if (stream != null) {
-				String request = "SETUP rtsp://"+mHost+":"+mPort+mPath+"/trackID="+i+" RTSP/1.0\r\n" +
+				String request = "SETUP rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+"/trackID="+i+" RTSP/1.0\r\n" +
 						"Transport: RTP/AVP/UDP;unicast;client_port="+(5000+2*i)+"-"+(5000+2*i+1)+";mode=receive\r\n" +
 						addHeaders();
 
@@ -279,7 +397,7 @@ public class RtspClient {
 	 * Forges and sends the RECORD request 
 	 */
 	private void sendRequestRecord() throws IllegalStateException, SocketException, IOException {
-		String request = "RECORD rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" +
+		String request = "RECORD rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" +
 				"Range: npt=0.000-" +
 				addHeaders();
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
@@ -291,11 +409,20 @@ public class RtspClient {
 	 * Forges and sends the TEARDOWN request 
 	 */
 	private void sendRequestTeardown() throws IOException {
-		String request = "TEARDOWN rtsp://"+mHost+":"+mPort+mPath+" RTSP/1.0\r\n" + addHeaders();
+		String request = "TEARDOWN rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" + addHeaders();
+		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
+		mOutputStream.write(request.getBytes("UTF-8"));
+	}
+	
+	/**
+	 * Forges and sends the OPTIONS request 
+	 */
+	private void sendRequestOption() throws IOException {
+		String request = "OPTIONS rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" + addHeaders();
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 		mOutputStream.write(request.getBytes("UTF-8"));
 		Response.parseResponse(mBufferedReader);
-	}
+	}	
 
 	private String addHeaders() {
 		return "CSeq: " + (++mCSeq) + "\r\n" +
@@ -304,6 +431,51 @@ public class RtspClient {
 				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"");
 	}	
 
+	/**
+	 * If the connection with the RTSP server is lost, we try to reconnect to it as
+	 * long as {@link #stopStream()} is not called.
+	 */
+	private Runnable mConnectionMonitor = new Runnable() {
+		@Override
+		public void run() {
+			if (mState == STATE_STARTED) {
+				try {
+					// We poll the RTSP server with OPTION requests
+					sendRequestOption();
+					mHandler.postDelayed(mConnectionMonitor, 6000);
+				} catch (IOException e) {
+					// Happens if the OPTION request fails
+					postMessage(ERROR_CONNECTION_LOST);
+					Log.e(TAG, "Connection lost with the server...");
+					mParameters.session.stop();
+					mHandler.post(mRetryConnection);
+				}
+			}
+		}
+	};
+
+	/** Here, we try to reconnect to the RTSP. */
+	private Runnable mRetryConnection = new Runnable() {
+		@Override
+		public void run() {
+			if (mState == STATE_STARTED) {
+				try {
+					Log.e(TAG, "Trying to reconnect...");
+					tryConnection();
+					try {
+						mParameters.session.start();
+						mHandler.post(mConnectionMonitor);
+						postMessage(MESSAGE_CONNECTION_RECOVERED);
+					} catch (Exception e) {
+						abord();
+					}
+				} catch (IOException e) {
+					mHandler.postDelayed(mRetryConnection,1000);
+				}
+			}
+		}
+	};
+	
 	final protected static char[] hexArray = {'0','1','2','3','4','5','6','7','8','9','a','b','c','d','e','f'};
 
 	private static String bytesToHex(byte[] bytes) {
@@ -317,6 +489,7 @@ public class RtspClient {
 		return new String(hexChars);
 	}
 
+	/** Needed for the Digest Access Authentication. */
 	private String computeMd5Hash(String buffer) {
 		MessageDigest md;
 		try {
@@ -326,6 +499,28 @@ public class RtspClient {
 		} catch (UnsupportedEncodingException e) {}
 		return "";
 	}
+
+	private void postMessage(final int message) {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onRtspUpdate(message, null); 
+				}
+			}
+		});
+	}
+
+	private void postError(final int message, final Exception e) {
+		mMainHandler.post(new Runnable() {
+			@Override
+			public void run() {
+				if (mCallback != null) {
+					mCallback.onRtspUpdate(message, e); 
+				}
+			}
+		});
+	}	
 
 	static class Response {
 

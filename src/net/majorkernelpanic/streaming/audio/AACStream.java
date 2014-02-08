@@ -1,7 +1,7 @@
 /*
- * Copyright (C) 2011-2013 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,8 +24,10 @@ import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
+import java.net.InetAddress;
 import java.nio.ByteBuffer;
 
+import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.rtp.AACADTSPacketizer;
 import net.majorkernelpanic.streaming.rtp.AACLATMPacketizer;
 import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
@@ -38,12 +40,16 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Environment;
+import android.service.textservice.SpellCheckerService.Session;
 import android.util.Log;
 
 /**
- * A class for streaming AAC from the microphone of an android device using RTP.
- * Call {@link #setDestinationAddress(java.net.InetAddress)} & {@link #start()} and that's it !
+ * A class for streaming AAC from the camera of an android device using RTP.
+ * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
+ * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setAudioQuality(AudioQuality)}
+ * to configure the stream. You can then call {@link #start()} to start the RTP stream.
  * Call {@link #stop()} to stop the stream.
  */
 public class AACStream extends AudioStream {
@@ -79,32 +85,26 @@ public class AACStream extends AudioStream {
 		-1,   // 15
 	};
 
-	private int mActualSamplingRate;
+	private String mSessionDescription = null;
 	private int mProfile, mSamplingRateIndex, mChannel, mConfig;
 	private SharedPreferences mSettings = null;
 	private AudioRecord mAudioRecord = null;
 	private Thread mThread = null;
 
-	public AACStream() throws IOException {
+	public AACStream() {
 		super();
-		
+
 		if (!AACStreamingSupported()) {
 			Log.e(TAG,"AAC not supported on this phone");
-			throw new AACNotSupportedException();
+			throw new RuntimeException("AAC not supported by this phone !");
 		} else {
 			Log.d(TAG,"AAC supported on this phone");
 		}
 
-		if (mMode == MODE_MEDIARECORDER_API) {
-			mPacketizer = new AACADTSPacketizer();
-		} else { 
-			mPacketizer = new AACLATMPacketizer();
-		}
-		
 	}
 
 	private static boolean AACStreamingSupported() {
-		if (Integer.parseInt(android.os.Build.VERSION.SDK)<14) return false;
+		if (Build.VERSION.SDK_INT<14) return false;
 		try {
 			MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
 			return true;
@@ -114,43 +114,89 @@ public class AACStream extends AudioStream {
 	}
 
 	/**
-	 * Some data (the actual sampling rate used by the phone and the AAC profile) needs to be stored once {@link #generateSessionDescription()} is called.
+	 * Some data (the actual sampling rate used by the phone and the AAC profile) needs to be stored once {@link #getSessionDescription()} is called.
 	 * @param prefs The SharedPreferences that will be used to store the sampling rate 
 	 */
 	public void setPreferences(SharedPreferences prefs) {
 		mSettings = prefs;
 	}
 
-	public void start() throws IllegalStateException, IOException {
-		super.start();
+	@Override
+	public synchronized void start() throws IllegalStateException, IOException {
+		configure();
+		if (!mStreaming) {
+			super.start();
+		}
+	}
+
+	public synchronized void configure() throws IllegalStateException, IOException {
+		super.configure();
+		mQuality = mRequestedQuality.clone();
+
+		// Checks if the user has supplied an exotic sampling rate
+		int i=0;
+		for (;i<AUDIO_SAMPLING_RATES.length;i++) {
+			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
+				mSamplingRateIndex = i;
+				break;
+			}
+		}
+		// If he did, we force a reasonable one: 16 kHz
+		if (i>12) mQuality.samplingRate = 16000;
+
+		if (mMode != mRequestedMode || mPacketizer==null) {
+			mMode = mRequestedMode;
+			if (mMode == MODE_MEDIARECORDER_API) {
+				mPacketizer = new AACADTSPacketizer();
+			} else { 
+				mPacketizer = new AACLATMPacketizer();
+			}		
+		}
+		
+
+		if (mMode == MODE_MEDIARECORDER_API) {
+
+			testADTS();
+
+			// All the MIME types parameters used here are described in RFC 3640
+			// SizeLength: 13 bits will be enough because ADTS uses 13 bits for frame length
+			// config: contains the object type + the sampling rate + the channel number
+
+			// TODO: streamType always 5 ? profile-level-id always 15 ?
+
+			mSessionDescription = "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+					"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
+					"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
+
+		} else {
+
+			mProfile = 2; // AAC LC
+			mChannel = 1;
+			mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
+
+			mSessionDescription = "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+					"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
+					"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";			
+
+		}
 
 	}
 
 	@Override
 	protected void encodeWithMediaRecorder() throws IOException {
 		testADTS();
-		((AACADTSPacketizer)mPacketizer).setSamplingRate(mActualSamplingRate);
+		((AACADTSPacketizer)mPacketizer).setSamplingRate(mQuality.samplingRate);
 		super.encodeWithMediaRecorder();
 	}
 
 	@Override
 	@SuppressLint({ "InlinedApi", "NewApi" })
 	protected void encodeWithMediaCodec() throws IOException {
-		
-		// Checks if the user has supplied an exotic sampling rate
-		int i=0;
-		for (;i<AUDIO_SAMPLING_RATES.length;i++) {
-			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
-				break;
-			}
-		}
-		// If he did, we force a reasonable one: 24 kHz
-		if (i>12) mQuality.samplingRate = 24000;
-		
+
 		final int bufferSize = AudioRecord.getMinBufferSize(mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT)*2;
-		
+
 		((AACLATMPacketizer)mPacketizer).setSamplingRate(mQuality.samplingRate);
-		
+
 		mAudioRecord = new AudioRecord(MediaRecorder.AudioSource.MIC, mQuality.samplingRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize);
 		mMediaCodec = MediaCodec.createEncoderByType("audio/mp4a-latm");
 		MediaFormat format = new MediaFormat();
@@ -188,30 +234,24 @@ public class AACStream extends AudioStream {
 				} catch (RuntimeException e) {
 					e.printStackTrace();
 				}
-				//Log.e(TAG,"Thread 1 over");
 			}
 		});
 
 		mThread.start();
 
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the packetizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(inputStream);
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
-		}
+		// The packetizer encapsulates this stream in an RTP stream and send it over the network
+		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+		mPacketizer.setInputStream(inputStream);
+		mPacketizer.start();
+
+		mStreaming = true;
 
 	}
 
 	/** Stops the stream. */
 	public synchronized void stop() {
 		if (mStreaming) {
-			if ((mMode&MODE_MEDIACODEC_API)!=0) {
+			if (mMode==MODE_MEDIACODEC_API) {
 				Log.d(TAG, "Interrupting threads...");
 				mThread.interrupt();
 				mAudioRecord.stop();
@@ -226,40 +266,9 @@ public class AACStream extends AudioStream {
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 * Will fail if called when streaming.
 	 */
-	public String generateSessionDescription() throws IllegalStateException, IOException {
-
-		if (mMode == MODE_MEDIARECORDER_API) {
-
-			testADTS();
-
-			// All the MIME types parameters used here are described in RFC 3640
-			// SizeLength: 13 bits will be enough because ADTS uses 13 bits for frame length
-			// config: contains the object type + the sampling rate + the channel number
-
-			// TODO: streamType always 5 ? profile-level-id always 15 ?
-
-			return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
-			"a=rtpmap:96 mpeg4-generic/"+mActualSamplingRate+"\r\n"+
-			"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";
-
-		} else {
-			
-			for (int i=0;i<AUDIO_SAMPLING_RATES.length;i++) {
-				if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
-					mSamplingRateIndex = i;
-					break;
-				}
-			}
-			mProfile = 2; // AAC LC
-			mChannel = 1;
-			mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
-
-			return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
-			"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
-			"a=fmtp:96 streamtype=5; profile-level-id=15; mode=AAC-hbr; config="+Integer.toHexString(mConfig)+"; SizeLength=13; IndexLength=3; IndexDeltaLength=3;\r\n";			
-
-		}
-
+	public String getSessionDescription() throws IllegalStateException {
+		if (mSessionDescription == null) throw new IllegalStateException("You need to call configure() first !");
+		return mSessionDescription;
 	}
 
 	/** 
@@ -271,7 +280,7 @@ public class AACStream extends AudioStream {
 	 */
 	@SuppressLint("InlinedApi")
 	private void testADTS() throws IllegalStateException, IOException {
-
+		
 		setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
 		try {
 			Field name = MediaRecorder.OutputFormat.class.getField("AAC_ADTS");
@@ -280,24 +289,13 @@ public class AACStream extends AudioStream {
 		catch (Exception ignore) {
 			setOutputFormat(6);
 		}
-		
-		// Checks if the user has supplied an exotic sampling rate
-		int i=0;
-		for (;i<AUDIO_SAMPLING_RATES.length;i++) {
-			if (AUDIO_SAMPLING_RATES[i] == mQuality.samplingRate) {
-				break;
-			}
-		}
-		// If he did, we force a reasonable one: 16 kHz
-		if (i>12) {
-			Log.e(TAG,"Not a valid sampling rate: "+mQuality.samplingRate);
-			mQuality.samplingRate = 16000;
-		}
-		
+
+		String key = PREF_PREFIX+"aac-"+mQuality.samplingRate;
+
 		if (mSettings!=null) {
-			if (mSettings.contains("aac-"+mQuality.samplingRate)) {
-				String[] s = mSettings.getString("aac-"+mQuality.samplingRate, "").split(",");
-				mActualSamplingRate = Integer.valueOf(s[0]);
+			if (mSettings.contains(key)) {
+				String[] s = mSettings.getString(key, "").split(",");
+				mQuality.samplingRate = Integer.valueOf(s[0]);
 				mConfig = Integer.valueOf(s[1]);
 				mChannel = Integer.valueOf(s[2]);
 				return;
@@ -353,7 +351,7 @@ public class AACStream extends AudioStream {
 		mSamplingRateIndex = (buffer[1]&0x3C)>>2 ;
 		mProfile = ( (buffer[1]&0xC0) >> 6 ) + 1 ;
 		mChannel = (buffer[1]&0x01) << 2 | (buffer[2]&0xC0) >> 6 ;
-		mActualSamplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
+		mQuality.samplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
 
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
 		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
@@ -361,14 +359,14 @@ public class AACStream extends AudioStream {
 		Log.i(TAG,"MPEG VERSION: " + ( (buffer[0]&0x08) >> 3 ) );
 		Log.i(TAG,"PROTECTION: " + (buffer[0]&0x01) );
 		Log.i(TAG,"PROFILE: " + AUDIO_OBJECT_TYPES[ mProfile ] );
-		Log.i(TAG,"SAMPLING FREQUENCY: " + mActualSamplingRate );
+		Log.i(TAG,"SAMPLING FREQUENCY: " + mQuality.samplingRate );
 		Log.i(TAG,"CHANNEL: " + mChannel );
 
 		raf.close();
 
 		if (mSettings!=null) {
 			Editor editor = mSettings.edit();
-			editor.putString("aac-"+mQuality.samplingRate, mActualSamplingRate+","+mConfig+","+mChannel);
+			editor.putString(key, mQuality.samplingRate+","+mConfig+","+mChannel);
 			editor.commit();
 		}
 
