@@ -130,8 +130,8 @@ public class VideoQuality {
 		List<int[]> supportedFpsRanges = parameters.getSupportedPreviewFpsRange();
 		for (Iterator<int[]> it = supportedFpsRanges.iterator(); it.hasNext();) {
 			int[] interval = it.next();
-			supportedFpsRangesStr += interval[0]+"-"+interval[1]+"fps"+(it.hasNext()?", ":"");
-			if (interval[1]/1000>maxFps[1]) {
+			supportedFpsRangesStr += interval[0]/1000+"-"+interval[1]/1000+"fps"+(it.hasNext()?", ":"");
+			if (interval[1]>maxFps[1] || (interval[0]>maxFps[0] && interval[1]==maxFps[1])) {
 				maxFps = interval; 
 			}
 		}
