@@ -62,13 +62,13 @@ public class EncoderDebugger {
 	 * If this is set to false the test will be run only once and the result 
 	 * will be saved in the shared preferences. 
 	 */
-	private static final boolean DEBUG = true;
+	private static final boolean DEBUG = false;
 	
 	/** Set this to true to see more logs. */
-	private static final boolean VERBOSE = true;
+	private static final boolean VERBOSE = false;
 
 	/** Will be incremented every time this test is modified. */
-	private static final int VERSION = 2;
+	private static final int VERSION = 3;
 
 	/** Bitrate that will be used with the encoder. */
 	private final static int BITRATE = 1000000;
