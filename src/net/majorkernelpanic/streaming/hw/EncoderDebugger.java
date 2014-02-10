@@ -62,10 +62,10 @@ public class EncoderDebugger {
 	 * If this is set to false the test will be run only once and the result 
 	 * will be saved in the shared preferences. 
 	 */
-	private static final boolean DEBUG = false;
+	private static final boolean DEBUG = true;
 	
 	/** Set this to true to see more logs. */
-	private static final boolean VERBOSE = false;
+	private static final boolean VERBOSE = true;
 
 	/** Will be incremented every time this test is modified. */
 	private static final int VERSION = 2;
@@ -158,11 +158,11 @@ public class EncoderDebugger {
 	}
 
 	private void debug() {
-
+		
 		// If testing the phone again is not needed, 
 		// we just restore the result from the shared preferences
 		if (!checkTestNeeded()) {
-			String resolution = mWidth+"x"+mHeight+"-";
+			String resolution = mWidth+"x"+mHeight+"-";			
 
 			boolean success = mPreferences.getBoolean(PREF_PREFIX+resolution+"success",false);
 			if (!success) {
@@ -183,18 +183,28 @@ public class EncoderDebugger {
 			return;
 		}
 
+		if (VERBOSE) Log.d(TAG, ">>>> Testing the phone for resolution "+mWidth+"x"+mHeight);
+		
 		// Builds a list of available encoders and decoders we may be able to use
 		// because they support some nice color formats
 		Codec[] encoders = CodecManager.findEncodersForMimeType(MIME_TYPE);
 		Codec[] decoders = CodecManager.findDecodersForMimeType(MIME_TYPE);
 
+		int count = 0, n = 1;
+		for (int i=0;i<encoders.length;i++) {
+			count += encoders[i].formats.length;
+		}
+		
 		// Tries available encoders
 		for (int i=0;i<encoders.length;i++) {
 			for (int j=0;j<encoders[i].formats.length;j++) {
-
+				reset();
+				
 				mEncoderName = encoders[i].name;
 				mEncoderColorFormat = encoders[i].formats[j];
 
+				if (VERBOSE) Log.v(TAG, ">> Test "+(n++)+"/"+count+": "+mEncoderName+" with color format "+mEncoderColorFormat+" at "+mWidth+"x"+mHeight);
+				
 				// Converts from NV21 to YUV420 with the specified parameters
 				mNV21.setSize(mWidth, mHeight);
 				mNV21.setSliceHeigth(mHeight);
@@ -211,6 +221,8 @@ public class EncoderDebugger {
 					// Starts the encoder
 					configureEncoder();
 					searchSPSandPPS();
+					
+					if (VERBOSE) Log.v(TAG, "SPS and PPS in b64: SPS="+mB64SPS+", PPS="+mB64PPS);
 
 					// Feeds the encoder with an image repeatidly to produce some NAL units
 					encode();
@@ -223,10 +235,16 @@ public class EncoderDebugger {
 							mDecoderColorFormat = decoders[k].formats[l];
 							try {
 								configureDecoder();
-								decode();
+							} catch (Exception e) {
+								if (VERBOSE) Log.d(TAG, mDecoderName+" can't be used with "+mDecoderColorFormat+" at "+mWidth+"x"+mHeight);
+								releaseDecoder();
+								break;
+							}
+							try {
+								decode(true);
 								if (VERBOSE) Log.d(TAG, mDecoderName+" successfully decoded the NALs (color format "+mDecoderColorFormat+")");
 								decoded = true;
-							} catch (RuntimeException e) {
+							} catch (Exception e) {
 								if (VERBOSE) Log.e(TAG, mDecoderName+" failed to decode the NALs");
 								e.printStackTrace();
 							} finally {
@@ -247,11 +265,11 @@ public class EncoderDebugger {
 					int padding;
 					if ((padding = checkPaddingNeeded())>0) {
 						if (padding<4096) {
+							if (VERBOSE) Log.d(TAG, "Some padding is needed: "+padding);
 							mNV21.setYPadding(padding);
 							createTestImage();
 							mData = mNV21.convert(mInitialImage);
 							encodeDecode();
-							if (VERBOSE) Log.d(TAG, "Some padding is needed: "+padding);
 						} else {
 							// TODO: try again with a different sliceHeight
 							// TODO: try again with the "slice-height" param
@@ -278,7 +296,7 @@ public class EncoderDebugger {
 					PrintWriter pw = new PrintWriter(sw); e.printStackTrace(pw);
 					String stack = sw.toString();
 					String str = "Encoder "+mEncoderName+" cannot be used with color format "+mEncoderColorFormat;
-					if (VERBOSE) Log.e(TAG, str);
+					if (VERBOSE) Log.e(TAG, str, e);
 					mErrorLog += str + "\n" + stack;
 					e.printStackTrace();
 				} finally {
@@ -455,7 +473,7 @@ public class EncoderDebugger {
 					if (sliceHeight<mHeight) sliceHeight = mHeight;
 				}
 				if (format.containsKey("stride")) {
-					stride = format.getInteger("stride");	
+					stride = format.getInteger("stride");
 					if (stride<mWidth) stride = mWidth;
 				}
 				if (format.containsKey(MediaFormat.KEY_COLOR_FORMAT)) {
@@ -505,7 +523,6 @@ public class EncoderDebugger {
 	 * Instantiates and starts the encoder.
 	 */
 	private void configureEncoder()  {
-		if (VERBOSE) Log.v(TAG, "Testing "+mEncoderName+" with color format "+mEncoderColorFormat+" at "+mWidth+"x"+mHeight);
 		mEncoder = MediaCodec.createByCodecName(mEncoderName);
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
@@ -707,7 +724,11 @@ public class EncoderDebugger {
 
 	}
 
-	private long decode() {
+	/**
+	 * @param withPrefix If set to true, the decoder will be fed with NALs preceeded with 0x00000001.
+	 * @return How long it took to decode all the NALs
+	 */
+	private long decode(boolean withPrefix) {
 		int n = 0, i = 0, j = 0;
 		long elapsed = 0, now = timestamp();
 		int decInputIndex = 0, decOutputIndex = 0;
@@ -723,9 +744,20 @@ public class EncoderDebugger {
 				if (decInputIndex>=0) {
 					int l1 = decInputBuffers[decInputIndex].capacity();
 					int l2 = mVideo[i].length;
-					check(l1>=l2, "The decoder input buffer is not big enough.");
 					decInputBuffers[decInputIndex].clear();
-					decInputBuffers[decInputIndex].put(mVideo[i],0,mVideo[i].length);
+					
+					if ((withPrefix && hasPrefix(mVideo[i])) || (!withPrefix && !hasPrefix(mVideo[i]))) {
+						check(l1>=l2, "The decoder input buffer is not big enough (nal="+l2+", capacity="+l1+").");
+						decInputBuffers[decInputIndex].put(mVideo[i],0,mVideo[i].length);
+					} else if (withPrefix && !hasPrefix(mVideo[i])) {
+						check(l1>=l2+4, "The decoder input buffer is not big enough (nal="+(l2+4)+", capacity="+l1+").");
+						decInputBuffers[decInputIndex].put(new byte[] {0,0,0,1});
+						decInputBuffers[decInputIndex].put(mVideo[i],0,mVideo[i].length);
+					} else if (!withPrefix && hasPrefix(mVideo[i])) {
+						check(l1>=l2-4, "The decoder input buffer is not big enough (nal="+(l2-4)+", capacity="+l1+").");
+						decInputBuffers[decInputIndex].put(mVideo[i],4,mVideo[i].length-4);
+					}
+					
 					mDecoder.queueInputBuffer(decInputIndex, 0, l2, timestamp(), 0);
 					i++;
 				} else {
@@ -765,11 +797,22 @@ public class EncoderDebugger {
 
 	}
 
+	/**
+	 * Makes sure the NAL has a header or not.
+	 * @param withPrefix If set to true, the NAL will be preceeded with 0x00000001.
+	 */
+	private boolean hasPrefix(byte[] nal) {
+		if (nal[0] == 0 && nal[1] == 0 && nal[2] == 0 && nal[3] == 0x01)
+			return true;
+		else
+			return false;
+	}
+	
 	private void encodeDecode() {
 		encode();
 		try {
 			configureDecoder();
-			decode();
+			decode(true);
 		} finally {
 			releaseDecoder();
 		}

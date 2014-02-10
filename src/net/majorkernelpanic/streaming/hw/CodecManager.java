@@ -21,6 +21,8 @@
 package net.majorkernelpanic.streaming.hw;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 import android.annotation.SuppressLint;
 import android.media.MediaCodecInfo;
@@ -67,7 +69,7 @@ public class CodecManager {
 				if (types[i].equalsIgnoreCase(mimeType)) {
 					MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
 
-					ArrayList<Integer> formats = new ArrayList<Integer>();
+					Set<Integer> formats = new HashSet<Integer>();
 
 					// And through the color formats supported
 					for (int k = 0; k < capabilities.colorFormats.length; k++) {
@@ -106,7 +108,7 @@ public class CodecManager {
 				if (types[i].equalsIgnoreCase(mimeType)) {
 					MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
 
-					ArrayList<Integer> formats = new ArrayList<Integer>();
+					Set<Integer> formats = new HashSet<Integer>();
 
 					// And through the color formats supported
 					for (int k = 0; k < capabilities.colorFormats.length; k++) {
