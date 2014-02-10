@@ -44,7 +44,7 @@ import android.os.Looper;
  * This is the class you will want to use to stream audio and or video to some peer using RTP.<br />
  * 
  * It holds a {@link VideoStream} and a {@link AudioStream} together and provides 
- * syncronous and asyncrounous functions to start and stop those steams.
+ * synchronous and asynchronous functions to start and stop those steams.
  * You should implement a callback interface {@link Callback} to receive notifications and error reports.<br />
  * 
  * If you want to stream to a RTSP server, you will need an instance of this class and hand it to a {@link RtspClient}.
@@ -368,7 +368,7 @@ public class Session {
 	}	
 
 	/** 
-	 * Does the same thing as {@link #configure()}, but in a syncronous manner.
+	 * Does the same thing as {@link #configure()}, but in a synchronous manner.
 	 * Throws exceptions in addition to calling a callback 
 	 * {@link Callback#onSessionError(int, int, Exception)} when
 	 * an error occurs.	
@@ -411,7 +411,7 @@ public class Session {
 	}
 
 	/** 
-	 * Asyncronously starts all streams of the session.
+	 * Asynchronously starts all streams of the session.
 	 **/
 	public void start() {
 		mHandler.post(new Runnable() {
@@ -425,7 +425,7 @@ public class Session {
 	}
 
 	/** 
-	 * Starts a stream in a syncronous manner. 
+	 * Starts a stream in a synchronous manner. 
 	 * Throws exceptions in addition to calling a callback.
 	 * @param id The id of the stream to start
 	 **/
@@ -477,7 +477,7 @@ public class Session {
 	}	
 
 	/** 
-	 * Does the same thing as {@link #start()}, but in a syncronous manner. 
+	 * Does the same thing as {@link #start()}, but in a synchronous manner. 
 	 * Throws exceptions in addition to calling a callback.
 	 **/
 	public void syncStart() 			
@@ -512,7 +512,7 @@ public class Session {
 	}
 
 	/** 
-	 * Stops one stream in a syncronous manner.
+	 * Stops one stream in a synchronous manner.
 	 * @param id The id of the stream to stop
 	 **/	
 	private void syncStop(final int id) {
@@ -522,7 +522,7 @@ public class Session {
 		}
 	}		
 	
-	/** Stops all existing streams in a syncronous manner. */
+	/** Stops all existing streams in a synchronous manner. */
 	public void syncStop() {
 		syncStop(0);
 		syncStop(1);

@@ -5,7 +5,7 @@
 **libstreaming** is an API that allows you, with only a few lines of code, to stream the camera and/or microphone of an android powered device using RTP over UDP. 
 
 * Android 4.0 or more recent is required.
-* Supported encoders includes H.264, H.263, AAC and AMR.
+* Supported encoders include H.264, H.263, AAC and AMR.
 
 The first step you will need to achieve to start a streaming session to some peer is called 'signaling'. During this step you will contact the receiver and send a description of the incomming streams. You have three ways to do that with libstreaming.
 
@@ -19,7 +19,7 @@ The full javadoc documentation of the API is available here: http://majorkernelp
 
 There are three ways on Android to get encoded data from the peripherals:
 
-* With the **MediaRecorder** API and a simple hack
+* With the **MediaRecorder** API and a simple hack.
 * With the **MediaCodec** API input buffers, Android 4.1 is required.
 * With the **MediaCodec** API an input surface, only for encoding video and Android 4.3 is required.
 
@@ -38,7 +38,7 @@ It's hard to tell how well this hack is going to work on a phone. It does work w
 The **MediaCodec** API do not present the limitations I just mentionned, but has its own issues. There are actually two ways to use the MediaCodec API: with buffers or with a surface.
 
 The first method uses calls to [**dequeueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#dequeueInputBuffer(long)) and [**queueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#queueInputBuffer(int, int, int, long, int)) to feed the encoder with raw data.
-That seems easy right ? Well it's not, because video encoders that you get access to wit this API are using different color formats and you need to support all of them. A list of those color formats is available [here](http://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities.html). Moreover, many encoders claim support for color formats they don't actually support properly or can present little glitches.
+That seems easy right ? Well it's not, because video encoders that you get access to with this API are using different color formats and you need to support all of them. A list of those color formats is available [here](http://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities.html). Moreover, many encoders claim support for color formats they don't actually support properly or can present little glitches.
 
 All the [**hw**]() package is dedicated to solving those issues. See in particular [**EncoderDebugger**]() class. 
 
@@ -163,17 +163,17 @@ This example is extracted from [this simple android app](https://github.com/fyhe
 
 ```
 
-The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceView** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (It's an ennoying limitation of the **MediaRecorder** API). On Android 4.3, streaming with no **SurfaceView** is possible but not yet implemented. The call to **setContext** is necessary, it allows **H264Stream** objects and **AACStream** objects to store and recover data using **SharedPreferences**.
+The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceView** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (it's an annoying limitation of the **MediaRecorder** API). On Android 4.3, streaming with no **SurfaceView** is possible but not yet implemented. The call to **setContext** is necessary, it allows **H264Stream** objects and **AACStream** objects to store and recover data using **SharedPreferences**.
 
-**Session** objects represents a streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the start() (resp. stop()) method is invoked.
+A **Session** object represents a streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the **start()** (resp. **stop()**) method is invoked.
 
-The method **getSessionDescription** will return a SDP of the session in the form of a String. Before calling it, you must make sure that the **Session** has been configured. After calling **configure()** or **startPreview()** on you Session instance, the callback **onSessionConfigured()** will be called.
+The method **getSessionDescription()** will return a SDP of the session in the form of a String. Before calling it, you must make sure that the **Session** has been configured. After calling **configure()** or **startPreview()** on you Session instance, the callback **onSessionConfigured()** will be called.
 
-**In the example presented above, the Session instance is used in an asyncrounous manner and calls to its methods do not block. You know when stuff is done when callbacks are called.**
+**In the example presented above, the Session instance is used in an asynchronous manner and calls to its methods do not block. You know when stuff is done when callbacks are called.**
 
-**You can also use a Session object in a syncronous manner like that:**
+**You can also use a Session object in a synchronous manner like that:**
 
-```
+```java
     // Blocks until the all streams are configured
     try {
          mSession.syncConfigure();
