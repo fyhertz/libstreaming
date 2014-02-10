@@ -78,7 +78,7 @@ The [**rtp**]() package handles packetization of encoded data in RTP packets.
 
 ## How to stream H.264 and AAC
 
-This example is extracted from [this simple android app](https://github.com/fyhertz/libstreaming-examples#example-2). 
+This example is extracted from [this simple android app](https://github.com/fyhertz/libstreaming-examples#example-2). This could be a part of an Activity, a Fragment or a Service. 
 
 ```java
     protected void onCreate(Bundle savedInstanceState) {
