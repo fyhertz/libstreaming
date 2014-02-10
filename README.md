@@ -63,7 +63,7 @@ If you are looking for a basic implementation of one of the RFC mentionned above
 
 RTCP packets are also sent to the receiver since version 2.0 of libstreaming. Only Sender Reports are implemented. They are actually needed for lip sync.
 
-The [**rtp**]() package handles packetization of encoded data in RTP packets.
+The [**rtp**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/rtp/package-summary.html) package handles packetization of encoded data in RTP packets.
 
 # Using libstreaming in your app
 
@@ -163,7 +163,7 @@ This example is extracted from [this simple android app](https://github.com/fyhe
 
 ```
 
-The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceView** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (it's an annoying limitation of the **MediaRecorder** API). On Android 4.3, streaming with no **SurfaceView** is possible but not yet implemented. The call to **setContext** is necessary, it allows **H264Stream** objects and **AACStream** objects to store and recover data using **SharedPreferences**.
+The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceView** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (it's an annoying limitation of the **MediaRecorder** API). On Android 4.3, streaming with no **SurfaceView** is possible but not yet implemented. The call to **setContext(Context)** is necessary, it allows **H264Stream** objects and **AACStream** objects to store and recover data using **SharedPreferences**.
 
 A **Session** object represents a streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the **start()** (resp. **stop()**) method is invoked.
 
