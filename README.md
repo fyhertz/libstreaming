@@ -192,8 +192,6 @@ The method **getSessionDescription()** will return a SDP of the session in the f
     mSession.syncStop();
 ```
 
-The complete source code of this example is available here: https://github.com/fyhertz/libstreaming-examples
-
 ## How to use the RTSP client
 
 Check out [this page of the wiki](https://github.com/fyhertz/libstreaming/wiki/Using-libstreaming-with-Wowza-Media-Server) and the [example 3](https://github.com/fyhertz/libstreaming-examples#example-3).
