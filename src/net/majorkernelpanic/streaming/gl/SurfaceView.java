@@ -22,7 +22,6 @@ package net.majorkernelpanic.streaming.gl;
 
 import java.util.concurrent.Semaphore;
 
-import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.SurfaceTexture;
 import android.graphics.SurfaceTexture.OnFrameAvailableListener;
@@ -31,7 +30,6 @@ import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 
-@SuppressLint("NewApi")
 public class SurfaceView extends android.view.SurfaceView implements Runnable, OnFrameAvailableListener, SurfaceHolder.Callback {
 
 	public final static String TAG = "GLSurfaceView";

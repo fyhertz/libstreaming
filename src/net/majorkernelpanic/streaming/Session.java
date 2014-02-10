@@ -23,7 +23,7 @@ package net.majorkernelpanic.streaming;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.concurrent.Semaphore;
+import java.util.concurrent.CountDownLatch;
 
 import net.majorkernelpanic.streaming.audio.AudioQuality;
 import net.majorkernelpanic.streaming.audio.AudioStream;
@@ -44,7 +44,7 @@ import android.os.Looper;
  * This is the class you will want to use to stream audio and or video to some peer using RTP.<br />
  * 
  * It holds a {@link VideoStream} and a {@link AudioStream} together and provides 
- * synchronous and asynchronous functions to start and stop those steams.
+ * syncronous and asyncrounous functions to start and stop those steams.
  * You should implement a callback interface {@link Callback} to receive notifications and error reports.<br />
  * 
  * If you want to stream to a RTSP server, you will need an instance of this class and hand it to a {@link RtspClient}.
@@ -110,8 +110,22 @@ public class Session {
 
 	private Callback mCallback;
 	private Handler mMainHandler;
-	private Handler mHandler;
+	
+	private static CountDownLatch sSignal;
+	private static Handler sHandler;
 
+	static {
+		// Creates the Thread that will be used when asynchronous methods of a Session are called
+		sSignal = new CountDownLatch(1);
+		new HandlerThread("net.majorkernelpanic.streaming.Session"){
+			@Override
+			protected void onLooperPrepared() {
+				sHandler = new Handler();
+				sSignal.countDown();
+			}
+		}.start();
+	}
+	
 	/** 
 	 * Creates a streaming session that can be customized by adding tracks.
 	 */
@@ -120,16 +134,11 @@ public class Session {
 		mMainHandler = new Handler(Looper.getMainLooper());
 		mTimestamp = (uptime/1000)<<32 & (((uptime-((uptime/1000)*1000))>>32)/1000); // NTP timestamp
 		mOrigin = "127.0.0.1";
-
-		final Semaphore signal = new Semaphore(0);
-		new HandlerThread("net.majorkernelpanic.streaming.Session"){
-			@Override
-			protected void onLooperPrepared() {
-				mHandler = new Handler();
-				signal.release();
-			}
-		}.start();
-		signal.acquireUninterruptibly();
+		
+		// Me make sure that we won't send Runnables to a non existing thread
+		try {
+			sSignal.await();
+		} catch (InterruptedException e) {}
 	}
 
 	/**
@@ -178,34 +187,40 @@ public class Session {
 
 	}
 
-	public void addAudioTrack(AudioStream track) {
+	/** You probably don't need to use that directly, use the {@link SessionBuilder}. */
+	void addAudioTrack(AudioStream track) {
 		removeAudioTrack();
 		mAudioStream = track;
 	}
 
-	public void addVideoTrack(VideoStream track) {
+	/** You probably don't need to use that directly, use the {@link SessionBuilder}. */
+	void addVideoTrack(VideoStream track) {
 		removeVideoTrack();
 		mVideoStream = track;
 	}
 
-	public void removeAudioTrack() {
+	/** You probably don't need to use that directly, use the {@link SessionBuilder}. */
+	void removeAudioTrack() {
 		if (mAudioStream != null) {
 			mAudioStream.stop();
 			mAudioStream = null;
 		}
 	}
 
-	public void removeVideoTrack() {
+	/** You probably don't need to use that directly, use the {@link SessionBuilder}. */
+	void removeVideoTrack() {
 		if (mVideoStream != null) {
 			mVideoStream.stopPreview();
 			mVideoStream = null;
 		}
 	}
 
+	/** Returns the underlying {@link AudioStream} used by the {@link Session}. */
 	public AudioStream getAudioTrack() {
 		return mAudioStream;
 	}
 
+	/** Returns the underlying {@link VideoStream} used by the {@link Session}. */
 	public VideoStream getVideoTrack() {
 		return mVideoStream;
 	}	
@@ -261,7 +276,7 @@ public class Session {
 	 * You can call this method at any time and changes will take effect next time you call {@link #start()} or {@link #startPreview()}.
 	 */
 	public void setSurfaceView(final SurfaceView view) {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -357,7 +372,7 @@ public class Session {
 	 * Configures all streams of the session.
 	 **/
 	public void configure() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -368,7 +383,7 @@ public class Session {
 	}	
 
 	/** 
-	 * Does the same thing as {@link #configure()}, but in a synchronous manner.
+	 * Does the same thing as {@link #configure()}, but in a syncronous manner.
 	 * Throws exceptions in addition to calling a callback 
 	 * {@link Callback#onSessionError(int, int, Exception)} when
 	 * an error occurs.	
@@ -411,10 +426,10 @@ public class Session {
 	}
 
 	/** 
-	 * Asynchronously starts all streams of the session.
+	 * Asyncronously starts all streams of the session.
 	 **/
 	public void start() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -425,7 +440,7 @@ public class Session {
 	}
 
 	/** 
-	 * Starts a stream in a synchronous manner. 
+	 * Starts a stream in a syncronous manner. 
 	 * Throws exceptions in addition to calling a callback.
 	 * @param id The id of the stream to start
 	 **/
@@ -448,7 +463,7 @@ public class Session {
 					postSessionStarted();
 				}
 				if (getTrack(1-id) == null || !getTrack(1-id).isStreaming()) {
-					mHandler.post(mUpdateBitrate);
+					sHandler.post(mUpdateBitrate);
 				}
 			} catch (UnknownHostException e) {
 				postError(ERROR_UNKNOWN_HOST, id, e);
@@ -477,7 +492,7 @@ public class Session {
 	}	
 
 	/** 
-	 * Does the same thing as {@link #start()}, but in a synchronous manner. 
+	 * Does the same thing as {@link #start()}, but in a syncronous manner. 
 	 * Throws exceptions in addition to calling a callback.
 	 **/
 	public void syncStart() 			
@@ -503,7 +518,7 @@ public class Session {
 
 	/** Stops all existing streams. */
 	public void stop() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				syncStop();
@@ -512,7 +527,7 @@ public class Session {
 	}
 
 	/** 
-	 * Stops one stream in a synchronous manner.
+	 * Stops one stream in a syncronous manner.
 	 * @param id The id of the stream to stop
 	 **/	
 	private void syncStop(final int id) {
@@ -522,7 +537,7 @@ public class Session {
 		}
 	}		
 	
-	/** Stops all existing streams in a synchronous manner. */
+	/** Stops all existing streams in a syncronous manner. */
 	public void syncStop() {
 		syncStop(0);
 		syncStop(1);
@@ -530,7 +545,7 @@ public class Session {
 	}	
 
 	public void startPreview() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -557,7 +572,7 @@ public class Session {
 	}
 
 	public void stopPreview() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -568,7 +583,7 @@ public class Session {
 	}	
 
 	public void switchCamera() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -597,7 +612,7 @@ public class Session {
 	}
 
 	public void toggleFlash() {
-		mHandler.post(new Runnable() {
+		sHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -615,7 +630,7 @@ public class Session {
 	public void release() {
 		removeAudioTrack();
 		removeVideoTrack();
-		mHandler.getLooper().quit();
+		sHandler.getLooper().quit();
 	}
 
 	private void postPreviewStarted() {
@@ -689,7 +704,7 @@ public class Session {
 		public void run() {
 			if (isStreaming()) { 
 				postBitRate(getBitrate());
-				mHandler.postDelayed(mUpdateBitrate, 500);
+				sHandler.postDelayed(mUpdateBitrate, 500);
 			} else {
 				postBitRate(0);
 			}
