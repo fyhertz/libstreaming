@@ -45,9 +45,9 @@ import android.util.Log;
  * Feeding the encoder with a surface is not tested here.
  * Some bugs you may have encountered:<br />
  * <ul>
- * <il>U and V panes reversed</il>
- * <il>Some padding is needed after the Y pane</il>
- * <il>stride!=width or slice-height!=height</il>
+ * <li>U and V panes reversed</li>
+ * <li>Some padding is needed after the Y pane</li>
+ * <li>stride!=width or slice-height!=height</li>
  * </ul>
  */
 @SuppressLint("NewApi")
