@@ -20,8 +20,8 @@ The full javadoc documentation of the API is available here: http://majorkernelp
 There are three ways on Android to get encoded data from the peripherals:
 
 * With the **MediaRecorder** API and a simple hack.
-* With the **MediaCodec** API input buffers, Android 4.1 is required.
-* With the **MediaCodec** API an input surface, only for encoding video and Android 4.3 is required.
+* With the **MediaCodec** API and the buffer-to-buffer method which requires Android 4.1.
+* With the **MediaCodec** API and the surface-to-buffer method which requires Android 4.3.
 
 ### Encoding with the MediaRecorder API
 
@@ -37,14 +37,14 @@ It's hard to tell how well this hack is going to work on a phone. It does work w
 
 The **MediaCodec** API do not present the limitations I just mentionned, but has its own issues. There are actually two ways to use the MediaCodec API: with buffers or with a surface.
 
-The first method uses calls to [**dequeueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#dequeueInputBuffer(long)) and [**queueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#queueInputBuffer(int, int, int, long, int)) to feed the encoder with raw data.
+The buffer-to-buffer method uses calls to [**dequeueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#dequeueInputBuffer(long)) and [**queueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#queueInputBuffer(int, int, int, long, int)) to feed the encoder with raw data.
 That seems easy right ? Well it's not, because video encoders that you get access to with this API are using different color formats and you need to support all of them. A list of those color formats is available [here](http://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities.html). Moreover, many encoders claim support for color formats they don't actually support properly or can present little glitches.
 
 All the [**hw**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/hw/package-summary.html) package is dedicated to solving those issues. See in particular [**EncoderDebugger**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/hw/EncoderDebugger.html) class. 
 
 If streaming with that API fails, libstreaming fallbacks on streaming with the **MediaRecorder API**.
 
-The second solution is to use the [createInputSurface()](http://developer.android.com/reference/android/media/MediaCodec.html#createInputSurface()) method. This method is probably the best way to encode raw video from the camera but it requires android 4.3 and up.
+The surface-to-buffer method uses the [createInputSurface()](http://developer.android.com/reference/android/media/MediaCodec.html#createInputSurface()) method. This method is probably the best way to encode raw video from the camera but it requires android 4.3 and up.
 
 The [**gl**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/gl/package-summary.html) package is dedicated to using the MediaCodec API with a surface.
 
