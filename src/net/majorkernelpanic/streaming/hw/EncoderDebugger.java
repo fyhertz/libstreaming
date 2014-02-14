@@ -97,8 +97,10 @@ public class EncoderDebugger {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-				debug(prefs, width, height);
+				try {
+					SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+					debug(prefs, width, height);
+				} catch (Exception e) {}
 			}
 		}).start();
 	}

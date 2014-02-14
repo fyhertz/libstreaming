@@ -53,49 +53,69 @@ public class CodecManager {
 		public Integer[] formats;
 	}
 
+	/**
+	 * Lists all encoders that claim to support a color format that we know how to use.
+	 * @return A list of those encoders
+	 * @throws RuntimeException It may be thrown if the MediaCodecList is buggy on the phone
+	 */
 	@SuppressLint("NewApi")
 	public synchronized static Codec[] findEncodersForMimeType(String mimeType) {
 		if (sEncoders != null) return sEncoders;
 
-		ArrayList<Codec> encoders = new ArrayList<Codec>();
+		try {
 
-		// We loop through the encoders, apparently this can take up to a sec (testes on a GS3)
-		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
-			MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
-			if (!codecInfo.isEncoder()) continue;
+			ArrayList<Codec> encoders = new ArrayList<Codec>();
 
-			String[] types = codecInfo.getSupportedTypes();
-			for (int i = 0; i < types.length; i++) {
-				if (types[i].equalsIgnoreCase(mimeType)) {
-					MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
+			// We loop through the encoders, apparently this can take up to a sec (testes on a GS3)
+			for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
+				MediaCodecInfo codecInfo = MediaCodecList.getCodecInfoAt(j);
+				if (!codecInfo.isEncoder()) continue;
 
-					Set<Integer> formats = new HashSet<Integer>();
+				String[] types = codecInfo.getSupportedTypes();
+				for (int i = 0; i < types.length; i++) {
+					if (types[i].equalsIgnoreCase(mimeType)) {
+						MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
 
-					// And through the color formats supported
-					for (int k = 0; k < capabilities.colorFormats.length; k++) {
-						int format = capabilities.colorFormats[k];
+						Set<Integer> formats = new HashSet<Integer>();
 
-						for (int l=0;l<SUPPORTED_COLOR_FORMATS.length;l++) {
-							if (format == SUPPORTED_COLOR_FORMATS[l]) {
-								formats.add(format);
+						// And through the color formats supported
+						for (int k = 0; k < capabilities.colorFormats.length; k++) {
+							int format = capabilities.colorFormats[k];
+
+							for (int l=0;l<SUPPORTED_COLOR_FORMATS.length;l++) {
+								if (format == SUPPORTED_COLOR_FORMATS[l]) {
+									formats.add(format);
+								}
 							}
-						}
 
+						}
+						Codec codec = new Codec(codecInfo.getName(), (Integer[]) formats.toArray(new Integer[formats.size()]));
+						encoders.add(codec);
 					}
-					Codec codec = new Codec(codecInfo.getName(), (Integer[]) formats.toArray(new Integer[formats.size()]));
-					encoders.add(codec);
 				}
 			}
-		}
 
-		sEncoders = (Codec[]) encoders.toArray(new Codec[encoders.size()]);
-		return sEncoders;
+			sEncoders = (Codec[]) encoders.toArray(new Codec[encoders.size()]);
+			return sEncoders;
+			
+		} catch (Exception e) {
+			// The MediaCodecList API is buggy on some HTC device, and an IllegalArgumentException is thrown !
+			// Other may have a buggy API, hence the pokemon exception.
+			throw new RuntimeException("Could not list available encoders.");
+		}
 	}
 
+	/**
+	 * Lists all decoders that claim to support a color format that we know how to use.
+	 * @return A list of those decoders
+	 * @throws RuntimeException It may be thrown if the MediaCodecList is buggy on the phone
+	 */
 	@SuppressLint("NewApi")
-	public synchronized static Codec[] findDecodersForMimeType(String mimeType) {
+	public synchronized static Codec[] findDecodersForMimeType(String mimeType) throws RuntimeException {
 		if (sDecoders != null) return sDecoders;
 
+		try {
+			
 		ArrayList<Codec> decoders = new ArrayList<Codec>();
 
 		// We loop through the decoders, apparently this can take up to a sec (testes on a GS3)
@@ -124,13 +144,13 @@ public class CodecManager {
 
 					Codec codec = new Codec(codecInfo.getName(), (Integer[]) formats.toArray(new Integer[formats.size()]));
 					decoders.add(codec);
-					
+
 				}
 			}
 		}
 
 		sDecoders = (Codec[]) decoders.toArray(new Codec[decoders.size()]);
-		
+
 		// We will use the decoder from google first, it seems to work properly on many phones
 		for (int i=0;i<sDecoders.length;i++) {
 			if (sDecoders[i].name.equalsIgnoreCase("omx.google.h264.decoder")) {
@@ -139,8 +159,14 @@ public class CodecManager {
 				sDecoders[i] = codec;
 			} 
 		}
-		
+
 		return sDecoders;
+	
+		} catch (Exception e) {
+			// The MediaCodecList API is buggy on some HTC device, and an IllegalArgumentException is thrown !
+			// Other may have a buggy API, hence the pokemon exception.
+			throw new RuntimeException("Could not list available decoders.");
+		}
 	}
 
 }
