@@ -428,7 +428,7 @@ public class RtspClient {
 		return "CSeq: " + (++mCSeq) + "\r\n" +
 				"Content-Length: 0\r\n" +
 				"Session: " + mSessionID + "\r\n" +
-				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"");
+				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"") + "\r\n";
 	}	
 
 	/**
