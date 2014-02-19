@@ -428,8 +428,9 @@ public class RtspClient {
 		return "CSeq: " + (++mCSeq) + "\r\n" +
 				"Content-Length: 0\r\n" +
 				"Session: " + mSessionID + "\r\n" +
-				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"");
-	}	
+				// For some reason you may have to remove last "\r\n" in the next line to make the RTSP client work with your wowza server :/
+				(mAuthorization != null ? "Authorization: " + mAuthorization + "\r\n":"") + "\r\n";
+	}
 
 	/**
 	 * If the connection with the RTSP server is lost, we try to reconnect to it as

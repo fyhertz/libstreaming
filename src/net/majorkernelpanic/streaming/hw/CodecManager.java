@@ -27,6 +27,7 @@ import java.util.Set;
 import android.annotation.SuppressLint;
 import android.media.MediaCodecInfo;
 import android.media.MediaCodecList;
+import android.util.Log;
 
 @SuppressLint("InlinedApi")
 public class CodecManager {
@@ -88,7 +89,9 @@ public class CodecManager {
 						
 						Codec codec = new Codec(codecInfo.getName(), (Integer[]) formats.toArray(new Integer[formats.size()]));
 						encoders.add(codec);
-					} catch (Exception e) {}
+					} catch (Exception e) {
+						Log.wtf(TAG,e);
+					}
 				}
 			}
 		}
@@ -132,7 +135,9 @@ public class CodecManager {
 
 						Codec codec = new Codec(codecInfo.getName(), (Integer[]) formats.toArray(new Integer[formats.size()]));
 						decoders.add(codec);
-					} catch (Exception e) {}
+					} catch (Exception e) {
+						Log.wtf(TAG,e);
+					}
 				}
 			}
 		}

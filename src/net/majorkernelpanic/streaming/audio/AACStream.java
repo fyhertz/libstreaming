@@ -123,8 +123,8 @@ public class AACStream extends AudioStream {
 
 	@Override
 	public synchronized void start() throws IllegalStateException, IOException {
-		configure();
 		if (!mStreaming) {
+			configure();
 			super.start();
 		}
 	}

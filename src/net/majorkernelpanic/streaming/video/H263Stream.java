@@ -63,8 +63,8 @@ public class H263Stream extends VideoStream {
 	 * Starts the stream.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
-		configure();
 		if (!mStreaming) {
+			configure();
 			super.start();
 		}
 	}
