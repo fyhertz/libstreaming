@@ -1,3 +1,4 @@
+package net.majorkernelpanic.streaming.mp4;
 /*
  * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
  * 
@@ -18,7 +19,7 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-package net.majorkernelpanic.streaming.mp4;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -34,93 +35,97 @@ import android.util.Log;
  * An mp4 file contains a tree where each node has a name and a size.
  * This class is used by H264Stream.java to determine the SPS and PPS parameters of a short video recorded by the phone.
  */
-class MP4Parser {
+public class MP4Parser {
 
 	private static final String TAG = "MP4Parser";
 
-	private HashMap<String, Long> boxes = new HashMap<String, Long>();
-	private final RandomAccessFile file;
-	private long pos = 0;
+	private HashMap<String, Long> mBoxes = new HashMap<String, Long>();
+	private final RandomAccessFile mFile;
+	private long mPos = 0;
 
-	public MP4Parser(final String path) throws IOException, FileNotFoundException {
-		this.file = new RandomAccessFile(new File(path), "r");
-	}
 
 	/** Parses the mp4 file. **/
-	public void parse() throws IOException {
-		long length = 0;
+	public static MP4Parser parse(String path) throws IOException {
+		return new MP4Parser(path);
+	}	
+	
+	private MP4Parser(final String path) throws IOException, FileNotFoundException {
+		mFile = new RandomAccessFile(new File(path), "r");
 		try {
-			length = file.length();
-		} catch (IOException e) {
-			throw new IOException("Wrong size");
-		}
-
-		try {
-			parse("",length);
-		} catch (IOException e) {
+			parse("",mFile.length());
+		} catch (Exception e) {
+			e.printStackTrace();
 			throw new IOException("Parse error: malformed mp4 file");
-		}		
+		}
 	}
-
-	/** Close the file opened when creating the MP4Parser. **/
+	
 	public void close() {
 		try {
-			file.close();
-		} catch (IOException ignore) {}
+			mFile.close();
+		} catch (Exception e) {};
 	}
-
+	
 	public long getBoxPos(String box) throws IOException {
-		Long r = boxes.get(box);
+		Long r = mBoxes.get(box);
 
 		if (r==null) throw new IOException("Box not found: "+box);
-		return boxes.get(box);
+		return mBoxes.get(box);
 	}
 
 	public StsdBox getStsdBox() throws IOException {
 		try {
-			return new StsdBox(file,getBoxPos("/moov/trak/mdia/minf/stbl/stsd"));
+			return new StsdBox(mFile,getBoxPos("/moov/trak/mdia/minf/stbl/stsd"));
 		} catch (IOException e) {
 			throw new IOException("stsd box could not be found");
 		}
 	}
 
 	private void parse(String path, long len) throws IOException {
-		byte[] buffer = new byte[8];
-		String name="";
+		ByteBuffer byteBuffer;
 		long sum = 0, newlen = 0;
-		if(!path.equals(""))
-			boxes.put(path, pos-8);
-
+		byte[] buffer = new byte[8];
+		String name = "";
+		
+		if(!path.equals("")) mBoxes.put(path, mPos-8);
 
 		while (sum<len) {
+			mFile.read(buffer,0,8);
+			mPos += 8; sum += 8; 
 
-			file.read(buffer,0,8);
-			sum += 8; 
-			pos += 8;
 			if (validBoxName(buffer)) {
+				name = new String(buffer,4,4);
 
-				ByteBuffer byteBuffer = ByteBuffer.wrap(buffer,0,4);
-				newlen = byteBuffer.getInt()-8;
+				if (buffer[3] == 1) {
+					// 64 bits atom size
+					mFile.read(buffer,0,8);
+					mPos += 8; sum += 8;
+					byteBuffer = ByteBuffer.wrap(buffer,0,8);
+					newlen = byteBuffer.getLong()-16;
+				} else {
+					// 32 bits atom size
+					byteBuffer = ByteBuffer.wrap(buffer,0,4);
+					newlen = byteBuffer.getInt()-8;
+				}
 
 				// 1061109559+8 correspond to "????" in ASCII the HTC Desire S seems to write that sometimes, maybe other phones do
 				// "wide" atom would produce a newlen == 0, and we shouldn't throw an exception because of that
 				if (newlen < 0 || newlen == 1061109559) throw new IOException();
-				name = new String(buffer,4,4);
-				Log.d(TAG,"Atom -> name: "+name+" newlen: "+newlen+" pos: "+pos);
+				
+				Log.d(TAG, "Atom -> name: "+name+" position: "+mPos+", length: "+newlen);
 				sum += newlen;
 				parse(path+'/'+name,newlen);
 
 			}
 			else {
 				if( len < 8){
-					file.seek(file.getFilePointer() - 8 + len);
+					mFile.seek(mFile.getFilePointer() - 8 + len);
 					sum += len-8;
 				} else {
-					int skipped = file.skipBytes((int)(len-8));
+					int skipped = mFile.skipBytes((int)(len-8));
 					if (skipped < ((int)(len-8))) {
 						throw new IOException();
 					}
-					pos += len-8;
+					mPos += len-8;
 					sum += len-8;
 				}
 			}

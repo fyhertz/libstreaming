@@ -63,12 +63,9 @@ public class MP4Config {
 
 		StsdBox stsdBox; 
 		
-		// We open the mp4 file
-		mp4Parser = new MP4Parser(path);
-
-		// We parse it
+		// We open the mp4 file and parse it
 		try {
-			mp4Parser.parse();
+			mp4Parser = MP4Parser.parse(path);
 		} catch (IOException ignore) {
 			// Maybe enough of the file has been parsed and we can get the stsd box
 		}
@@ -78,10 +75,9 @@ public class MP4Config {
 		mPPS = stsdBox.getB64PPS();
 		mSPS = stsdBox.getB64SPS();
 		mProfilLevel = stsdBox.getProfileLevel();
-		
-		// We're done !
-		mp4Parser.close();
 
+		mp4Parser.close();
+		
 	}
 
 	public String getProfileLevel() {

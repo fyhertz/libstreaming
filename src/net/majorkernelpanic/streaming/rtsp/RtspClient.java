@@ -341,12 +341,12 @@ public class RtspClient {
 			String hash2 = computeMd5Hash("ANNOUNCE"+":"+uri);
 			String hash3 = computeMd5Hash(hash1+":"+m.group(2)+":"+hash2);
 
-			mAuthorization = "Digest username=\""+mParameters.username+"\",realm=\""+realm+"\",nonce=\""+nonce+"\",uri=\""+uri+"\",response=\""+hash3+"\"\r\n";
+			mAuthorization = "Digest username=\""+mParameters.username+"\",realm=\""+realm+"\",nonce=\""+nonce+"\",uri=\""+uri+"\",response=\""+hash3+"\"";
 
 			request = "ANNOUNCE rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" +
 					"CSeq: " + (++mCSeq) + "\r\n" +
 					"Content-Length: " + body.length() + "\r\n" +
-					"Authorization: " + mAuthorization +
+					"Authorization: " + mAuthorization + "\r\n" +
 					"Session: " + mSessionID + "\r\n" +
 					"Content-Type: application/sdp \r\n\r\n" +
 					body;
@@ -398,7 +398,7 @@ public class RtspClient {
 	 */
 	private void sendRequestRecord() throws IllegalStateException, SocketException, IOException {
 		String request = "RECORD rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" +
-				"Range: npt=0.000-" +
+				"Range: npt=0.000-\r\n" +
 				addHeaders();
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 		mOutputStream.write(request.getBytes("UTF-8"));
