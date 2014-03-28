@@ -22,6 +22,7 @@ package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.util.Random;
 
@@ -56,11 +57,6 @@ abstract public class AbstractPacketizer {
 		return socket;
 	}
 
-	public SenderReport getRtcpSocket() {
-		return socket.getRtcpSocket();
-	}
-
-
 	public void setSSRC(int ssrc) {
 		socket.setSSRC(ssrc);
 	}
@@ -72,7 +68,7 @@ abstract public class AbstractPacketizer {
 	public void setInputStream(InputStream is) {
 		this.is = is;
 	}
-
+	
 	public void setTimeToLive(int ttl) throws IOException {
 		socket.setTimeToLive(ttl);
 	}

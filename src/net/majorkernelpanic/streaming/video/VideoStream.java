@@ -377,7 +377,6 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
-		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 		mPacketizer.setInputStream(mReceiver.getInputStream());
 		mPacketizer.start();
 
@@ -467,7 +466,6 @@ public abstract class VideoStream extends MediaStream {
 		mCamera.setPreviewCallbackWithBuffer(callback);
 
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
-		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 		mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
 		mPacketizer.start();
 
@@ -505,7 +503,6 @@ public abstract class VideoStream extends MediaStream {
 		mMediaCodec.start();
 
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
-		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 		mPacketizer.setInputStream(new MediaCodecInputStream(mMediaCodec));
 		mPacketizer.start();
 

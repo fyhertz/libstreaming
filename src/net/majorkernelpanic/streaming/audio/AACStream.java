@@ -151,8 +151,9 @@ public class AACStream extends AudioStream {
 			} else { 
 				mPacketizer = new AACLATMPacketizer();
 			}		
+			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+			mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
 		}
-		
 
 		if (mMode == MODE_MEDIARECORDER_API) {
 
@@ -240,7 +241,6 @@ public class AACStream extends AudioStream {
 		mThread.start();
 
 		// The packetizer encapsulates this stream in an RTP stream and send it over the network
-		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 		mPacketizer.setInputStream(inputStream);
 		mPacketizer.start();
 

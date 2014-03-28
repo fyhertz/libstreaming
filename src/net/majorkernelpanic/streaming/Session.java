@@ -359,7 +359,7 @@ public class Session {
 		if (mVideoStream != null) sum += mVideoStream.getBitrate();
 		return sum;
 	}
-
+	
 	/** Indicates if a track is currently running. */
 	public boolean isStreaming() {
 		if ( (mAudioStream!=null && mAudioStream.isStreaming()) || (mVideoStream!=null && mVideoStream.isStreaming()) )

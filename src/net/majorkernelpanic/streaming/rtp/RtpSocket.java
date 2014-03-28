@@ -21,6 +21,7 @@
 package net.majorkernelpanic.streaming.rtp;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -41,6 +42,12 @@ public class RtpSocket implements Runnable {
 
 	public static final String TAG = "RtpSocket";
 
+	/** Use this to use UDP for the transport protocol. */
+	public final static int TRANSPORT_UDP = 0x00;
+	
+	/** Use this to use TCP for the transport protocol. */
+	public final static int TRANSPORT_TCP = 0x01;	
+	
 	public static final int RTP_HEADER_LENGTH = 12;
 	public static final int MTU = 1300;
 
@@ -54,12 +61,15 @@ public class RtpSocket implements Runnable {
 	private Semaphore mBufferRequested, mBufferCommitted;
 	private Thread mThread;
 
+	private int mTransport;
 	private long mCacheSize;
 	private long mClock = 0;
 	private long mOldTimestamp = 0;
 	private int mSsrc, mSeq = 0, mPort = -1;
 	private int mBufferCount, mBufferIn, mBufferOut;
 	private int mCount = 0;
+	private byte mTcpHeader[];
+	protected OutputStream mOutputStream = null;
 	
 	private AverageBitrate mAverageBitrate;
 
@@ -75,6 +85,8 @@ public class RtpSocket implements Runnable {
 		mPackets = new DatagramPacket[mBufferCount];
 		mReport = new SenderReport();
 		mAverageBitrate = new AverageBitrate();
+		mTransport = TRANSPORT_UDP;
+		mTcpHeader = new byte[] {'$',0,0,0};
 		
 		resetFifo();
 
@@ -156,24 +168,41 @@ public class RtpSocket implements Runnable {
 
 	/** Sets the destination address and to which the packets will be sent. */
 	public void setDestination(InetAddress dest, int dport, int rtcpPort) {
-		mPort = dport;
-		for (int i=0;i<mBufferCount;i++) {
-			mPackets[i].setPort(dport);
-			mPackets[i].setAddress(dest);
+		if (dport != 0 && rtcpPort != 0) {
+			mTransport = TRANSPORT_UDP;
+			mPort = dport;
+			for (int i=0;i<mBufferCount;i++) {
+				mPackets[i].setPort(dport);
+				mPackets[i].setAddress(dest);
+			}
+			mReport.setDestination(dest, rtcpPort);
 		}
-		mReport.setDestination(dest, rtcpPort);
+	}
+	
+	/**
+	 * If a TCP is used as the transport protocol for the RTP session,
+	 * the output stream to which RTP packets will be written to must
+	 * be specified with this method.
+	 */ 
+	public void setOutputStream(OutputStream outputStream, byte channelIdentifier) {
+		if (outputStream != null) {
+			mTransport = TRANSPORT_TCP;
+			mOutputStream = outputStream;
+			mTcpHeader[1] = channelIdentifier;
+			mReport.setOutputStream(outputStream, (byte) (channelIdentifier+1));
+		}
 	}
 
 	public int getPort() {
 		return mPort;
 	}
 
-	public int getLocalPort() {
-		return mSocket.getLocalPort();
-	}
-
-	public SenderReport getRtcpSocket() {
-		return mReport;
+	public int[] getLocalPorts() {
+		return new int[] {
+			mSocket.getLocalPort(),
+			mReport.getLocalPort()
+		};
+		
 	}
 	
 	/** 
@@ -268,9 +297,15 @@ public class RtpSocket implements Runnable {
 						delta = 0;
 					}
 				}
-				mReport.update(mPackets[mBufferOut].getLength(), System.nanoTime(),(mTimestamps[mBufferOut]/100L)*(mClock/1000L)/10000L);
+				mReport.update(mPackets[mBufferOut].getLength(), (mTimestamps[mBufferOut]/100L)*(mClock/1000L)/10000L);
 				mOldTimestamp = mTimestamps[mBufferOut];
-				if (mCount++>30) mSocket.send(mPackets[mBufferOut]);
+				if (mCount++>30) {
+					if (mTransport == TRANSPORT_UDP) {
+						mSocket.send(mPackets[mBufferOut]);
+					} else {
+						sendTCP();
+					}
+				}
 				if (++mBufferOut>=mBufferCount) mBufferOut = 0;
 				mBufferRequested.release();
 			}
@@ -279,6 +314,19 @@ public class RtpSocket implements Runnable {
 		}
 		mThread = null;
 		resetFifo();
+	}
+
+	private void sendTCP() {
+		synchronized (mOutputStream) {
+			int len = mPackets[mBufferOut].getLength();
+			Log.d(TAG,"sent "+len);
+			mTcpHeader[2] = (byte) (len>>8);
+			mTcpHeader[3] = (byte) (len&0xFF);
+			try {
+				mOutputStream.write(mTcpHeader);
+				mOutputStream.write(mBuffers[mBufferOut], 0, len);
+			} catch (Exception e) {}
+		}
 	}
 
 	private void setLong(byte[] buffer, long n, int begin, int end) {

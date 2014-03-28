@@ -21,6 +21,7 @@
 package net.majorkernelpanic.streaming;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetAddress;
 
 /**
@@ -74,6 +75,13 @@ public interface Stream {
 	 * @param rtcpPort Destination port that will be used for RTCP
 	 */
 	public void setDestinationPorts(int rtpPort, int rtcpPort);
+
+	/**
+	 * If a TCP is used as the transport protocol for the RTP session,
+	 * the output stream to which RTP packets will be written to must
+	 * be specified with this method.
+	 */ 
+	public void setOutputStream(OutputStream stream, byte channelIdentifier);
 	
 	/** 
 	 * Returns a pair of source ports, the first one is the 

@@ -21,6 +21,7 @@
 package net.majorkernelpanic.streaming;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetAddress;
 import java.util.Random;
 
@@ -42,7 +43,7 @@ import android.util.Log;
 public abstract class MediaStream implements Stream {
 
 	protected static final String TAG = "MediaStream";
-
+	
 	/** Raw audio/video will be encoded using the MediaRecorder API. */
 	public static final byte MODE_MEDIARECORDER_API = 0x01;
 
@@ -62,7 +63,9 @@ public abstract class MediaStream implements Stream {
 	protected byte mMode, mRequestedMode;
 
 	protected boolean mStreaming = false, mConfigured = false;
-	protected int mRtpPort = 0, mRtcpPort = 0;
+	protected int mRtpPort = 0, mRtcpPort = 0; 
+	protected byte mChannelIdentifier = 0;
+	protected OutputStream mOutputStream = null;
 	protected InetAddress mDestination;
 	protected LocalSocket mReceiver, mSender = null;
 	private LocalServerSocket mLss = null;
@@ -123,8 +126,20 @@ public abstract class MediaStream implements Stream {
 	public void setDestinationPorts(int rtpPort, int rtcpPort) {
 		mRtpPort = rtpPort;
 		mRtcpPort = rtcpPort;
+		mOutputStream = null;
 	}	
 
+	/**
+	 * If a TCP is used as the transport protocol for the RTP session,
+	 * the output stream to which RTP packets will be written to must
+	 * be specified with this method.
+	 */ 
+	public void setOutputStream(OutputStream stream, byte channelIdentifier) {
+		mOutputStream = stream;
+		mChannelIdentifier = channelIdentifier;
+	}
+	
+	
 	/**
 	 * Sets the Time To Live of packets sent over the network.
 	 * @param ttl The time to live
@@ -150,10 +165,7 @@ public abstract class MediaStream implements Stream {
 	 * one used for RTP and the second one is used for RTCP. 
 	 **/	
 	public int[] getLocalPorts() {
-		return new int[] {
-				this.mPacketizer.getRtpSocket().getLocalPort(),
-				this.mPacketizer.getRtcpSocket().getLocalPort()
-		};
+		return mPacketizer.getRtpSocket().getLocalPorts();
 	}
 
 	/**
@@ -205,6 +217,10 @@ public abstract class MediaStream implements Stream {
 	 */
 	public synchronized void configure() throws IllegalStateException, IOException {
 		if (mStreaming) throw new IllegalStateException("Can't be called while streaming.");
+		if (mPacketizer != null) {
+			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+			mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
+		}
 		mMode = mRequestedMode;
 		mConfigured = true;
 	}
