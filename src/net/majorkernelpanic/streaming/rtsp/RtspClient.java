@@ -20,9 +20,6 @@
 
 package net.majorkernelpanic.streaming.rtsp;
 
-import static net.majorkernelpanic.streaming.rtp.RtpSocket.TRANSPORT_TCP;
-import static net.majorkernelpanic.streaming.rtp.RtpSocket.TRANSPORT_UDP;
-
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -41,6 +38,7 @@ import java.util.regex.Pattern;
 
 import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.Stream;
+import net.majorkernelpanic.streaming.rtp.RtpSocket;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -63,10 +61,10 @@ public class RtspClient {
 	public final static int ERROR_WRONG_CREDENTIALS = 0x03;
 	
 	/** Use this to use UDP for the transport protocol. */
-	public final static int TRANSPORT_UDP = 0x00;
+	public final static int TRANSPORT_UDP = RtpSocket.TRANSPORT_UDP;
 	
 	/** Use this to use TCP for the transport protocol. */
-	public final static int TRANSPORT_TCP = 0x01;	
+	public final static int TRANSPORT_TCP = RtpSocket.TRANSPORT_TCP;	
 	
 	/** 
 	 * Message sent when the connection with the RTSP server has been lost for 
@@ -410,7 +408,6 @@ public class RtspClient {
 				Response response = Response.parseResponse(mBufferedReader);
 				Matcher m;
 				if (mParameters.transport == TRANSPORT_UDP) {
-					Log.e(TAG,"COUCOUOCOCUOUCUOCUOCOUCOUO");
 					try {
 						m = Response.rexegTransport.matcher(response.headers.get("transport")); m.find();
 						stream.setDestinationPorts(Integer.parseInt(m.group(3)), Integer.parseInt(m.group(4)));

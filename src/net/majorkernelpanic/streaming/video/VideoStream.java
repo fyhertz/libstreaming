@@ -222,7 +222,6 @@ public abstract class VideoStream extends MediaStream {
 		mRequestedOrientation = orientation;
 	}
 	
-	
 	/** 
 	 * Sets the configuration of the stream. You can call this method at any time 
 	 * and changes will take effect next time you call {@link #configure()}.
@@ -628,6 +627,10 @@ public abstract class VideoStream extends MediaStream {
 		Parameters parameters = mCamera.getParameters();
 		mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
 		int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+		
+		double ratio = (double)mQuality.resX/(double)mQuality.resY;
+		mSurfaceView.requestAspectRatio(ratio);
+		
 		parameters.setPreviewFormat(mCameraImageFormat);
 		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
 		parameters.setPreviewFpsRange(max[0], max[1]);

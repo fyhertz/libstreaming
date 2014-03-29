@@ -307,7 +307,7 @@ public class Session {
 			mAudioStream.setAudioQuality(quality);
 		}
 	}
-
+	
 	/**
 	 * Returns the {@link Callback} interface that was set with 
 	 * {@link #setCallback(Callback)} or null if none was set.
@@ -542,7 +542,7 @@ public class Session {
 		syncStop(0);
 		syncStop(1);
 		postSessionStopped();
-	}	
+	}
 
 	public void startPreview() {
 		sHandler.post(new Runnable() {
