@@ -27,6 +27,7 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import net.majorkernelpanic.streaming.MediaStream;
+import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.Stream;
 import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
 import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
@@ -135,6 +136,11 @@ public abstract class VideoStream extends MediaStream {
 		if (streaming) start(); 
 	}
 
+	/**
+	 * Returns the id of the camera currently selected. 
+	 * Can be either {@link CameraInfo#CAMERA_FACING_BACK} or 
+	 * {@link CameraInfo#CAMERA_FACING_FRONT}.
+	 */
 	public int getCamera() {
 		return mCameraId;
 	}
@@ -204,7 +210,10 @@ public abstract class VideoStream extends MediaStream {
 		}
 	}
 
-	/** Toggle the LED of the phone if it has one. */
+	/** 
+	 * Toggles the LED of the phone if it has one.
+	 * You can get the current state of the flash with {@link VideoStream#getFlashState()}.
+	 */
 	public synchronized void toggleFlash() {
 		setFlashState(!mFlashEnabled);
 	}

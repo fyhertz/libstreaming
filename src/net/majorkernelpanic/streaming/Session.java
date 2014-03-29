@@ -35,6 +35,7 @@ import net.majorkernelpanic.streaming.gl.SurfaceView;
 import net.majorkernelpanic.streaming.rtsp.RtspClient;
 import net.majorkernelpanic.streaming.video.VideoQuality;
 import net.majorkernelpanic.streaming.video.VideoStream;
+import android.hardware.Camera.CameraInfo;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
@@ -44,7 +45,7 @@ import android.os.Looper;
  * This is the class you will want to use to stream audio and or video to some peer using RTP.<br />
  * 
  * It holds a {@link VideoStream} and a {@link AudioStream} together and provides 
- * syncronous and asyncrounous functions to start and stop those steams.
+ * synchronous and asynchronous functions to start and stop those steams.
  * You should implement a callback interface {@link Callback} to receive notifications and error reports.<br />
  * 
  * If you want to stream to a RTSP server, you will need an instance of this class and hand it to a {@link RtspClient}.
@@ -77,7 +78,7 @@ public class Session {
 
 	/** 
 	 * The internal storage of the phone is not ready. 
-	 * Libstreaming tried to store a test file on the sdcard but couldn't.
+	 * libstreaming tried to store a test file on the sdcard but couldn't.
 	 * See H264Stream and AACStream to find out why libstreaming would want to something like that. 
 	 */
 	public final static int ERROR_STORAGE_NOT_READY = 0x02;
@@ -96,7 +97,7 @@ public class Session {
 	public final static int ERROR_UNKNOWN_HOST = 0x05;
 
 	/**
-	 * Some other error occured !
+	 * Some other error occurred !
 	 */
 	public final static int ERROR_OTHER = 0x06;
 
@@ -235,7 +236,7 @@ public class Session {
 
 	/** 
 	 * The origin address of the session.
-	 * It appears in the sessionn description.
+	 * It appears in the session description.
 	 * @param origin The origin address
 	 */
 	public void setOrigin(String origin) {
@@ -243,7 +244,7 @@ public class Session {
 	}	
 
 	/** 
-	 * The destination address for all the streams of the session.
+	 * The destination address for all the streams of the session. <br />
 	 * Changes will be taken into account the next time you start the session.
 	 * @param destination The destination address
 	 */
@@ -252,7 +253,7 @@ public class Session {
 	}
 
 	/** 
-	 * Set the TTL of all packets sent during the session.
+	 * Set the TTL of all packets sent during the session. <br />
 	 * Changes will be taken into account the next time you start the session.
 	 * @param ttl The Time To Live
 	 */
@@ -261,8 +262,9 @@ public class Session {
 	}
 
 	/** 
-	 * Sets the configuration of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #configure()}.
+	 * Sets the configuration of the stream. <br />
+	 * You can call this method at any time and changes will take 
+	 * effect next time you call {@link #configure()}.
 	 * @param quality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality quality) {
@@ -272,8 +274,9 @@ public class Session {
 	}
 
 	/**
-	 * Sets a Surface to show a preview of recorded media (video). 
-	 * You can call this method at any time and changes will take effect next time you call {@link #start()} or {@link #startPreview()}.
+	 * Sets a Surface to show a preview of recorded media (video). <br />
+	 * You can call this method at any time and changes will take 
+	 * effect next time you call {@link #start()} or {@link #startPreview()}.
 	 */
 	public void setSurfaceView(final SurfaceView view) {
 		sHandler.post(new Runnable() {
@@ -287,8 +290,9 @@ public class Session {
 	}
 
 	/** 
-	 * Sets the orientation of the preview. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #configure()}.
+	 * Sets the orientation of the preview. <br />
+	 * You can call this method at any time and changes will take 
+	 * effect next time you call {@link #configure()}.
 	 * @param orientation The orientation of the preview
 	 */
 	public void setPreviewOrientation(int orientation) {
@@ -298,8 +302,9 @@ public class Session {
 	}	
 	
 	/** 
-	 * Sets the configuration of the stream. You can call this method at any time 
-	 * and changes will take effect next time you call {@link #configure()}.
+	 * Sets the configuration of the stream. <br />
+	 * You can call this method at any time and changes will take 
+	 * effect next time you call {@link #configure()}.
 	 * @param quality Quality of the stream
 	 */
 	public void setAudioQuality(AudioQuality quality) {
@@ -352,7 +357,7 @@ public class Session {
 		return mDestination;
 	}
 
-	/** Returns an approximation of the bandwidth consumed by the session in bit per seconde. */
+	/** Returns an approximation of the bandwidth consumed by the session in bit per second. */
 	public long getBitrate() {
 		long sum = 0;
 		if (mAudioStream != null) sum += mAudioStream.getBitrate();
@@ -383,7 +388,7 @@ public class Session {
 	}	
 
 	/** 
-	 * Does the same thing as {@link #configure()}, but in a syncronous manner.
+	 * Does the same thing as {@link #configure()}, but in a synchronous manner. <br />
 	 * Throws exceptions in addition to calling a callback 
 	 * {@link Callback#onSessionError(int, int, Exception)} when
 	 * an error occurs.	
@@ -426,7 +431,7 @@ public class Session {
 	}
 
 	/** 
-	 * Asyncronously starts all streams of the session.
+	 * Asynchronously starts all streams of the session.
 	 **/
 	public void start() {
 		sHandler.post(new Runnable() {
@@ -440,7 +445,7 @@ public class Session {
 	}
 
 	/** 
-	 * Starts a stream in a syncronous manner. 
+	 * Starts a stream in a synchronous manner. <br />
 	 * Throws exceptions in addition to calling a callback.
 	 * @param id The id of the stream to start
 	 **/
@@ -492,7 +497,7 @@ public class Session {
 	}	
 
 	/** 
-	 * Does the same thing as {@link #start()}, but in a syncronous manner. 
+	 * Does the same thing as {@link #start()}, but in a synchronous manner. <br /> 
 	 * Throws exceptions in addition to calling a callback.
 	 **/
 	public void syncStart() 			
@@ -527,7 +532,7 @@ public class Session {
 	}
 
 	/** 
-	 * Stops one stream in a syncronous manner.
+	 * Stops one stream in a synchronous manner.
 	 * @param id The id of the stream to stop
 	 **/	
 	private void syncStop(final int id) {
@@ -537,13 +542,19 @@ public class Session {
 		}
 	}		
 	
-	/** Stops all existing streams in a syncronous manner. */
+	/** Stops all existing streams in a synchronous manner. */
 	public void syncStop() {
 		syncStop(0);
 		syncStop(1);
 		postSessionStopped();
 	}
 
+	/**
+	 * Asynchronously starts the camera preview. <br />
+	 * You should of course pass a {@link SurfaceView} to {@link #setSurfaceView(SurfaceView)}
+	 * before calling this method. Otherwise, the {@link Callback#onSessionError(int, int, Exception)}
+	 * callback will be called with {@link #ERROR_INVALID_SURFACE}.
+	 */
 	public void startPreview() {
 		sHandler.post(new Runnable() {
 			@Override
@@ -571,6 +582,9 @@ public class Session {
 		});
 	}
 
+	/**
+	 * Asynchronously stops the camera preview.
+	 */
 	public void stopPreview() {
 		sHandler.post(new Runnable() {
 			@Override
@@ -582,6 +596,11 @@ public class Session {
 		});
 	}	
 
+	/**	Switch between the front facing and the back facing camera of the phone. <br />
+	 * If {@link #startPreview()} has been called, the preview will be  briefly interrupted. <br />
+	 * If {@link #start()} has been called, the stream will be  briefly interrupted.<br />
+	 * To find out which camera is currently selected, use {@link #getCamera()}
+	 **/
 	public void switchCamera() {
 		sHandler.post(new Runnable() {
 			@Override
@@ -606,11 +625,21 @@ public class Session {
 		});
 	}
 
+	/**
+	 * Returns the id of the camera currently selected.
+	 * It can be either {@link CameraInfo#CAMERA_FACING_BACK} or 
+	 * {@link CameraInfo#CAMERA_FACING_FRONT}.
+	 */
 	public int getCamera() {
 		return mVideoStream != null ? mVideoStream.getCamera() : 0;
 
 	}
 
+	/** 
+	 * Toggles the LED of the phone if it has one.
+	 * You can get the current state of the flash with 
+	 * {@link Session#getVideoTrack()} and {@link VideoStream#getFlashState()}.
+	 **/
 	public void toggleFlash() {
 		sHandler.post(new Runnable() {
 			@Override
