@@ -88,7 +88,7 @@ public class H264Stream extends VideoStream {
 
 	/**
 	 * Starts the stream.
-	 * This will also open the camera and dispay the preview if {@link #startPreview()} has not aready been called.
+	 * This will also open the camera and display the preview if {@link #startPreview()} has not aready been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
 		if (!mStreaming) {
@@ -169,6 +169,8 @@ public class H264Stream extends VideoStream {
 		boolean savedFlashState = mFlashEnabled;
 		mFlashEnabled = false;
 
+		boolean previewStarted = mPreviewStarted;
+		
 		boolean cameraOpen = mCamera!=null;
 		createCamera();
 
@@ -247,6 +249,12 @@ public class H264Stream extends VideoStream {
 			if (!cameraOpen) destroyCamera();
 			// Restore flash state
 			mFlashEnabled = savedFlashState;
+			if (previewStarted) {
+				// If the preview was started before the test, we try to restart it.
+				try {
+					startPreview();
+				} catch (Exception e) {}
+			}
 		}
 
 		// Retrieve SPS & PPS & ProfileId with MP4Config

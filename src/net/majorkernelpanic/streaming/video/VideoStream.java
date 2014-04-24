@@ -27,7 +27,6 @@ import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 
 import net.majorkernelpanic.streaming.MediaStream;
-import net.majorkernelpanic.streaming.Session;
 import net.majorkernelpanic.streaming.Stream;
 import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
 import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
@@ -75,7 +74,8 @@ public abstract class VideoStream extends MediaStream {
 	protected boolean mSurfaceReady = false;
 	protected boolean mUnlocked = false;
 	protected boolean mPreviewStarted = false;
-
+	protected boolean mUpdated = false;
+	
 	protected String mMimeType;
 	protected String mEncoderName;
 	protected int mEncoderColorFormat;
@@ -229,6 +229,7 @@ public abstract class VideoStream extends MediaStream {
 	 */
 	public void setPreviewOrientation(int orientation) {
 		mRequestedOrientation = orientation;
+		mUpdated = false;
 	}
 	
 	/** 
@@ -237,7 +238,10 @@ public abstract class VideoStream extends MediaStream {
 	 * @param videoQuality Quality of the stream
 	 */
 	public void setVideoQuality(VideoQuality videoQuality) {
-		mRequestedQuality = videoQuality.clone();
+		if (!mRequestedQuality.equals(videoQuality)) {
+			mRequestedQuality = videoQuality.clone();
+			mUpdated = false;
+		}
 	}
 
 	/** 
@@ -301,20 +305,12 @@ public abstract class VideoStream extends MediaStream {
 	public synchronized void startPreview() 
 			throws CameraInUseException, 
 			InvalidSurfaceException, 
-			ConfNotSupportedException, 
 			RuntimeException {
 		
 		mCameraOpenedManually = true;
 		if (!mPreviewStarted) {
 			createCamera();
 			updateCamera();
-			try {
-				mCamera.startPreview();
-				mPreviewStarted = true;
-			} catch (RuntimeException e) {
-				destroyCamera();
-				throw e;
-			}
 		}
 	}
 
@@ -329,7 +325,7 @@ public abstract class VideoStream extends MediaStream {
 	/**
 	 * Video encoding is done by a MediaRecorder.
 	 */
-	protected void encodeWithMediaRecorder() throws IOException {
+	protected void encodeWithMediaRecorder() throws IOException, ConfNotSupportedException {
 
 		Log.d(TAG,"Video encoded using the MediaRecorder API");
 
@@ -459,6 +455,7 @@ public abstract class VideoStream extends MediaStream {
 					int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
 					if (bufferIndex>=0) {
 						inputBuffers[bufferIndex].clear();
+						if (data == null) Log.d(TAG,"ERRORRR");
 						convertor.convert(data, inputBuffers[bufferIndex]);
 						mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
 					} else {
@@ -469,7 +466,7 @@ public abstract class VideoStream extends MediaStream {
 				}				
 			}
 		};
-
+		
 		for (int i=0;i<10;i++) mCamera.addCallbackBuffer(new byte[convertor.getBufferSize()]);
 		mCamera.setPreviewCallbackWithBuffer(callback);
 
@@ -561,6 +558,7 @@ public abstract class VideoStream extends MediaStream {
 
 		if (mCamera == null) {
 			openCamera();
+			mUpdated = false;
 			mUnlocked = false;
 			mCamera.setErrorCallback(new Camera.ErrorCallback() {
 				@Override
@@ -582,7 +580,7 @@ public abstract class VideoStream extends MediaStream {
 			try {
 
 				// If the phone has a flash, we turn it on/off according to mFlashEnabled
-				// setRecordingHint(true) is a very nice optimisation if you plane to only use the Camera for recording
+				// setRecordingHint(true) is a very nice optimization if you plane to only use the Camera for recording
 				Parameters parameters = mCamera.getParameters();
 				if (parameters.getFlashMode()!=null) {
 					parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
@@ -628,6 +626,10 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 	protected synchronized void updateCamera() throws RuntimeException {
+		
+		// The camera is already correctly configured
+		if (mUpdated) return;
+		
 		if (mPreviewStarted) {
 			mPreviewStarted = false;
 			mCamera.stopPreview();
@@ -649,6 +651,7 @@ public abstract class VideoStream extends MediaStream {
 			mCamera.setDisplayOrientation(mOrientation);
 			mCamera.startPreview();
 			mPreviewStarted = true;
+			mUpdated = true;
 		} catch (RuntimeException e) {
 			destroyCamera();
 			throw e;

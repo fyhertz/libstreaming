@@ -73,7 +73,7 @@ public class Session {
 	/** Some app is already using a camera (Camera.open() has failed). */
 	public final static int ERROR_CAMERA_ALREADY_IN_USE = 0x00;
 
-	/** The phone may not support some streaming parameters that you are using (bit rate, frame rate...s). */
+	/** The phone may not support some streaming parameters that you are trying to use (bit rate, frame rate, resolution...). */
 	public final static int ERROR_CONFIGURATION_NOT_SUPPORTED = 0x01;
 
 	/** 
@@ -111,7 +111,7 @@ public class Session {
 
 	private Callback mCallback;
 	private Handler mMainHandler;
-	
+
 	private static CountDownLatch sSignal;
 	private static Handler sHandler;
 
@@ -126,7 +126,7 @@ public class Session {
 			}
 		}.start();
 	}
-	
+
 	/** 
 	 * Creates a streaming session that can be customized by adding tracks.
 	 */
@@ -135,7 +135,7 @@ public class Session {
 		mMainHandler = new Handler(Looper.getMainLooper());
 		mTimestamp = (uptime/1000)<<32 & (((uptime-((uptime/1000)*1000))>>32)/1000); // NTP timestamp
 		mOrigin = "127.0.0.1";
-		
+
 		// Me make sure that we won't send Runnables to a non existing thread
 		try {
 			sSignal.await();
@@ -300,7 +300,7 @@ public class Session {
 			mVideoStream.setPreviewOrientation(orientation);
 		}
 	}	
-	
+
 	/** 
 	 * Sets the configuration of the stream. <br />
 	 * You can call this method at any time and changes will take 
@@ -312,7 +312,7 @@ public class Session {
 			mAudioStream.setAudioQuality(quality);
 		}
 	}
-	
+
 	/**
 	 * Returns the {@link Callback} interface that was set with 
 	 * {@link #setCallback(Callback)} or null if none was set.
@@ -364,7 +364,7 @@ public class Session {
 		if (mVideoStream != null) sum += mVideoStream.getBitrate();
 		return sum;
 	}
-	
+
 	/** Indicates if a track is currently running. */
 	public boolean isStreaming() {
 		if ( (mAudioStream!=null && mAudioStream.isStreaming()) || (mVideoStream!=null && mVideoStream.isStreaming()) )
@@ -456,7 +456,7 @@ public class Session {
 			InvalidSurfaceException, 
 			UnknownHostException,
 			IOException {
-		
+
 		Stream stream = id==0 ? mAudioStream : mVideoStream;
 		if (stream!=null && !stream.isStreaming()) {
 			try {
@@ -541,7 +541,7 @@ public class Session {
 			stream.stop();
 		}
 	}		
-	
+
 	/** Stops all existing streams in a synchronous manner. */
 	public void syncStop() {
 		syncStop(0);
@@ -561,9 +561,9 @@ public class Session {
 			public void run() {
 				if (mVideoStream != null) {
 					try {
-						mVideoStream.configure();
 						mVideoStream.startPreview();
 						postPreviewStarted();
+						mVideoStream.configure();
 					} catch (CameraInUseException e) {
 						postError(ERROR_CAMERA_ALREADY_IN_USE , STREAM_VIDEO, e);
 					} catch (ConfNotSupportedException e) {
@@ -626,7 +626,7 @@ public class Session {
 	}
 
 	/**
-	 * Returns the id of the camera currently selected.
+	 * Returns the id of the camera currently selected. <br />
 	 * It can be either {@link CameraInfo#CAMERA_FACING_BACK} or 
 	 * {@link CameraInfo#CAMERA_FACING_FRONT}.
 	 */

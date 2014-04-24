@@ -72,8 +72,8 @@ public class VideoQuality {
 
 	public boolean equals(VideoQuality quality) {
 		if (quality==null) return false;
-		return (quality.resX == this.resX 				&
-				quality.resY == this.resY 				&
+		return (quality.resX == this.resX 			&
+				quality.resY == this.resY 			&
 				quality.framerate == this.framerate	&
 				quality.bitrate == this.bitrate);
 	}
@@ -97,6 +97,10 @@ public class VideoQuality {
 		return quality;
 	}
 
+	public String toString() {
+		return resX+"x"+resY+" px, "+framerate+" fps, "+bitrate/1000+" kbps";
+	}
+	
 	/** 
 	 * Checks if the requested resolution is supported by the camera.
 	 * If not, it modifies it by supported parameters. 
