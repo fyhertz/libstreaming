@@ -115,22 +115,18 @@ public class Session {
 	private static CountDownLatch sSignal;
 	private static Handler sHandler;
 
-	static {
-		// Creates the Thread that will be used when asynchronous methods of a Session are called
-		sSignal = new CountDownLatch(1);
-		new HandlerThread("net.majorkernelpanic.streaming.Session"){
-			@Override
-			protected void onLooperPrepared() {
-				sHandler = new Handler();
-				sSignal.countDown();
-			}
-		}.start();
-	}
-
 	/** 
 	 * Creates a streaming session that can be customized by adding tracks.
 	 */
 	public Session() {
+        sSignal = new CountDownLatch(1);
+        new HandlerThread("net.majorkernelpanic.streaming.Session"){
+            @Override
+            protected void onLooperPrepared() {
+                sHandler = new Handler();
+                sSignal.countDown();
+            }
+        }.start();
 		long uptime = System.currentTimeMillis();
 		mMainHandler = new Handler(Looper.getMainLooper());
 		mTimestamp = (uptime/1000)<<32 & (((uptime-((uptime/1000)*1000))>>32)/1000); // NTP timestamp
