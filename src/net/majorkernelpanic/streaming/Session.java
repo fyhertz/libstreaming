@@ -112,30 +112,21 @@ public class Session {
 	private Callback mCallback;
 	private Handler mMainHandler;
 
-	private static CountDownLatch sSignal;
-	private static Handler sHandler;
+	private Handler mHandler;
 
 	/** 
 	 * Creates a streaming session that can be customized by adding tracks.
 	 */
 	public Session() {
-        sSignal = new CountDownLatch(1);
-        new HandlerThread("net.majorkernelpanic.streaming.Session"){
-            @Override
-            protected void onLooperPrepared() {
-                sHandler = new Handler();
-                sSignal.countDown();
-            }
-        }.start();
 		long uptime = System.currentTimeMillis();
+
+		HandlerThread thread = new HandlerThread("net.majorkernelpanic.streaming.Session");
+		thread.start();
+
+		mHandler = new Handler(thread.getLooper());
 		mMainHandler = new Handler(Looper.getMainLooper());
 		mTimestamp = (uptime/1000)<<32 & (((uptime-((uptime/1000)*1000))>>32)/1000); // NTP timestamp
 		mOrigin = "127.0.0.1";
-
-		// Me make sure that we won't send Runnables to a non existing thread
-		try {
-			sSignal.await();
-		} catch (InterruptedException e) {}
 	}
 
 	/**
@@ -275,7 +266,7 @@ public class Session {
 	 * effect next time you call {@link #start()} or {@link #startPreview()}.
 	 */
 	public void setSurfaceView(final SurfaceView view) {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -373,7 +364,7 @@ public class Session {
 	 * Configures all streams of the session.
 	 **/
 	public void configure() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -430,7 +421,7 @@ public class Session {
 	 * Asynchronously starts all streams of the session.
 	 **/
 	public void start() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				try {
@@ -464,7 +455,7 @@ public class Session {
 					postSessionStarted();
 				}
 				if (getTrack(1-id) == null || !getTrack(1-id).isStreaming()) {
-					sHandler.post(mUpdateBitrate);
+					mHandler.post(mUpdateBitrate);
 				}
 			} catch (UnknownHostException e) {
 				postError(ERROR_UNKNOWN_HOST, id, e);
@@ -519,7 +510,7 @@ public class Session {
 
 	/** Stops all existing streams. */
 	public void stop() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				syncStop();
@@ -552,7 +543,7 @@ public class Session {
 	 * callback will be called with {@link #ERROR_INVALID_SURFACE}.
 	 */
 	public void startPreview() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -582,7 +573,7 @@ public class Session {
 	 * Asynchronously stops the camera preview.
 	 */
 	public void stopPreview() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -598,7 +589,7 @@ public class Session {
 	 * To find out which camera is currently selected, use {@link #getCamera()}
 	 **/
 	public void switchCamera() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -637,7 +628,7 @@ public class Session {
 	 * {@link Session#getVideoTrack()} and {@link VideoStream#getFlashState()}.
 	 **/
 	public void toggleFlash() {
-		sHandler.post(new Runnable() {
+		mHandler.post(new Runnable() {
 			@Override
 			public void run() {
 				if (mVideoStream != null) {
@@ -655,7 +646,7 @@ public class Session {
 	public void release() {
 		removeAudioTrack();
 		removeVideoTrack();
-		sHandler.getLooper().quit();
+		mHandler.getLooper().quit();
 	}
 
 	private void postPreviewStarted() {
@@ -729,7 +720,7 @@ public class Session {
 		public void run() {
 			if (isStreaming()) { 
 				postBitRate(getBitrate());
-				sHandler.postDelayed(mUpdateBitrate, 500);
+				mHandler.postDelayed(mUpdateBitrate, 500);
 			} else {
 				postBitRate(0);
 			}
