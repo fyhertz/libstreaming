@@ -37,7 +37,7 @@ import android.net.LocalSocketAddress;
 import android.util.Log;
 
 /**
- * A MediaRecorder that streams what it records using a packetizer from the rtp package.
+ * A MediaRecorder that streams what it records using a packetizer from the RTP package.
  * You can't use this class directly !
  */
 public abstract class MediaStream implements Stream {
@@ -56,7 +56,7 @@ public abstract class MediaStream implements Stream {
 	/** Prefix that will be used for all shared preferences saved by libstreaming */
 	protected static final String PREF_PREFIX = "libstreaming-";
 
-	/** The packetizer that will read the output of the camera and send RTP packets over the networkd. */
+	/** The packetizer that will read the output of the camera and send RTP packets over the networked. */
 	protected AbstractPacketizer mPacketizer = null;
 
 	protected static byte sSuggestedMode = MODE_MEDIARECORDER_API;
@@ -75,7 +75,7 @@ public abstract class MediaStream implements Stream {
 	protected MediaCodec mMediaCodec;
 	
 	static {
-		// We determine wether or not the MediaCodec API should be used
+		// We determine whether or not the MediaCodec API should be used
 		try {
 			Class.forName("android.media.MediaCodec");
 			// Will be set to MODE_MEDIACODEC_API at some point...
@@ -275,7 +275,7 @@ public abstract class MediaStream implements Stream {
 	/**
 	 * Returns a description of the stream using SDP. 
 	 * This method can only be called after {@link Stream#configure()}.
-	 * @throws IllegalStateException Thrown when {@link Stream#configure()} wa not called.
+	 * @throws IllegalStateException Thrown when {@link Stream#configure()} was not called.
 	 */
 	public abstract String getSessionDescription();
 	

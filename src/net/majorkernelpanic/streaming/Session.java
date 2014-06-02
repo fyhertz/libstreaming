@@ -139,7 +139,7 @@ public class Session {
 		 * Called periodically to inform you on the bandwidth 
 		 * consumption of the streams when streaming. 
 		 */
-		public void onBitrareUpdate(long bitrate);
+		public void onBitrateUpdate(long bitrate);
 
 		/** Called when some error occurs. */
 		public void onSessionError(int reason, int streamType, Exception e);
@@ -709,7 +709,7 @@ public class Session {
 			@Override
 			public void run() {
 				if (mCallback != null) {
-					mCallback.onBitrareUpdate(bitrate);
+					mCallback.onBitrateUpdate(bitrate);
 				}
 			}
 		});

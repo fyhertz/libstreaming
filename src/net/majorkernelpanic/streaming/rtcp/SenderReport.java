@@ -104,7 +104,7 @@ public class SenderReport {
 
 	/**
 	 * Sets the temporal interval between two RTCP Sender Reports.
-	 * Default interval is set to 3 secondes.
+	 * Default interval is set to 3 seconds.
 	 * Set 0 to disable RTCP.
 	 * @param interval The interval in milliseconds
 	 */
@@ -115,6 +115,8 @@ public class SenderReport {
 	/** 
 	 * Updates the number of packets sent, and the total amount of data sent.
 	 * @param length The length of the packet 
+	 * @param rtpts
+	 *            The RTP timestamp.
 	 * @throws IOException 
 	 **/
 	public void update(int length, long rtpts) throws IOException {
@@ -193,7 +195,14 @@ public class SenderReport {
 		}
 	}	
 
-	/** Sends the RTCP packet over the network. */
+	/**
+	 * Sends the RTCP packet over the network.
+	 * 
+	 * @param ntpts
+	 *            the NTP timestamp.
+	 * @param rtpts
+	 *            the RTP timestamp.
+	 */
 	private void send(long ntpts, long rtpts) throws IOException {
 		long hb = ntpts/1000000000;
 		long lb = ( ( ntpts - hb*1000000000 ) * 4294967296L )/1000000000;

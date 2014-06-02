@@ -150,7 +150,7 @@ public class AACStream extends AudioStream {
 				mPacketizer = new AACADTSPacketizer();
 			} else { 
 				mPacketizer = new AACLATMPacketizer();
-			}		
+			}
 			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 			mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
 		}
