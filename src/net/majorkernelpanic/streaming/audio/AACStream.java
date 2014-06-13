@@ -150,7 +150,7 @@ public class AACStream extends AudioStream {
 				mPacketizer = new AACADTSPacketizer();
 			} else { 
 				mPacketizer = new AACLATMPacketizer();
-			}		
+			}
 			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 			mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
 		}
@@ -173,7 +173,7 @@ public class AACStream extends AudioStream {
 
 			mProfile = 2; // AAC LC
 			mChannel = 1;
-			mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
+			mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
 
 			mSessionDescription = "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 					"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
@@ -354,7 +354,7 @@ public class AACStream extends AudioStream {
 		mQuality.samplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
 
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
-		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
+		mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
 
 		Log.i(TAG,"MPEG VERSION: " + ( (buffer[0]&0x08) >> 3 ) );
 		Log.i(TAG,"PROTECTION: " + (buffer[0]&0x01) );

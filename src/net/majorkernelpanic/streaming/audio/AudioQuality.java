@@ -21,7 +21,7 @@
 package net.majorkernelpanic.streaming.audio;
 
 /**
- * A class that represents the quality of an audio stream. 
+ * A class that represents the quality of an audio stream.
  */
 public class AudioQuality {
 

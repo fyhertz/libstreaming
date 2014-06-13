@@ -88,7 +88,7 @@ public class H264Stream extends VideoStream {
 
 	/**
 	 * Starts the stream.
-	 * This will also open the camera and display the preview if {@link #startPreview()} has not aready been called.
+	 * This will also open the camera and display the preview if {@link #startPreview()} has not already been called.
 	 */
 	public synchronized void start() throws IllegalStateException, IOException {
 		if (!mStreaming) {

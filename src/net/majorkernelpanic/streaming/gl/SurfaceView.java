@@ -53,7 +53,7 @@ import android.view.SurfaceHolder;
  */
 public class SurfaceView extends android.view.SurfaceView implements Runnable, OnFrameAvailableListener, SurfaceHolder.Callback {
 
-	public final static String TAG = "GLSurfaceView";
+	public final static String TAG = "SurfaceView";
 
 	/** 
 	 * The aspect ratio of the surface view will be equal 
@@ -68,8 +68,8 @@ public class SurfaceView extends android.view.SurfaceView implements Runnable, O
 	private Handler mHandler = null;
 	private boolean mFrameAvailable = false; 
 	private boolean mRunning = true;
-	private int mAspectRatioMode = 0;
-	
+	private int mAspectRatioMode = ASPECT_RATIO_STRETCH;
+
 	// The surface in which the preview is rendered
 	private SurfaceManager mViewSurfaceManager = null;
 	
@@ -80,8 +80,8 @@ public class SurfaceView extends android.view.SurfaceView implements Runnable, O
 	// from the camera, onto a Surface
 	private TextureManager mTextureManager = null;
 
-	private Semaphore mLock = new Semaphore(0);
-	private Object mSyncObject = new Object();
+	private final Semaphore mLock = new Semaphore(0);
+	private final Object mSyncObject = new Object();
 
 	// Allows to force the aspect ratio of the preview
 	private ViewAspectRatioMeasurer mVARM = new ViewAspectRatioMeasurer();

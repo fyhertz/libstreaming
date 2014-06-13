@@ -79,8 +79,8 @@ public class RtpSocket implements Runnable {
 	 */
 	public RtpSocket() {
 		
-		mCacheSize = 00;
-		mBufferCount = 300; // TODO: reajust that when the FIFO is full 
+		mCacheSize = 0;
+		mBufferCount = 300; // TODO: readjust that when the FIFO is full 
 		mBuffers = new byte[mBufferCount][];
 		mPackets = new DatagramPacket[mBufferCount];
 		mReport = new SenderReport();
@@ -151,7 +151,7 @@ public class RtpSocket implements Runnable {
 		return mSsrc;
 	}
 
-	/** Sets the clock frquency of the stream in Hz. */
+	/** Sets the clock frequency of the stream in Hz. */
 	public void setClockFrequency(long clock) {
 		mClock = clock;
 	}
@@ -246,7 +246,7 @@ public class RtpSocket implements Runnable {
 		
 	}
 
-	/** Returns an approximation of the bitrate of the RTP stream in bit per seconde. */
+	/** Returns an approximation of the bitrate of the RTP stream in bits per second. */
 	public long getBitrate() {
 		return mAverageBitrate.average();
 	}

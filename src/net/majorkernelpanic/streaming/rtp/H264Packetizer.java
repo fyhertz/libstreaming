@@ -177,7 +177,7 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			}
 		}
 
-		// We send two packets containing NALU type 7 (sps) and 8 (pps)
+		// We send two packets containing NALU type 7 (SPS) and 8 (PPS)
 		// Those should allow the H264 stream to be decoded even if no SDP was sent to the decoder.
 		if (type == 5 && sps != null && pps != null) {
 			buffer = socket.requestBuffer();

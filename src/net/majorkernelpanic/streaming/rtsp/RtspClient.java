@@ -250,7 +250,7 @@ public class RtspClient {
 					tryConnection();
 				} catch (Exception e) {
 					postError(ERROR_CONNECTION_FAILED, e);
-					abord();
+					abort();
 					return;
 				}
 				
@@ -261,7 +261,7 @@ public class RtspClient {
 						mHandler.post(mConnectionMonitor);
 					}
 				} catch (Exception e) {
-					abord();
+					abort();
 				}
 
 			}
@@ -281,7 +281,7 @@ public class RtspClient {
 				}
 				if (mState != STATE_STOPPED) {
 					mState = STATE_STOPPING;
-					abord();
+					abort();
 				}
 			}
 		});
@@ -292,7 +292,7 @@ public class RtspClient {
 		mHandler.getLooper().quit();
 	}
 	
-	private void abord() {
+	private void abort() {
 		try {
 			sendRequestTeardown();
 		} catch (Exception ignore) {}
@@ -502,7 +502,7 @@ public class RtspClient {
 						mHandler.post(mConnectionMonitor);
 						postMessage(MESSAGE_CONNECTION_RECOVERED);
 					} catch (Exception e) {
-						abord();
+						abort();
 					}
 				} catch (IOException e) {
 					mHandler.postDelayed(mRetryConnection,1000);
@@ -574,12 +574,12 @@ public class RtspClient {
 		public int status;
 		public HashMap<String,String> headers = new HashMap<String,String>();
 
-		/** Parse the method, uri & headers of a RTSP request */
+		/** Parse the method, URI & headers of a RTSP request */
 		public static Response parseResponse(BufferedReader input) throws IOException, IllegalStateException, SocketException {
 			Response response = new Response();
 			String line;
 			Matcher matcher;
-			// Parsing request method & uri
+			// Parsing request method & URI
 			if ((line = input.readLine())==null) throw new SocketException("Connection lost");
 			matcher = regexStatus.matcher(line);
 			matcher.find();
