@@ -455,8 +455,8 @@ public abstract class VideoStream extends MediaStream {
 					int bufferIndex = mMediaCodec.dequeueInputBuffer(500000);
 					if (bufferIndex>=0) {
 						inputBuffers[bufferIndex].clear();
-						if (data == null) Log.d(TAG,"ERRORRR");
-						convertor.convert(data, inputBuffers[bufferIndex]);
+						if (data == null) Log.e(TAG,"Symptom of the \"Callback buffer was to small\" problem...");
+						else convertor.convert(data, inputBuffers[bufferIndex]);
 						mMediaCodec.queueInputBuffer(bufferIndex, 0, inputBuffers[bufferIndex].position(), now, 0);
 					} else {
 						Log.e(TAG,"No buffer available !");

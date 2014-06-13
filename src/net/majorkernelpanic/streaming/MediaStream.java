@@ -187,6 +187,14 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/**
+	 * Returns the streaming method in use, call this after 
+	 * {@link #configure()} to get an accurate response. 
+	 */
+	public byte getStreamingMethod() {
+		return mMode;
+	}		
+	
+	/**
 	 * Returns the packetizer associated with the {@link MediaStream}.
 	 * @return The packetizer
 	 */
