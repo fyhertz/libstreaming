@@ -130,7 +130,7 @@ This example is extracted from [this simple android app](https://github.com/fyhe
 	}	
 
 	@Override
-	public void onBitrareUpdate(long bitrate) {
+	public void onBitrateUpdate(long bitrate) {
         // Informs you of the bandwidth consumption of the streams
 		Log.d(TAG,"Bitrate: "+bitrate);
 	}
