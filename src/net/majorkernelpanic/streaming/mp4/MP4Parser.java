@@ -194,7 +194,7 @@ class StsdBox {
 		 *  You may find really useful information about this box 
 		 *  in the document ISO-IEC 14496-15, part 5.2.4.1.1
 		 *  The box's structure is described there
-		 *  
+		 *  <pre>
 		 *  aligned(8) class AVCDecoderConfigurationRecord {
 		 *		unsigned int(8) configurationVersion = 1;
 		 *		unsigned int(8) AVCProfileIndication;
@@ -214,9 +214,7 @@ class StsdBox {
 		 *			bit(8*pictureParameterSetLength) pictureParameterSetNALUnit;
 		 *		}
 		 *	}
-		 *
-		 *  
-		 *  
+		 *  </pre>
 		 */
 		try {
 

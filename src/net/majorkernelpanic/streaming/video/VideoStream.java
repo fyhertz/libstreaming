@@ -480,7 +480,7 @@ public abstract class VideoStream extends MediaStream {
 
 	/**
 	 * Video encoding is done by a MediaCodec.
-	 * But here we will use the buffer-to-surface methode
+	 * But here we will use the buffer-to-surface method
 	 */
 	@SuppressLint({ "InlinedApi", "NewApi" })	
 	protected void encodeWithMediaCodecMethod2() throws RuntimeException, IOException {

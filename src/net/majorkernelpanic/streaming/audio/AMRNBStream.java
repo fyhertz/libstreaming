@@ -65,13 +65,13 @@ public class AMRNBStream extends AudioStream {
 			super.start();
 		}
 	}
-	
+
 	public synchronized void configure() throws IllegalStateException, IOException {
 		super.configure();
 		mMode = MODE_MEDIARECORDER_API;
 		mQuality = mRequestedQuality.clone();
 	}
-	
+
 	/**
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */	

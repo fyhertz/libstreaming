@@ -54,7 +54,7 @@ public class MP4Config {
 	}
 	
 	/**
-	 * Finds sps & pps parameters inside a .mp4.
+	 * Finds SPS & PPS parameters inside a .mp4.
 	 * @param path Path to the file to analyze
 	 * @throws IOException
 	 * @throws FileNotFoundException
