@@ -642,6 +642,51 @@ public class Session {
 		});
 	}	
 
+
+
+
+public void setSize(final int w, final int h) {
+
+		sHandler.post(new Runnable() {
+				
+			@Override
+			public void run() {
+				if (mVideoStream != null) {
+					try {
+						
+						mVideoStream.setCameraPreviewSize(w,h);
+					} catch (RuntimeException e) {
+					
+					}
+				}
+			}
+		});
+	
+	}
+	
+	
+	//
+	public List<Size> getAvailableSizes() {
+	
+		sHandler.post(new Runnable() {
+			
+			@Override
+			public void run() {
+				if (mVideoStream != null) {
+					try {
+						size = mVideoStream.getSizes();
+										} catch (RuntimeException e) {
+					
+					}
+				}
+			}
+		});
+	return size;
+	}
+
+
+
+
 	/** Deletes all existing tracks & release associated resources. */
 	public void release() {
 		removeAudioTrack();
