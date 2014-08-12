@@ -78,16 +78,25 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		this.pps = pps;
 		this.sps = sps;
 
-		if (pps != null && sps != null) {
-			// A STAP-A NAL (NAL type 24) containing the sps and pps of the stream
-			stapa = new byte[sps.length+pps.length+5];
+        // A STAP-A NAL (NAL type 24) containing the sps and pps of the stream
+        if (pps != null && sps != null) {
+            // STAP-A NAL header + NALU 1 (SPS) size + NALU 2 (PPS) size = 5 bytes
+			stapa = new byte[sps.length + pps.length + 5];
+
+            // STAP-A NAL header is 24
 			stapa[0] = 24;
-			stapa[1] = (byte) (sps.length>>8);
-			stapa[2] = (byte) (sps.length&0xFF);
-			stapa[sps.length+1] = (byte) (pps.length>>8);
-			stapa[sps.length+2] = (byte) (pps.length&0xFF);
+
+            // Write NALU 1 size into the array (NALU 1 is the SPS).
+			stapa[1] = (byte) (sps.length >> 8);
+			stapa[2] = (byte) (sps.length & 0xFF);
+
+            // Write NALU 2 size into the array (NALU 2 is the PPS).
+            stapa[sps.length + 3] = (byte) (pps.length >> 8);
+			stapa[sps.length + 4] = (byte) (pps.length & 0xFF);
+
+            // Write NALU 1 into the array, then write NALU 2 into the array.
 			System.arraycopy(sps, 0, stapa, 3, sps.length);
-			System.arraycopy(pps, 0, stapa, 5+sps.length, pps.length);
+			System.arraycopy(pps, 0, stapa, 5 + sps.length, pps.length);
 		}
 	}	
 
