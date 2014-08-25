@@ -336,6 +336,8 @@ public abstract class VideoStream extends MediaStream {
 		destroyCamera();
 		createCamera();
 
+
+		mCamera.stopPreview();
 		// The camera must be unlocked before the MediaRecorder can use it
 		unlockCamera();
 
