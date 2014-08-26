@@ -582,6 +582,7 @@ public abstract class VideoStream extends MediaStream {
 				// If the phone has a flash, we turn it on/off according to mFlashEnabled
 				// setRecordingHint(true) is a very nice optimization if you plane to only use the Camera for recording
 				Parameters parameters = mCamera.getParameters();
+				parameters.setFocusMode("continuous-picture");
 				if (parameters.getFlashMode()!=null) {
 					parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
 				}
@@ -636,6 +637,7 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 		Parameters parameters = mCamera.getParameters();
+		parameters.setFocusMode("continuous-picture");
 		mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
 		int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
 		
