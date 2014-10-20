@@ -84,8 +84,8 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 			stapa[0] = 24;
 			stapa[1] = (byte) (sps.length>>8);
 			stapa[2] = (byte) (sps.length&0xFF);
-			stapa[sps.length+1] = (byte) (pps.length>>8);
-			stapa[sps.length+2] = (byte) (pps.length&0xFF);
+			stapa[sps.length+3] = (byte) (pps.length>>8);
+			stapa[sps.length+4] = (byte) (pps.length&0xFF);
 			System.arraycopy(sps, 0, stapa, 3, sps.length);
 			System.arraycopy(pps, 0, stapa, 5+sps.length, pps.length);
 		}
