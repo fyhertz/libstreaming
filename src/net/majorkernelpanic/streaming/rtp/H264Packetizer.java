@@ -48,7 +48,6 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 	private int count = 0;
 	private int streamType = 1;
 
-
 	public H264Packetizer() {
 		super();
 		socket.setClockFrequency(90000);
@@ -79,17 +78,29 @@ public class H264Packetizer extends AbstractPacketizer implements Runnable {
 		this.sps = sps;
 
 		if (pps != null && sps != null) {
+			Log.d(TAG,"Creating STAP-A NAL Unit");
 			// A STAP-A NAL (NAL type 24) containing the sps and pps of the stream
 			stapa = new byte[sps.length+pps.length+5];
 			stapa[0] = 24;
 			stapa[1] = (byte) (sps.length>>8);
 			stapa[2] = (byte) (sps.length&0xFF);
-			stapa[sps.length+1] = (byte) (pps.length>>8);
-			stapa[sps.length+2] = (byte) (pps.length&0xFF);
+			stapa[sps.length+3] = (byte) (pps.length>>8);
+			stapa[sps.length+4] = (byte) (pps.length&0xFF);
 			System.arraycopy(sps, 0, stapa, 3, sps.length);
-			System.arraycopy(pps, 0, stapa, 5+sps.length, pps.length);
+			System.arraycopy(pps, 0, stapa, 5 + sps.length, pps.length);
+			Log.d(TAG,"SPS bytes: " + getFormattedByteArray(sps));
+			Log.d(TAG,"PPS bytes: " + getFormattedByteArray(pps));
+			Log.d(TAG,"Constructed STAP-A: " + getFormattedByteArray(stapa));
 		}
 	}	
+
+	private String getFormattedByteArray(byte[] arr) {
+		StringBuffer buffer = new StringBuffer(arr.length * 5);
+		for (byte b: arr) {
+			buffer.append(String.format("%#02x,", b));
+		}
+		return buffer.toString();
+	}
 
 	public void run() {
 		long duration = 0;
