@@ -79,7 +79,7 @@ public class VideoQuality {
 	}
 
 	public VideoQuality clone() {
-		return new VideoQuality(resX,resY,framerate,bitrate);
+		return new VideoQuality(resX,resY,framerate, bitrate);
 	}
 
 	public static VideoQuality parseQuality(String str) {
@@ -113,7 +113,7 @@ public class VideoQuality {
 		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
 			Size size = it.next();
 			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");
-			int dist = Math.abs(quality.resX - size.width);
+			int dist = Math.abs(quality.resX - size.width) + Math.abs(quality.resY - size.height);
 			if (dist<minDist) {
 				minDist = dist;
 				v.resX = size.width;
