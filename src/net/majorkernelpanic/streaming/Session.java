@@ -39,6 +39,7 @@ import android.hardware.Camera.CameraInfo;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
+import android.util.Log;
 
 /**
  * You should instantiate this class with the {@link SessionBuilder}.<br />
@@ -129,7 +130,7 @@ public class Session {
 		mOrigin = "127.0.0.1";
 	}
 
-	/**
+    /**
 	 * The callback interface you need to implement to get some feedback
 	 * Those will be called from the UI thread.
 	 */
@@ -369,7 +370,9 @@ public class Session {
 			public void run() {
 				try {
 					syncConfigure();
-				} catch (Exception e) {};
+				} catch (Exception e) {
+                    Log.e(TAG, Log.getStackTraceString(e));
+                };
 			}
 		});
 	}	
@@ -622,11 +625,14 @@ public class Session {
 
 	}
 
+
 	/** 
 	 * Toggles the LED of the phone if it has one.
 	 * You can get the current state of the flash with 
 	 * {@link Session#getVideoTrack()} and {@link VideoStream#getFlashState()}.
 	 **/
+
+    /*
 	public void toggleFlash() {
 		mHandler.post(new Runnable() {
 			@Override
@@ -684,7 +690,7 @@ public void setSize(final int w, final int h) {
 	return size;
 	}
 
-
+*/
 
 
 	/** Deletes all existing tracks & release associated resources. */
