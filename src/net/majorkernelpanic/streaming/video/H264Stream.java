@@ -125,7 +125,7 @@ public class H264Stream extends VideoStream {
 		createCamera();
 		updateCamera();
 		try {
-			if (mQuality.resX>=640) {
+			if (mQuality.resX>=640 && mMode == MODE_MEDIACODEC_API) {
 				// Using the MediaCodec API with the buffer method for high resolutions is too slow
 				mMode = MODE_MEDIARECORDER_API;
 			}
