@@ -107,13 +107,13 @@ public class VideoQuality {
 	 **/
 	public static VideoQuality determineClosestSupportedResolution(Camera.Parameters parameters, VideoQuality quality) {
 		VideoQuality v = quality.clone();
-		int minDist = Integer.MAX_VALUE;
+		float minDist = Float.MAX_VALUE;
 		String supportedSizesStr = "Supported resolutions: ";
 		List<Size> supportedSizes = parameters.getSupportedPreviewSizes();
 		for (Iterator<Size> it = supportedSizes.iterator(); it.hasNext();) {
 			Size size = it.next();
 			supportedSizesStr += size.width+"x"+size.height+(it.hasNext()?", ":"");
-			int dist = Math.abs(quality.resX - size.width);
+			float dist = (float) Math.sqrt(Math.pow(quality.resX - size.width, 2) + Math.pow(quality.resY - size.height, 2));
 			if (dist<minDist) {
 				minDist = dist;
 				v.resX = size.width;
