@@ -143,5 +143,32 @@ public class VideoQuality {
 		Log.v(TAG,supportedFpsRangesStr);
 		return maxFps;
 	}
-	
+
+	/**
+     * Compares the framerate requested by the session with the ones available by the camera
+     * Since we're comparing a single value with the interval, it chooses intervals whose average
+     * fps value is closest to the requested one, e.g., if one requests 30fps and the camera
+     * supports 15-30,30-30, and 60-60. It will select  30-30;
+     * Given these are fps ranges of real cameras we should not see troublesome situations like a
+     * choice between 15-45 and 30-30, which in this case would give precedence to the first.
+     **/
+    public static int[] determineClosestSupportedFramerate(Camera.Parameters parameters, VideoQuality quality) {
+        int[] fps = new int[]{0,0};
+        int fr = quality.framerate * 1000;
+        float dist = Float.MAX_VALUE;
+        String supportedFpsRangesStr = "Supported frame rates: ";
+        List<int[]> supportedFpsRanges = parameters.getSupportedPreviewFpsRange();
+        for (Iterator<int[]> it = supportedFpsRanges.iterator(); it.hasNext();) {
+            int[] interval = it.next();
+            // Intervals are returned as integers, for example "29970" means "29.970" FPS.
+            supportedFpsRangesStr += interval[0]/1000+"-"+interval[1]/1000+"fps"+(it.hasNext()?", ":"");
+            float testDist = Math.abs((interval[0] + interval[1])/2 - fr);
+            if(testDist < dist) {
+                fps = interval;
+                dist = testDist;
+            }
+        }
+        Log.v(TAG,supportedFpsRangesStr);
+        return fps;
+    }
 }
