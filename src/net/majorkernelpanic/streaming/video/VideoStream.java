@@ -641,7 +641,7 @@ public abstract class VideoStream extends MediaStream {
 		int[] fr;
         if (mQuality.framerate == Integer.MAX_VALUE) {
             fr = VideoQuality.determineMaximumSupportedFramerate(parameters);
-            mQuality.framerate = (fr[0] + fr[1])/2;
+            mQuality.framerate = (fr[0] + fr[1])/2000;
         } else {
             fr = VideoQuality.determineClosestSupportedFramerate(parameters, mQuality);
         }
