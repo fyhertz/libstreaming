@@ -66,7 +66,10 @@ public class MP4Config {
 		// We open the mp4 file and parse it
 		try {
 			mp4Parser = MP4Parser.parse(path);
-		} catch (IOException ignore) {
+		} catch (FileNotFoundException e) {
+            throw new FileNotFoundException("Error: path - " + path);
+        } catch (IOException ignore) {
+            Log.e(TAG, "MP4Config: " + ignore.getMessage(), ignore);
 			// Maybe enough of the file has been parsed and we can get the stsd box
 		}
 
