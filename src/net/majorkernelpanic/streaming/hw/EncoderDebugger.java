@@ -20,6 +20,7 @@
 
 package net.majorkernelpanic.streaming.hw;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -524,7 +525,7 @@ public class EncoderDebugger {
 	/**
 	 * Instantiates and starts the encoder.
 	 */
-	private void configureEncoder()  {
+	private void configureEncoder() throws IOException {
 		mEncoder = MediaCodec.createByCodecName(mEncoderName);
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
@@ -549,7 +550,7 @@ public class EncoderDebugger {
 	/**
 	 * Instantiates and starts the decoder.
 	 */	
-	private void configureDecoder() {
+	private void configureDecoder() throws IOException {
 		byte[] prefix = new byte[] {0x00,0x00,0x00,0x01};
 
 		ByteBuffer csd0 = ByteBuffer.allocate(4+mSPS.length+4+mPPS.length);
@@ -801,8 +802,7 @@ public class EncoderDebugger {
 
 	/**
 	 * Makes sure the NAL has a header or not.
-	 * @param withPrefix If set to true, the NAL will be preceeded with 0x00000001.
-	 */
+     */
 	private boolean hasPrefix(byte[] nal) {
 		if (nal[0] == 0 && nal[1] == 0 && nal[2] == 0 && nal[3] == 0x01)
 			return true;
@@ -810,7 +810,7 @@ public class EncoderDebugger {
 			return false;
 	}
 	
-	private void encodeDecode() {
+	private void encodeDecode() throws IOException {
 		encode();
 		try {
 			configureDecoder();
