@@ -607,10 +607,10 @@ public abstract class VideoStream extends MediaStream {
 				if (parameters.getFlashMode()!=null) {
 					parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
 				}
-				parameters.setRecordingHint(true);
+                parameters.setRecordingHint(true);
                 parameters.set("cam_mode", 1);
-				mCamera.setParameters(parameters);
-				mCamera.setDisplayOrientation(mOrientation);
+                mCamera.setParameters(parameters);
+                mCamera.setDisplayOrientation(mOrientation);
 
 				try {
 					if (mMode == MODE_MEDIACODEC_API_2) {

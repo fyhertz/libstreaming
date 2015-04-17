@@ -525,7 +525,6 @@ public class EncoderDebugger {
 	 * Instantiates and starts the encoder.
 	 */
 	private void configureEncoder()  {
-
         try{
             mEncoder = MediaCodec.createByCodecName(mEncoderName);
             MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
@@ -536,11 +535,10 @@ public class EncoderDebugger {
             mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
             mEncoder.start();
         }
-		catch (Exception e) {
+        catch (Exception e) {
             Log.e(getClass().getSimpleName(),"configureEncoder");
             Log.e(getClass().getSimpleName(), e.getStackTrace().toString());
         }
-
 	}
 
 	private void releaseEncoder() {
@@ -574,7 +572,7 @@ public class EncoderDebugger {
             mDecoder.configure(mediaFormat, null, null, 0);
             mDecoder.start();
         }
-		catch (Exception e) {
+        catch (Exception e) {
             Log.e(getClass().getSimpleName(),"configureDecoder");
             Log.e(getClass().getSimpleName(), e.getStackTrace().toString());
         }

@@ -16,3 +16,5 @@ ant.properties
 *.iml
 .gradle/
 .idea/
+target/
+build/

@@ -340,16 +340,16 @@ public abstract class MediaStream implements Stream {
         } catch (Exception e) {
             e.printStackTrace();
         }
-		try {
-			mSender.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		try {
-			mLss.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        try {
+            mSender.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            mLss.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         try {
             mParcelRead.close();
         }
