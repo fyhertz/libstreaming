@@ -373,8 +373,6 @@ public abstract class VideoStream extends MediaStream {
 			throw new ConfNotSupportedException(e.getMessage());
 		}
 
-        Log.e(TAG, "VideoStream Initialize mediaRecorder complete");
-
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
         InputStream inputStream;
         if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
@@ -393,7 +391,7 @@ public abstract class VideoStream extends MediaStream {
 				if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
 			}
 		} catch (IOException e) {
-			Log.e(TAG,"Couldn't skip mp4 header :/ ja");
+			Log.e(TAG,"Couldn't skip mp4 header :/");
 			stop();
 			throw e;
 		}
@@ -410,7 +408,6 @@ public abstract class VideoStream extends MediaStream {
         mPacketizer.start();
 		mStreaming = true;
 
-        Log.e(TAG, "VideoStream Initialize complete");
 	}
 
 

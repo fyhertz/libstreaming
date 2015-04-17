@@ -335,11 +335,11 @@ public abstract class MediaStream implements Stream {
     }
 
 	protected void closeSockets() {
-		try {
-			mReceiver.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+        try {
+            mReceiver.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
 		try {
 			mSender.close();
 		} catch (Exception e) {
@@ -358,12 +358,12 @@ public abstract class MediaStream implements Stream {
         }
         try {
             mParcelWrite.close();
-        } catch (IOException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
         mLss = null;
-		mSender = null;
-		mReceiver = null;
+        mSender = null;
+        mReceiver = null;
         mParcelRead = null;
         mParcelWrite = null;
 	}
