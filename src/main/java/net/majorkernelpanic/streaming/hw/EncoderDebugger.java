@@ -525,14 +525,20 @@ public class EncoderDebugger {
 	 * Instantiates and starts the encoder.
 	 */
 	private void configureEncoder()  {
-		mEncoder = MediaCodec.createByCodecName(mEncoderName);
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
-		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
-		mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAMERATE);	
-		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mEncoderColorFormat);
-		mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
-		mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-		mEncoder.start();
+        try{
+            mEncoder = MediaCodec.createByCodecName(mEncoderName);
+            MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
+            mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
+            mediaFormat.setInteger(MediaFormat.KEY_FRAME_RATE, FRAMERATE);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mEncoderColorFormat);
+            mediaFormat.setInteger(MediaFormat.KEY_I_FRAME_INTERVAL, 1);
+            mEncoder.configure(mediaFormat, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            mEncoder.start();
+        }
+        catch (Exception e) {
+            Log.e(getClass().getSimpleName(),"configureEncoder");
+            Log.e(getClass().getSimpleName(), e.getStackTrace().toString());
+        }
 	}
 
 	private void releaseEncoder() {
@@ -558,12 +564,18 @@ public class EncoderDebugger {
 		csd0.put(new byte[] {0x00,0x00,0x00,0x01});
 		csd0.put(mPPS);
 
-		mDecoder = MediaCodec.createByCodecName(mDecoderName);
-		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
-		mediaFormat.setByteBuffer("csd-0", csd0);
-		mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mDecoderColorFormat);
-		mDecoder.configure(mediaFormat, null, null, 0);
-		mDecoder.start();
+        try{
+            mDecoder = MediaCodec.createByCodecName(mDecoderName);
+            MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
+            mediaFormat.setByteBuffer("csd-0", csd0);
+            mediaFormat.setInteger(MediaFormat.KEY_COLOR_FORMAT, mDecoderColorFormat);
+            mDecoder.configure(mediaFormat, null, null, 0);
+            mDecoder.start();
+        }
+        catch (Exception e) {
+            Log.e(getClass().getSimpleName(),"configureDecoder");
+            Log.e(getClass().getSimpleName(), e.getStackTrace().toString());
+        }
 
 		ByteBuffer[] decInputBuffers = mDecoder.getInputBuffers();
 

@@ -20,21 +20,6 @@
 
 package net.majorkernelpanic.streaming.video;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.ByteBuffer;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.TimeUnit;
-
-import net.majorkernelpanic.streaming.MediaStream;
-import net.majorkernelpanic.streaming.Stream;
-import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
-import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
-import net.majorkernelpanic.streaming.exceptions.InvalidSurfaceException;
-import net.majorkernelpanic.streaming.gl.SurfaceView;
-import net.majorkernelpanic.streaming.hw.EncoderDebugger;
-import net.majorkernelpanic.streaming.hw.NV21Convertor;
-import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
 import android.annotation.SuppressLint;
 import android.content.SharedPreferences;
 import android.content.SharedPreferences.Editor;
@@ -45,11 +30,29 @@ import android.media.MediaCodec;
 import android.media.MediaCodecInfo;
 import android.media.MediaFormat;
 import android.media.MediaRecorder;
+import android.os.Build;
 import android.os.Looper;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 import android.view.Surface;
 import android.view.SurfaceHolder;
 import android.view.SurfaceHolder.Callback;
+
+import net.majorkernelpanic.streaming.MediaStream;
+import net.majorkernelpanic.streaming.Stream;
+import net.majorkernelpanic.streaming.exceptions.CameraInUseException;
+import net.majorkernelpanic.streaming.exceptions.ConfNotSupportedException;
+import net.majorkernelpanic.streaming.exceptions.InvalidSurfaceException;
+import net.majorkernelpanic.streaming.gl.SurfaceView;
+import net.majorkernelpanic.streaming.hw.EncoderDebugger;
+import net.majorkernelpanic.streaming.hw.NV21Convertor;
+import net.majorkernelpanic.streaming.rtp.MediaCodecInputStream;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.ByteBuffer;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
 
 /** 
  * Don't use this class directly.
@@ -80,9 +83,9 @@ public abstract class VideoStream extends MediaStream {
 	protected String mEncoderName;
 	protected int mEncoderColorFormat;
 	protected int mCameraImageFormat;
-	protected int mMaxFps = 0;	
+	protected int mMaxFps = 0;
 
-	/** 
+    /**
 	 * Don't use this class directly.
 	 * Uses CAMERA_FACING_BACK by default.
 	 */
@@ -328,6 +331,7 @@ public abstract class VideoStream extends MediaStream {
 	protected void encodeWithMediaRecorder() throws IOException, ConfNotSupportedException {
 
 		Log.d(TAG,"Video encoded using the MediaRecorder API");
+        Log.e(TAG, "VideoStream Initial 1152");
 
 		// We need a local socket to forward data output by the camera to the packetizer
 		createSockets();
@@ -355,7 +359,12 @@ public abstract class VideoStream extends MediaStream {
 			// We write the ouput of the camera in a local socket instead of a file !			
 			// This one little trick makes streaming feasible quiet simply: data from the camera
 			// can then be manipulated at the other end of the socket
-			mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+            if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setMediaRecorderOutputFile(mMediaRecorder);
+            }
+            else {
+                mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+            }
 
 			mMediaRecorder.prepare();
 			mMediaRecorder.start();
@@ -365,13 +374,20 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 		// This will skip the MPEG4 header if this step fails we can't stream anything :(
-		InputStream is = mReceiver.getInputStream();
-		try {
+        InputStream inputStream;
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            inputStream = new ParcelFileDescriptor.AutoCloseInputStream(mParcelRead);
+        }
+        else {
+            inputStream = mReceiver.getInputStream();
+        }
+
+        try {
 			byte buffer[] = new byte[4];
 			// Skip all atoms preceding mdat atom
 			while (!Thread.interrupted()) {
-				while (is.read() != 'm');
-				is.read(buffer,0,3);
+				while (inputStream.read() != 'm');
+				inputStream.read(buffer, 0, 3);
 				if (buffer[0] == 'd' && buffer[1] == 'a' && buffer[2] == 't') break;
 			}
 		} catch (IOException e) {
@@ -381,9 +397,15 @@ public abstract class VideoStream extends MediaStream {
 		}
 
 		// The packetizer encapsulates the bit stream in an RTP stream and send it over the network
-		mPacketizer.setInputStream(mReceiver.getInputStream());
-		mPacketizer.start();
 
+        if (android.os.Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+            mPacketizer.setInputStream(inputStream);
+        }
+        else {
+            mPacketizer.setInputStream(mReceiver.getInputStream());
+        }
+
+        mPacketizer.start();
 		mStreaming = true;
 
 	}
@@ -585,9 +607,10 @@ public abstract class VideoStream extends MediaStream {
 				if (parameters.getFlashMode()!=null) {
 					parameters.setFlashMode(mFlashEnabled?Parameters.FLASH_MODE_TORCH:Parameters.FLASH_MODE_OFF);
 				}
-				parameters.setRecordingHint(true);
-				mCamera.setParameters(parameters);
-				mCamera.setDisplayOrientation(mOrientation);
+                parameters.setRecordingHint(true);
+                parameters.set("cam_mode", 1);
+                mCamera.setParameters(parameters);
+                mCamera.setDisplayOrientation(mOrientation);
 
 				try {
 					if (mMode == MODE_MEDIACODEC_API_2) {

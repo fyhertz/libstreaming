@@ -13,3 +13,8 @@ local.properties
 custom_rules.xml
 ant.properties
 *~
+*.iml
+.gradle/
+.idea/
+target/
+build/

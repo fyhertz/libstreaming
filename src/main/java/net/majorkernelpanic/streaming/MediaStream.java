@@ -20,21 +20,23 @@
 
 package net.majorkernelpanic.streaming;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.net.InetAddress;
-import java.util.Random;
-
-import net.majorkernelpanic.streaming.audio.AudioStream;
-import net.majorkernelpanic.streaming.rtp.AbstractPacketizer;
-import net.majorkernelpanic.streaming.video.VideoStream;
 import android.annotation.SuppressLint;
 import android.media.MediaCodec;
 import android.media.MediaRecorder;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
+
+import net.majorkernelpanic.streaming.audio.AudioStream;
+import net.majorkernelpanic.streaming.rtp.AbstractPacketizer;
+import net.majorkernelpanic.streaming.video.VideoStream;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetAddress;
+import java.util.Random;
 
 /**
  * A MediaRecorder that streams what it records using a packetizer from the RTP package.
@@ -73,6 +75,9 @@ public abstract class MediaStream implements Stream {
 
 	protected MediaRecorder mMediaRecorder;
 	protected MediaCodec mMediaCodec;
+
+    protected ParcelFileDescriptor mParcelRead;
+    protected ParcelFileDescriptor mParcelWrite;
 	
 	static {
 		// We determine whether or not the MediaCodec API should be used
@@ -315,25 +320,52 @@ public abstract class MediaStream implements Stream {
 		mSender.setSendBufferSize(500000);
 	}
 
+    protected void setMediaRecorderOutputFile(MediaRecorder mediaRecorder) {
+        ParcelFileDescriptor[] parcelFileDescriptors = new ParcelFileDescriptor[0];
+
+        try {
+            parcelFileDescriptors = ParcelFileDescriptor.createPipe();
+        } catch (IOException e) {
+            Log.e("Zeemi", "ParcelFileDescriptor initialize fail");
+        }
+
+        mParcelRead = new ParcelFileDescriptor(parcelFileDescriptors[0]);
+        mParcelWrite  = new ParcelFileDescriptor(parcelFileDescriptors[1]);
+        mediaRecorder.setOutputFile(mParcelWrite.getFileDescriptor());
+    }
+
 	protected void closeSockets() {
-		try {
-			mReceiver.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		try {
-			mSender.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		try {
-			mLss.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		mLss = null;
-		mSender = null;
-		mReceiver = null;
+        try {
+            mReceiver.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            mSender.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            mLss.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        try {
+            mParcelRead.close();
+        }
+        catch(Exception e){
+            e.printStackTrace();
+        }
+        try {
+            mParcelWrite.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        mLss = null;
+        mSender = null;
+        mReceiver = null;
+        mParcelRead = null;
+        mParcelWrite = null;
 	}
 	
 }
