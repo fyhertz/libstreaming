@@ -27,5 +27,8 @@ public class InvalidSurfaceException extends RuntimeException {
 	public InvalidSurfaceException(String message) {
 		super(message);
 	}
+    public InvalidSurfaceException(String message, Throwable t) {
+        super(message, t);
+    }
 
 }
