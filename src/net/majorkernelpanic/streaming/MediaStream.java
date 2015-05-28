@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
@@ -34,6 +34,8 @@ import android.media.MediaRecorder;
 import android.net.LocalServerSocket;
 import android.net.LocalSocket;
 import android.net.LocalSocketAddress;
+import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 /**
@@ -53,6 +55,12 @@ public abstract class MediaStream implements Stream {
 	/** Raw audio/video will be encoded using the MediaCode API with a surface. */
 	public static final byte MODE_MEDIACODEC_API_2 = 0x05;
 
+	/** A LocalSocket will be used to feed the MediaRecorder object */
+	public static final byte PIPE_API_LS = 0x01;
+	
+	/** A ParcelFileDescriptor will be used to feed the MediaRecorder object */
+	public static final byte PIPE_API_PFD = 0x02;
+	
 	/** Prefix that will be used for all shared preferences saved by libstreaming */
 	protected static final String PREF_PREFIX = "libstreaming-";
 
@@ -62,14 +70,28 @@ public abstract class MediaStream implements Stream {
 	protected static byte sSuggestedMode = MODE_MEDIARECORDER_API;
 	protected byte mMode, mRequestedMode;
 
+	/** 
+	 * Starting lollipop the LocalSocket API cannot be used to feed a MediaRecorder object. 
+	 * You can force what API to use to create the pipe that feeds it with this constant 
+	 * by using  {@link #PIPE_API_LS} and {@link #PIPE_API_PFD}.
+	 */
+	protected final static byte sPipeApi;
+	
 	protected boolean mStreaming = false, mConfigured = false;
 	protected int mRtpPort = 0, mRtcpPort = 0; 
 	protected byte mChannelIdentifier = 0;
 	protected OutputStream mOutputStream = null;
 	protected InetAddress mDestination;
+	
+	protected ParcelFileDescriptor[] mParcelFileDescriptors;
+	protected ParcelFileDescriptor mParcelRead;
+	protected ParcelFileDescriptor mParcelWrite;
+	
 	protected LocalSocket mReceiver, mSender = null;
 	private LocalServerSocket mLss = null;
-	private int mSocketId, mTTL = 64;
+	private int mSocketId; 
+	
+	private int mTTL = 64;
 
 	protected MediaRecorder mMediaRecorder;
 	protected MediaCodec mMediaCodec;
@@ -85,6 +107,14 @@ public abstract class MediaStream implements Stream {
 			sSuggestedMode = MODE_MEDIARECORDER_API;
 			Log.i(TAG,"Phone does not support the MediaCodec API");
 		}
+		
+		// Starting lollipop, the LocalSocket API cannot be used anymore to feed 
+		// a MediaRecorder object for security reasons
+		if (Build.VERSION.SDK_INT > Build.VERSION_CODES.KITKAT_WATCH) {
+			sPipeApi = PIPE_API_PFD;
+		} else {
+			sPipeApi = PIPE_API_LS;
+		}
 	}
 
 	public MediaStream() {
@@ -93,7 +123,7 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/** 
-	 * Sets the destination ip address of the stream.
+	 * Sets the destination IP address of the stream.
 	 * @param dest The destination address of the stream 
 	 */	
 	public void setDestinationAddress(InetAddress dest) {
@@ -297,43 +327,70 @@ public abstract class MediaStream implements Stream {
 	
 	protected void createSockets() throws IOException {
 
-		final String LOCAL_ADDR = "net.majorkernelpanic.streaming-";
-
-		for (int i=0;i<10;i++) {
-			try {
-				mSocketId = new Random().nextInt();
-				mLss = new LocalServerSocket(LOCAL_ADDR+mSocketId);
-				break;
-			} catch (IOException e1) {}
+		if (sPipeApi == PIPE_API_LS) {
+			
+			final String LOCAL_ADDR = "net.majorkernelpanic.streaming-";
+	
+			for (int i=0;i<10;i++) {
+				try {
+					mSocketId = new Random().nextInt();
+					mLss = new LocalServerSocket(LOCAL_ADDR+mSocketId);
+					break;
+				} catch (IOException e1) {}
+			}
+	
+			mReceiver = new LocalSocket();
+			mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId));
+			mReceiver.setReceiveBufferSize(500000);
+			mReceiver.setSoTimeout(3000);
+			mSender = mLss.accept();
+			mSender.setSendBufferSize(500000);
+			
+		} else {
+			Log.e(TAG, "parcelFileDescriptors createPipe version = Lollipop");
+			mParcelFileDescriptors = ParcelFileDescriptor.createPipe();
+			mParcelRead = new ParcelFileDescriptor(mParcelFileDescriptors[0]);
+			mParcelWrite = new ParcelFileDescriptor(mParcelFileDescriptors[1]);
 		}
-
-		mReceiver = new LocalSocket();
-		mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId));
-		mReceiver.setReceiveBufferSize(500000);
-		mReceiver.setSoTimeout(3000);
-		mSender = mLss.accept();
-		mSender.setSendBufferSize(500000);
 	}
 
 	protected void closeSockets() {
-		try {
-			mReceiver.close();
-		} catch (Exception e) {
-			e.printStackTrace();
+		if (sPipeApi == PIPE_API_LS) {
+			try {
+				mReceiver.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			try {
+				mSender.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			try {
+				mLss.close();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			mLss = null;
+			mSender = null;
+			mReceiver = null;
+			
+		} else {
+			try {
+				if (mParcelRead != null) {
+					mParcelRead.close();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			try {
+				if (mParcelWrite != null) {
+					mParcelWrite.close();
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
-		try {
-			mSender.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		try {
-			mLss.close();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-		mLss = null;
-		mSender = null;
-		mReceiver = null;
 	}
 	
 }

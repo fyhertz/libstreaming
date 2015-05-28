@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
  * 
@@ -20,10 +20,13 @@
 
 package net.majorkernelpanic.streaming.audio;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.InputStream;
 
 import net.majorkernelpanic.streaming.MediaStream;
 import android.media.MediaRecorder;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 /** 
@@ -83,21 +86,36 @@ public abstract class AudioStream  extends MediaStream {
 		// We write the ouput of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
-		mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+		FileDescriptor fd = null;
+		if (sPipeApi == PIPE_API_PFD) {
+			fd = mParcelWrite.getFileDescriptor();
+		} else  {
+			fd = mSender.getFileDescriptor();
+		}
+		mMediaRecorder.setOutputFile(fd);
+		mMediaRecorder.setOutputFile(fd);
 
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
 
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setInputStream(mReceiver.getInputStream());
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
+		InputStream is = null;
+		
+		if (sPipeApi == PIPE_API_PFD) {
+			is = new ParcelFileDescriptor.AutoCloseInputStream(mParcelRead);
+		} else  {
+			try {
+				// mReceiver.getInputStream contains the data from the camera
+				is = mReceiver.getInputStream();
+			} catch (IOException e) {
+				stop();
+				throw new IOException("Something happened with the local sockets :/ Start failed !");
+			}
 		}
+
+		// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
+		mPacketizer.setInputStream(is);
+		mPacketizer.start();
+		mStreaming = true;
 		
 	}
 	

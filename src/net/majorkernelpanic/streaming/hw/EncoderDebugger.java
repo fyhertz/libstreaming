@@ -20,6 +20,7 @@
 
 package net.majorkernelpanic.streaming.hw;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
@@ -70,10 +71,10 @@ public class EncoderDebugger {
 	/** Will be incremented every time this test is modified. */
 	private static final int VERSION = 3;
 
-	/** Bitrate that will be used with the encoder. */
+	/** Bit rate that will be used with the encoder. */
 	private final static int BITRATE = 1000000;
 
-	/** Framerate that will be used to test the encoder. */
+	/** Frame rate that will be used to test the encoder. */
 	private final static int FRAMERATE = 20;
 
 	private final static String MIME_TYPE = "video/avc";
@@ -137,7 +138,7 @@ public class EncoderDebugger {
 		return mNV21;
 	}
 
-	/** A log of all the errors that occured during the test. */
+	/** A log of all the errors that occurred during the test. */
 	public String getErrorLog() {
 		return mErrorLog;
 	}
@@ -226,7 +227,7 @@ public class EncoderDebugger {
 					
 					if (VERBOSE) Log.v(TAG, "SPS and PPS in b64: SPS="+mB64SPS+", PPS="+mB64PPS);
 
-					// Feeds the encoder with an image repeatidly to produce some NAL units
+					// Feeds the encoder with an image repeatedly to produce some NAL units
 					encode();
 
 					// We now try to decode the NALs with decoders available on the phone
@@ -523,8 +524,9 @@ public class EncoderDebugger {
 
 	/**
 	 * Instantiates and starts the encoder.
+	 * @throws IOException The encoder cannot be configured
 	 */
-	private void configureEncoder()  {
+	private void configureEncoder() throws IOException  {
 		mEncoder = MediaCodec.createByCodecName(mEncoderName);
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
@@ -548,8 +550,9 @@ public class EncoderDebugger {
 
 	/**
 	 * Instantiates and starts the decoder.
+	 * @throws IOException The decoder cannot be configured
 	 */	
-	private void configureDecoder() {
+	private void configureDecoder() throws IOException {
 		byte[] prefix = new byte[] {0x00,0x00,0x00,0x01};
 
 		ByteBuffer csd0 = ByteBuffer.allocate(4+mSPS.length+4+mPPS.length);
@@ -801,7 +804,7 @@ public class EncoderDebugger {
 
 	/**
 	 * Makes sure the NAL has a header or not.
-	 * @param withPrefix If set to true, the NAL will be preceeded with 0x00000001.
+	 * @param withPrefix If set to true, the NAL will be preceded with 0x00000001.
 	 */
 	private boolean hasPrefix(byte[] nal) {
 		if (nal[0] == 0 && nal[1] == 0 && nal[2] == 0 && nal[3] == 0x01)
@@ -810,7 +813,10 @@ public class EncoderDebugger {
 			return false;
 	}
 	
-	private void encodeDecode() {
+	/**
+	 * @throws IOException The decoder cannot be configured.
+	 */
+	private void encodeDecode() throws IOException {
 		encode();
 		try {
 			configureDecoder();
