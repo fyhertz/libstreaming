@@ -83,7 +83,7 @@ public abstract class AudioStream  extends MediaStream {
 		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		
-		// We write the ouput of the camera in a local socket instead of a file !			
+		// We write the output of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
 		FileDescriptor fd = null;
