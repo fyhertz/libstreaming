@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
  * 
  * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
  * 
@@ -186,9 +186,9 @@ public class RtspClient {
 	}
 
 	/**
-	 * If authentication is enabled on the server, you need to call this with a valid username/password pair.
+	 * If authentication is enabled on the server, you need to call this with a valid login/password pair.
 	 * Only implements Digest Access Authentication according to RFC 2069.
-	 * @param username The username
+	 * @param username The login
 	 * @param password The password
 	 */
 	public void setCredentials(String username, String password) {
@@ -219,7 +219,7 @@ public class RtspClient {
 
 	/**
 	 * Connects to the RTSP server to publish the stream, and the effectively starts streaming.
-	 * You need to call {@link #setServerAddress(String, int)} and optionnally {@link #setSession(Session)} 
+	 * You need to call {@link #setServerAddress(String, int)} and optionally {@link #setSession(Session)} 
 	 * and {@link #setCredentials(String, String)} before calling this.
 	 * Should be called of the main thread !
 	 */
@@ -323,7 +323,7 @@ public class RtspClient {
 		String request = "ANNOUNCE rtsp://"+mParameters.host+":"+mParameters.port+mParameters.path+" RTSP/1.0\r\n" +
 				"CSeq: " + (++mCSeq) + "\r\n" +
 				"Content-Length: " + body.length() + "\r\n" +
-				"Content-Type: application/sdp \r\n\r\n" +
+				"Content-Type: application/sdp\r\n\r\n" +
 				body;
 		Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
 
@@ -337,12 +337,14 @@ public class RtspClient {
 			Log.v(TAG,"RTSP server name unknown");
 		}
 
-		try {
-			Matcher m = Response.rexegSession.matcher(response.headers.get("session"));
-			m.find();
-			mSessionID = m.group(1);
-		} catch (Exception e) {
-			throw new IOException("Invalid response from server. Session id: "+mSessionID);
+		if (response.headers.containsKey("session")) {
+			try {
+				Matcher m = Response.rexegSession.matcher(response.headers.get("session"));
+				m.find();
+				mSessionID = m.group(1);
+			} catch (Exception e) {
+				throw new IOException("Invalid response from server. Session id: "+mSessionID);
+			}
 		}
 
 		if (response.status == 401) {
@@ -371,7 +373,7 @@ public class RtspClient {
 					"Content-Length: " + body.length() + "\r\n" +
 					"Authorization: " + mAuthorization + "\r\n" +
 					"Session: " + mSessionID + "\r\n" +
-					"Content-Type: application/sdp \r\n\r\n" +
+					"Content-Type: application/sdp\r\n\r\n" +
 					body;
 
 			Log.i(TAG,request.substring(0, request.indexOf("\r\n")));
@@ -407,6 +409,17 @@ public class RtspClient {
 				mOutputStream.flush();
 				Response response = Response.parseResponse(mBufferedReader);
 				Matcher m;
+				
+				if (response.headers.containsKey("session")) {
+					try {
+						m = Response.rexegSession.matcher(response.headers.get("session"));
+						m.find();
+						mSessionID = m.group(1);
+					} catch (Exception e) {
+						throw new IOException("Invalid response from server. Session id: "+mSessionID);
+					}
+				}
+				
 				if (mParameters.transport == TRANSPORT_UDP) {
 					try {
 						m = Response.rexegTransport.matcher(response.headers.get("transport")); m.find();
