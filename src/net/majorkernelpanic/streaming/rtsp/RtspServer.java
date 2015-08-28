@@ -599,7 +599,7 @@ public class RtspServer extends Service {
         private boolean isAuthorized(Request request)
         {
             String auth = request.headers.get("authorization");
-            if(mUsername.isEmpty())
+            if(mUsername == null || mPassword == null || mUsername.isEmpty())
                 return true;
 
             if(auth != null && !auth.isEmpty())
