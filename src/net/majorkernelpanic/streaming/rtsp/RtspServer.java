@@ -46,6 +46,7 @@ import android.content.SharedPreferences.OnSharedPreferenceChangeListener;
 import android.os.Binder;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
+import android.util.Base64;
 import android.util.Log;
 
 /**
@@ -94,6 +95,10 @@ public class RtspServer extends Service {
 	private final IBinder mBinder = new LocalBinder();
 	private boolean mRestart = false;
 	private final LinkedList<CallbackListener> mListeners = new LinkedList<CallbackListener>();
+
+    /** Credentials for Basic Auth */
+    private String mUsername;
+    private String mPassword;
 	
 
 	public RtspServer() {
@@ -148,7 +153,18 @@ public class RtspServer extends Service {
 		Editor editor = mSharedPreferences.edit();
 		editor.putString(KEY_PORT, String.valueOf(port));
 		editor.commit();
-	}	
+	}
+
+    /**
+     * Set Basic authorization to access RTSP Stream
+     * @param username username
+     * @param password password
+     */
+    public void setAuthorization(String username, String password)
+    {
+        mUsername = username;
+        mPassword = password;
+    }
 
 	/** 
 	 * Starts (or restart if needed, if for example the configuration 
@@ -428,143 +444,175 @@ public class RtspServer extends Service {
 		public Response processRequest(Request request) throws IllegalStateException, IOException {
 			Response response = new Response(request);
 
-			/* ********************************************************************************** */
-			/* ********************************* Method DESCRIBE ******************************** */
-			/* ********************************************************************************** */
-			if (request.method.equalsIgnoreCase("DESCRIBE")) {
+            //Ask for authorization unless this is an OPTIONS request
+            if(!isAuthorized(request) && !request.method.equalsIgnoreCase("OPTIONS"))
+            {
+                response.attributes = "WWW-Authenticate: Basic realm=\""+SERVER_NAME+"\"\r\n";
+                response.status = Response.STATUS_UNAUTHORIZED;
+            }
+            else
+            {
+			    /* ********************************************************************************** */
+			    /* ********************************* Method DESCRIBE ******************************** */
+			    /* ********************************************************************************** */
+                if (request.method.equalsIgnoreCase("DESCRIBE")) {
 
-				// Parse the requested URI and configure the session
-				mSession = handleRequest(request.uri, mClient);
-				mSessions.put(mSession, null);
-				mSession.syncConfigure();
-				
-				String requestContent = mSession.getSessionDescription();
-				String requestAttributes = 
-						"Content-Base: "+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/\r\n" +
-								"Content-Type: application/sdp\r\n";
+                    // Parse the requested URI and configure the session
+                    mSession = handleRequest(request.uri, mClient);
+                    mSessions.put(mSession, null);
+                    mSession.syncConfigure();
 
-				response.attributes = requestAttributes;
-				response.content = requestContent;
+                    String requestContent = mSession.getSessionDescription();
+                    String requestAttributes =
+                            "Content-Base: " + mClient.getLocalAddress().getHostAddress() + ":" + mClient.getLocalPort() + "/\r\n" +
+                                    "Content-Type: application/sdp\r\n";
 
-				// If no exception has been thrown, we reply with OK
-				response.status = Response.STATUS_OK;
+                    response.attributes = requestAttributes;
+                    response.content = requestContent;
 
-			}
+                    // If no exception has been thrown, we reply with OK
+                    response.status = Response.STATUS_OK;
 
-			/* ********************************************************************************** */
-			/* ********************************* Method OPTIONS ********************************* */
-			/* ********************************************************************************** */
-			else if (request.method.equalsIgnoreCase("OPTIONS")) {
-				response.status = Response.STATUS_OK;
-				response.attributes = "Public: DESCRIBE,SETUP,TEARDOWN,PLAY,PAUSE\r\n";
-				response.status = Response.STATUS_OK;
-			}
+                }
 
-			/* ********************************************************************************** */
-			/* ********************************** Method SETUP ********************************** */
-			/* ********************************************************************************** */
-			else if (request.method.equalsIgnoreCase("SETUP")) {
-				Pattern p; Matcher m;
-				int p2, p1, ssrc, trackId, src[];
-				String destination;
+                /* ********************************************************************************** */
+                /* ********************************* Method OPTIONS ********************************* */
+                /* ********************************************************************************** */
+                else if (request.method.equalsIgnoreCase("OPTIONS")) {
+                    response.status = Response.STATUS_OK;
+                    response.attributes = "Public: DESCRIBE,SETUP,TEARDOWN,PLAY,PAUSE\r\n";
+                    response.status = Response.STATUS_OK;
+                }
 
-				p = Pattern.compile("trackID=(\\w+)",Pattern.CASE_INSENSITIVE);
-				m = p.matcher(request.uri);
+                /* ********************************************************************************** */
+                /* ********************************** Method SETUP ********************************** */
+                /* ********************************************************************************** */
+                else if (request.method.equalsIgnoreCase("SETUP")) {
+                    Pattern p;
+                    Matcher m;
+                    int p2, p1, ssrc, trackId, src[];
+                    String destination;
 
-				if (!m.find()) {
-					response.status = Response.STATUS_BAD_REQUEST;
-					return response;
-				} 
+                    p = Pattern.compile("trackID=(\\w+)", Pattern.CASE_INSENSITIVE);
+                    m = p.matcher(request.uri);
 
-				trackId = Integer.parseInt(m.group(1));
+                    if (!m.find()) {
+                        response.status = Response.STATUS_BAD_REQUEST;
+                        return response;
+                    }
 
-				if (!mSession.trackExists(trackId)) {
-					response.status = Response.STATUS_NOT_FOUND;
-					return response;
-				}
+                    trackId = Integer.parseInt(m.group(1));
 
-				p = Pattern.compile("client_port=(\\d+)-(\\d+)",Pattern.CASE_INSENSITIVE);
-				m = p.matcher(request.headers.get("transport"));
+                    if (!mSession.trackExists(trackId)) {
+                        response.status = Response.STATUS_NOT_FOUND;
+                        return response;
+                    }
 
-				if (!m.find()) {
-					int[] ports = mSession.getTrack(trackId).getDestinationPorts();
-					p1 = ports[0];
-					p2 = ports[1];
-				}
-				else {
-					p1 = Integer.parseInt(m.group(1)); 
-					p2 = Integer.parseInt(m.group(2));
-				}
+                    p = Pattern.compile("client_port=(\\d+)-(\\d+)", Pattern.CASE_INSENSITIVE);
+                    m = p.matcher(request.headers.get("transport"));
 
-				ssrc = mSession.getTrack(trackId).getSSRC();
-				src = mSession.getTrack(trackId).getLocalPorts();
-				destination = mSession.getDestination();
+                    if (!m.find()) {
+                        int[] ports = mSession.getTrack(trackId).getDestinationPorts();
+                        p1 = ports[0];
+                        p2 = ports[1];
+                    } else {
+                        p1 = Integer.parseInt(m.group(1));
+                        p2 = Integer.parseInt(m.group(2));
+                    }
 
-				mSession.getTrack(trackId).setDestinationPorts(p1, p2);
-				
-				boolean streaming = isStreaming();
-				mSession.syncStart(trackId);
-				if (!streaming && isStreaming()) {
-					postMessage(MESSAGE_STREAMING_STARTED);
-				}
+                    ssrc = mSession.getTrack(trackId).getSSRC();
+                    src = mSession.getTrack(trackId).getLocalPorts();
+                    destination = mSession.getDestination();
 
-				response.attributes = "Transport: RTP/AVP/UDP;"+(InetAddress.getByName(destination).isMulticastAddress()?"multicast":"unicast")+
-						";destination="+mSession.getDestination()+
-						";client_port="+p1+"-"+p2+
-						";server_port="+src[0]+"-"+src[1]+
-						";ssrc="+Integer.toHexString(ssrc)+
-						";mode=play\r\n" +
-						"Session: "+ "1185d20035702ca" + "\r\n" +
-						"Cache-Control: no-cache\r\n";
-				response.status = Response.STATUS_OK;
+                    mSession.getTrack(trackId).setDestinationPorts(p1, p2);
 
-				// If no exception has been thrown, we reply with OK
-				response.status = Response.STATUS_OK;
+                    boolean streaming = isStreaming();
+                    mSession.syncStart(trackId);
+                    if (!streaming && isStreaming()) {
+                        postMessage(MESSAGE_STREAMING_STARTED);
+                    }
 
-			}
+                    response.attributes = "Transport: RTP/AVP/UDP;" + (InetAddress.getByName(destination).isMulticastAddress() ? "multicast" : "unicast") +
+                            ";destination=" + mSession.getDestination() +
+                            ";client_port=" + p1 + "-" + p2 +
+                            ";server_port=" + src[0] + "-" + src[1] +
+                            ";ssrc=" + Integer.toHexString(ssrc) +
+                            ";mode=play\r\n" +
+                            "Session: " + "1185d20035702ca" + "\r\n" +
+                            "Cache-Control: no-cache\r\n";
+                    response.status = Response.STATUS_OK;
 
-			/* ********************************************************************************** */
-			/* ********************************** Method PLAY *********************************** */
-			/* ********************************************************************************** */
-			else if (request.method.equalsIgnoreCase("PLAY")) {
-				String requestAttributes = "RTP-Info: ";
-				if (mSession.trackExists(0)) requestAttributes += "url=rtsp://"+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/trackID="+0+";seq=0,";
-				if (mSession.trackExists(1)) requestAttributes += "url=rtsp://"+mClient.getLocalAddress().getHostAddress()+":"+mClient.getLocalPort()+"/trackID="+1+";seq=0,";
-				requestAttributes = requestAttributes.substring(0, requestAttributes.length()-1) + "\r\nSession: 1185d20035702ca\r\n";
+                    // If no exception has been thrown, we reply with OK
+                    response.status = Response.STATUS_OK;
 
-				response.attributes = requestAttributes;
+                }
 
-				// If no exception has been thrown, we reply with OK
-				response.status = Response.STATUS_OK;
+                /* ********************************************************************************** */
+                /* ********************************** Method PLAY *********************************** */
+                /* ********************************************************************************** */
+                else if (request.method.equalsIgnoreCase("PLAY")) {
+                    String requestAttributes = "RTP-Info: ";
+                    if (mSession.trackExists(0))
+                        requestAttributes += "url=rtsp://" + mClient.getLocalAddress().getHostAddress() + ":" + mClient.getLocalPort() + "/trackID=" + 0 + ";seq=0,";
+                    if (mSession.trackExists(1))
+                        requestAttributes += "url=rtsp://" + mClient.getLocalAddress().getHostAddress() + ":" + mClient.getLocalPort() + "/trackID=" + 1 + ";seq=0,";
+                    requestAttributes = requestAttributes.substring(0, requestAttributes.length() - 1) + "\r\nSession: 1185d20035702ca\r\n";
 
-			}
+                    response.attributes = requestAttributes;
 
-			/* ********************************************************************************** */
-			/* ********************************** Method PAUSE ********************************** */
-			/* ********************************************************************************** */
-			else if (request.method.equalsIgnoreCase("PAUSE")) {
-				response.status = Response.STATUS_OK;
-			}
+                    // If no exception has been thrown, we reply with OK
+                    response.status = Response.STATUS_OK;
 
-			/* ********************************************************************************** */
-			/* ********************************* Method TEARDOWN ******************************** */
-			/* ********************************************************************************** */
-			else if (request.method.equalsIgnoreCase("TEARDOWN")) {
-				response.status = Response.STATUS_OK;
-			}
+                }
 
-			/* ********************************************************************************** */
-			/* ********************************* Unknown method ? ******************************* */
-			/* ********************************************************************************** */
-			else {
-				Log.e(TAG,"Command unknown: "+request);
-				response.status = Response.STATUS_BAD_REQUEST;
-			}
+                /* ********************************************************************************** */
+                /* ********************************** Method PAUSE ********************************** */
+                /* ********************************************************************************** */
+                else if (request.method.equalsIgnoreCase("PAUSE")) {
+                    response.status = Response.STATUS_OK;
+                }
 
+                /* ********************************************************************************** */
+                /* ********************************* Method TEARDOWN ******************************** */
+                /* ********************************************************************************** */
+                else if (request.method.equalsIgnoreCase("TEARDOWN")) {
+                    response.status = Response.STATUS_OK;
+                }
+
+                /* ********************************************************************************** */
+                /* ********************************* Unknown method ? ******************************* */
+                /* ********************************************************************************** */
+                else {
+                    Log.e(TAG, "Command unknown: " + request);
+                    response.status = Response.STATUS_BAD_REQUEST;
+                }
+            }
 			return response;
 
 		}
 
+        /**
+         * Check if the request is authorized
+         * @param request
+         * @return true or false
+         */
+        private boolean isAuthorized(Request request)
+        {
+            String auth = request.headers.get("authorization");
+            if(mUsername == null || mPassword == null || mUsername.isEmpty())
+                return true;
+
+            if(auth != null && !auth.isEmpty())
+            {
+                String received = auth.substring(auth.lastIndexOf(" ")+1);
+                String local = mUsername+":"+mPassword;
+                String localEncoded = Base64.encodeToString(local.getBytes(),Base64.NO_WRAP);
+                if(localEncoded.equals(received))
+                    return true;
+            }
+
+            return false;
+        }
 	}
 
 	static class Request {
@@ -611,6 +659,7 @@ public class RtspServer extends Service {
 		// Status code definitions
 		public static final String STATUS_OK = "200 OK";
 		public static final String STATUS_BAD_REQUEST = "400 Bad Request";
+        public static final String STATUS_UNAUTHORIZED = "401 Unauthorized";
 		public static final String STATUS_NOT_FOUND = "404 Not Found";
 		public static final String STATUS_INTERNAL_SERVER_ERROR = "500 Internal Server Error";
 
