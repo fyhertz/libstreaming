@@ -66,7 +66,8 @@ public class UriParser {
 		SessionBuilder builder = SessionBuilder.getInstance().clone();
 		byte audioApi = 0, videoApi = 0;
 
-        String[] queryParams = URI.create(uri).getQuery().split("&");
+		String query = URI.create(uri).getQuery();
+		String[] queryParams = query == null ? new String[0] : query.split("&");
         ContentValues params = new ContentValues();
         for(String param:queryParams)
         {
