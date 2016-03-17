@@ -38,7 +38,7 @@ public class AMRNBPacketizer extends AbstractPacketizer implements Runnable {
 
 	public final static String TAG = "AMRNBPacketizer";
 
-	private final int AMR_HEADER_LENGTH = 6; // "#!AMR\n"
+	private final static int AMR_HEADER_LENGTH = 6; // "#!AMR\n"
 	private static final int AMR_FRAME_HEADER_LENGTH = 1; // Each frame has a short header
 	private static final int[] sFrameBits = {95, 103, 118, 134, 148, 159, 204, 244};
 	private int samplingRate = 8000;

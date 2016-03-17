@@ -302,7 +302,7 @@ public class AACStream extends AudioStream {
 			}
 		}
 
-		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
+		final String testfile = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
 
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
 			throw new IllegalStateException("No external storage or external storage not ready !");
@@ -320,7 +320,7 @@ public class AACStream extends AudioStream {
 		mMediaRecorder.setAudioChannels(1);
 		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
-		mMediaRecorder.setOutputFile(TESTFILE);
+		mMediaRecorder.setOutputFile(testfile);
 		mMediaRecorder.setMaxDuration(1000);
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
@@ -335,7 +335,7 @@ public class AACStream extends AudioStream {
 		mMediaRecorder.release();
 		mMediaRecorder = null;
 
-		File file = new File(TESTFILE);
+		File file = new File(testfile);
 		RandomAccessFile raf = new RandomAccessFile(file, "r");
 
 		// ADTS packets start with a sync word: 12bits set to 1
