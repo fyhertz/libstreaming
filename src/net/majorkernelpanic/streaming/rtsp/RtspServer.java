@@ -32,6 +32,7 @@ import java.net.SocketException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Locale;
+import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -624,7 +625,7 @@ public class RtspServer extends Service {
 
 		public String method;
 		public String uri;
-		public HashMap<String,String> headers = new HashMap<String,String>();
+		public Map<String,String> headers = new HashMap<String,String>();
 
 		/** Parse the method, uri & headers of a RTSP request */
 		public static Request parseRequest(BufferedReader input) throws IOException, IllegalStateException, SocketException {
