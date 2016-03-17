@@ -191,8 +191,8 @@ public class RtspServer extends Service {
 			try {
 				mListenerThread.kill();
 				for ( Session session : mSessions.keySet() ) {
-				    if ( session != null ) {
-				    	if (session.isStreaming()) session.stop();
+				    if ( session != null && session.isStreaming() ) {
+						session.stop();
 				    } 
 				}
 			} catch (Exception e) {
@@ -205,8 +205,8 @@ public class RtspServer extends Service {
 	/** Returns whether or not the RTSP server is streaming to some client(s). */
 	public boolean isStreaming() {
 		for ( Session session : mSessions.keySet() ) {
-		    if ( session != null ) {
-		    	if (session.isStreaming()) return true;
+		    if ( session != null && session.isStreaming() ) {
+		    	return true;
 		    } 
 		}
 		return false;
@@ -220,8 +220,8 @@ public class RtspServer extends Service {
 	public long getBitrate() {
 		long bitrate = 0;
 		for ( Session session : mSessions.keySet() ) {
-		    if ( session != null ) {
-		    	if (session.isStreaming()) bitrate += session.getBitrate();
+		    if ( session != null && session.isStreaming() ) {
+		    	bitrate += session.getBitrate();
 		    } 
 		}
 		return bitrate;

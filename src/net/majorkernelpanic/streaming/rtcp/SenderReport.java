@@ -128,12 +128,10 @@ public class SenderReport {
 		now = SystemClock.elapsedRealtime();
 		delta += oldnow != 0 ? now-oldnow : 0;
 		oldnow = now;
-		if (interval>0) {
-			if (delta>=interval) {
-				// We send a Sender Report
-				send(System.nanoTime(), rtpts);
-				delta = 0;
-			}
+		if (interval>0 && delta>=interval) {
+			// We send a Sender Report
+			send(System.nanoTime(), rtpts);
+			delta = 0;
 		}
 		
 	}

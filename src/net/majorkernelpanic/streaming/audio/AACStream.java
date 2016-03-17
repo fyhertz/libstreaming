@@ -292,14 +292,12 @@ public class AACStream extends AudioStream {
 
 		String key = PREF_PREFIX+"aac-"+mQuality.samplingRate;
 
-		if (mSettings!=null) {
-			if (mSettings.contains(key)) {
-				String[] s = mSettings.getString(key, "").split(",");
-				mQuality.samplingRate = Integer.valueOf(s[0]);
-				mConfig = Integer.valueOf(s[1]);
-				mChannel = Integer.valueOf(s[2]);
-				return;
-			}
+		if (mSettings!=null && mSettings.contains(key)) {
+			String[] s = mSettings.getString(key, "").split(",");
+			mQuality.samplingRate = Integer.valueOf(s[0]);
+			mConfig = Integer.valueOf(s[1]);
+			mChannel = Integer.valueOf(s[2]);
+			return;
 		}
 
 		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";

@@ -479,10 +479,8 @@ public class EncoderDebugger {
 					stride = format.getInteger("stride");
 					if (stride<mWidth) stride = mWidth;
 				}
-				if (format.containsKey(MediaFormat.KEY_COLOR_FORMAT)) {
-					if (format.getInteger(MediaFormat.KEY_COLOR_FORMAT)>0) {
-						colorFormat = format.getInteger(MediaFormat.KEY_COLOR_FORMAT);
-					}
+				if (format.containsKey(MediaFormat.KEY_COLOR_FORMAT) && format.getInteger(MediaFormat.KEY_COLOR_FORMAT)>0) {
+					colorFormat = format.getInteger(MediaFormat.KEY_COLOR_FORMAT);
 				}
 			}
 		}
