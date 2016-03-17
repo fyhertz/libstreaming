@@ -72,9 +72,9 @@ public class VideoQuality {
 
 	public boolean equals(VideoQuality quality) {
 		if (quality==null) return false;
-		return (quality.resX == this.resX 			&
-				quality.resY == this.resY 			&
-				quality.framerate == this.framerate	&
+		return (quality.resX == this.resX 			&&
+				quality.resY == this.resY 			&&
+				quality.framerate == this.framerate	&&
 				quality.bitrate == this.bitrate);
 	}
 

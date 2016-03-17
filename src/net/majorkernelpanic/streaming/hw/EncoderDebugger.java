@@ -680,7 +680,7 @@ public class EncoderDebugger {
 			elapsed = timestamp() - now;
 		}
 
-		check(mPPS != null & mSPS != null, "Could not determine the SPS & PPS.");
+		check(mPPS != null && mSPS != null, "Could not determine the SPS & PPS.");
 		mB64PPS = Base64.encodeToString(mPPS, 0, mPPS.length, Base64.NO_WRAP);
 		mB64SPS = Base64.encodeToString(mSPS, 0, mSPS.length, Base64.NO_WRAP);
 
