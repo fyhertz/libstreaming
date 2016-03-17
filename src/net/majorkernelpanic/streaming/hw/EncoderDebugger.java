@@ -807,10 +807,7 @@ public class EncoderDebugger {
 	 * @param withPrefix If set to true, the NAL will be preceded with 0x00000001.
 	 */
 	private boolean hasPrefix(byte[] nal) {
-		if (nal[0] == 0 && nal[1] == 0 && nal[2] == 0 && nal[3] == 0x01)
-			return true;
-		else
-			return false;
+		return nal[0] == 0 && nal[1] == 0 && nal[2] == 0 && nal[3] == 0x01;
 	}
 	
 	/**
