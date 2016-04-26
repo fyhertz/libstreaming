@@ -1,18 +1,18 @@
 /*
  * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- * 
+ *
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This source code is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this source code; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -51,11 +51,11 @@ import android.util.Log;
 
 /**
  * Implementation of a subset of the RTSP protocol (RFC 2326).
- * 
+ *
  * It allows remote control of an android device cameras & microphone.
  * For each connected client, a Session is instantiated.
  * The Session will start or stop streams according to what the client wants.
- * 
+ *
  */
 public class RtspServer extends Service {
 
@@ -75,10 +75,10 @@ public class RtspServer extends Service {
 
 	/** Streaming started. */
 	public final static int MESSAGE_STREAMING_STARTED = 0X00;
-	
+
 	/** Streaming stopped. */
 	public final static int MESSAGE_STREAMING_STOPPED = 0X01;
-	
+
 	/** Key used in the SharedPreferences to store whether the RTSP server is enabled or not. */
 	public final static String KEY_ENABLED = "rtsp_enabled";
 
@@ -87,10 +87,10 @@ public class RtspServer extends Service {
 
 	protected SessionBuilder mSessionBuilder;
 	protected SharedPreferences mSharedPreferences;
-	protected boolean mEnabled = true;	
+	protected boolean mEnabled = true;
 	protected int mPort = DEFAULT_RTSP_PORT;
 	protected WeakHashMap<Session,Object> mSessions = new WeakHashMap<Session,Object>(2);
-	
+
 	private RequestListener mListenerThread;
 	private final IBinder mBinder = new LocalBinder();
 	private boolean mRestart = false;
@@ -99,7 +99,7 @@ public class RtspServer extends Service {
     /** Credentials for Basic Auth */
     private String mUsername;
     private String mPassword;
-	
+
 
 	public RtspServer() {
 	}
@@ -112,7 +112,7 @@ public class RtspServer extends Service {
 
 		/** Called when streaming starts/stops. */
 		void onMessage(RtspServer server, int message);
-		
+
 	}
 
 	/**
@@ -126,7 +126,7 @@ public class RtspServer extends Service {
 					if (cl == listener) return;
 				}
 			}
-			mListeners.add(listener);			
+			mListeners.add(listener);
 		}
 	}
 
@@ -136,11 +136,11 @@ public class RtspServer extends Service {
 	 */
 	public void removeCallbackListener(CallbackListener listener) {
 		synchronized (mListeners) {
-			mListeners.remove(listener);				
+			mListeners.remove(listener);
 		}
 	}
 
-	/** Returns the port used by the RTSP server. */	
+	/** Returns the port used by the RTSP server. */
 	public int getPort() {
 		return mPort;
 	}
@@ -166,9 +166,9 @@ public class RtspServer extends Service {
         mPassword = password;
     }
 
-	/** 
-	 * Starts (or restart if needed, if for example the configuration 
-	 * of the server has been modified) the RTSP server. 
+	/**
+	 * Starts (or restart if needed, if for example the configuration
+	 * of the server has been modified) the RTSP server.
 	 */
 	public void start() {
 		if (!mEnabled || mRestart) stop();
@@ -182,9 +182,9 @@ public class RtspServer extends Service {
 		mRestart = false;
 	}
 
-	/** 
-	 * Stops the RTSP server but not the Android Service. 
-	 * To stop the Android Service you need to call {@link android.content.Context#stopService(Intent)}; 
+	/**
+	 * Stops the RTSP server but not the Android Service.
+	 * To stop the Android Service you need to call {@link android.content.Context#stopService(Intent)};
 	 */
 	public void stop() {
 		if (mListenerThread != null) {
@@ -193,11 +193,12 @@ public class RtspServer extends Service {
 				for ( Session session : mSessions.keySet() ) {
 				    if ( session != null ) {
 				    	if (session.isStreaming()) session.stop();
-				    } 
+				    }
 				}
 			} catch (Exception e) {
 			} finally {
 				mListenerThread = null;
+				postMessage(MESSAGE_STREAMING_STOPPED);
 			}
 		}
 	}
@@ -207,11 +208,11 @@ public class RtspServer extends Service {
 		for ( Session session : mSessions.keySet() ) {
 		    if ( session != null ) {
 		    	if (session.isStreaming()) return true;
-		    } 
+		    }
 		}
 		return false;
 	}
-	
+
 	public boolean isEnabled() {
 		return mEnabled;
 	}
@@ -222,11 +223,11 @@ public class RtspServer extends Service {
 		for ( Session session : mSessions.keySet() ) {
 		    if ( session != null ) {
 		    	if (session.isStreaming()) bitrate += session.getBitrate();
-		    } 
+		    }
 		}
 		return bitrate;
 	}
-	
+
 	@Override
 	public int onStartCommand(Intent intent, int flags, int startId) {
 		return START_STICKY;
@@ -235,7 +236,7 @@ public class RtspServer extends Service {
 	@Override
 	public void onCreate() {
 
-		// Let's restore the state of the service 
+		// Let's restore the state of the service
 		mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
 		mPort = Integer.parseInt(mSharedPreferences.getString(KEY_PORT, String.valueOf(mPort)));
 		mEnabled = mSharedPreferences.getBoolean(KEY_ENABLED, mEnabled);
@@ -263,7 +264,7 @@ public class RtspServer extends Service {
 					mRestart = true;
 					start();
 				}
-			}		
+			}
 			else if (key.equals(KEY_ENABLED)) {
 				mEnabled = sharedPreferences.getBoolean(KEY_ENABLED, mEnabled);
 				start();
@@ -289,21 +290,21 @@ public class RtspServer extends Service {
 				for (CallbackListener cl : mListeners) {
 					cl.onMessage(this, id);
 				}
-			}			
+			}
 		}
-	}	
-	
+	}
+
 	protected void postError(Exception exception, int id) {
 		synchronized (mListeners) {
 			if (mListeners.size() > 0) {
 				for (CallbackListener cl : mListeners) {
 					cl.onError(this, exception, id);
 				}
-			}			
+			}
 		}
 	}
 
-	/** 
+	/**
 	 * By default the RTSP uses {@link UriParser} to parse the URI requested by the client
 	 * but you can change that behavior by override this method.
 	 * @param uri The uri that the client has requested
@@ -318,7 +319,7 @@ public class RtspServer extends Service {
 		}
 		return session;
 	}
-	
+
 	class RequestListener extends Thread implements Runnable {
 
 		private final ServerSocket mServer;
@@ -692,7 +693,7 @@ public class RtspServer extends Service {
 					(seqid>=0?("Cseq: " + seqid + "\r\n"):"") +
 					"Content-Length: " + content.length() + "\r\n" +
 					attributes +
-					"\r\n" + 
+					"\r\n" +
 					content;
 
 			Log.d(TAG,response.replace("\r", ""));
