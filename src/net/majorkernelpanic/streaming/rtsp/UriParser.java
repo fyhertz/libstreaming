@@ -1,18 +1,18 @@
 /*
  * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- * 
+ *
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This source code is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this source code; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -49,7 +49,7 @@ import android.hardware.Camera.CameraInfo;
 public class UriParser {
 
 	public final static String TAG = "UriParser";
-	
+
 	/**
 	 * Configures a Session according to the given URI.
 	 * Here are some examples of URIs that can be used to configure a Session:
@@ -66,7 +66,8 @@ public class UriParser {
 		SessionBuilder builder = SessionBuilder.getInstance().clone();
 		byte audioApi = 0, videoApi = 0;
 
-        String[] queryParams = URI.create(uri).getQuery().split("&");
+        String query = URI.create(uri).getQuery();
+        String[] queryParams = query == null ? new String[0] : query.split("&");
         ContentValues params = new ContentValues();
         for(String param:queryParams)
         {
@@ -93,17 +94,17 @@ public class UriParser {
 
 				// FLASH ON/OFF
 				if (paramName.equalsIgnoreCase("flash")) {
-					if (paramValue.equalsIgnoreCase("on")) 
+					if (paramValue.equalsIgnoreCase("on"))
 						builder.setFlashEnabled(true);
-					else 
+					else
 						builder.setFlashEnabled(false);
 				}
 
 				// CAMERA -> the client can choose between the front facing camera and the back facing camera
 				else if (paramName.equalsIgnoreCase("camera")) {
-					if (paramValue.equalsIgnoreCase("back")) 
+					if (paramValue.equalsIgnoreCase("back"))
 						builder.setCamera(CameraInfo.CAMERA_FACING_BACK);
-					else if (paramValue.equalsIgnoreCase("front")) 
+					else if (paramValue.equalsIgnoreCase("front"))
 						builder.setCamera(CameraInfo.CAMERA_FACING_FRONT);
 				}
 
@@ -131,9 +132,9 @@ public class UriParser {
 				else if (paramName.equalsIgnoreCase("unicast")) {
 					if (paramValue!=null) {
 						builder.setDestination(paramValue);
-					}					
+					}
 				}
-				
+
 				// VIDEOAPI -> can be used to specify what api will be used to encode video (the MediaRecorder API or the MediaCodec API)
 				else if (paramName.equalsIgnoreCase("videoapi")) {
 					if (paramValue!=null) {
@@ -142,9 +143,9 @@ public class UriParser {
 						} else if (paramValue.equalsIgnoreCase("mc")) {
 							videoApi = MediaStream.MODE_MEDIACODEC_API;
 						}
-					}					
+					}
 				}
-				
+
 				// AUDIOAPI -> can be used to specify what api will be used to encode audio (the MediaRecorder API or the MediaCodec API)
 				else if (paramName.equalsIgnoreCase("audioapi")) {
 					if (paramValue!=null) {
@@ -153,8 +154,8 @@ public class UriParser {
 						} else if (paramValue.equalsIgnoreCase("mc")) {
 							audioApi = MediaStream.MODE_MEDIACODEC_API;
 						}
-					}					
-				}		
+					}
+				}
 
 				// TTL -> the client can modify the time to live of packets
 				// By default ttl=64
@@ -205,15 +206,15 @@ public class UriParser {
 		}
 
 		Session session = builder.build();
-		
+
 		if (videoApi>0 && session.getVideoTrack() != null) {
 			session.getVideoTrack().setStreamingMethod(videoApi);
 		}
-		
+
 		if (audioApi>0 && session.getAudioTrack() != null) {
 			session.getAudioTrack().setStreamingMethod(audioApi);
 		}
-		
+
 		return session;
 
 	}
