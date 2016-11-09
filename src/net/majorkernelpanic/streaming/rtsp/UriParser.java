@@ -66,30 +66,56 @@ public class UriParser {
 		SessionBuilder builder = SessionBuilder.getInstance().clone();
 		byte audioApi = 0, videoApi = 0;
 
-        String[] queryParams = URI.create(uri).getQuery().split("&");
-        ContentValues params = new ContentValues();
-        for(String param:queryParams)
-        {
-            String[] keyValue = param.split("=");
+		String query = URI.create(uri).getQuery();
+		if (query != null) {
+			builder = applyQueryParams(builder, query, audioApi, videoApi);
+		}
+
+		if (builder.getVideoEncoder()==VIDEO_NONE && builder.getAudioEncoder()==AUDIO_NONE) {
+			SessionBuilder b = SessionBuilder.getInstance();
+			builder.setVideoEncoder(b.getVideoEncoder());
+			builder.setAudioEncoder(b.getAudioEncoder());
+		}
+
+		Session session = builder.build();
+		
+		if (videoApi>0 && session.getVideoTrack() != null) {
+			session.getVideoTrack().setStreamingMethod(videoApi);
+		}
+		
+		if (audioApi>0 && session.getAudioTrack() != null) {
+			session.getAudioTrack().setStreamingMethod(audioApi);
+		}
+		
+		return session;
+
+	}
+
+	private static SessionBuilder applyQueryParams(SessionBuilder builder, String query, byte audioApi, byte videoApi) throws IllegalStateException, IOException {
+		String[] queryParams = query.split("&");
+		ContentValues params = new ContentValues();
+		for(String param:queryParams)
+		{
+			String[] keyValue = param.split("=");
 			String value = "";
 			try {
 				value = keyValue[1];
 			}catch(ArrayIndexOutOfBoundsException e){}
 
-            params.put(
-                    URLEncoder.encode(keyValue[0], "UTF-8"), // Name
-                    URLEncoder.encode(value, "UTF-8")  // Value
-            );
+			params.put(
+					URLEncoder.encode(keyValue[0], "UTF-8"), // Name
+					URLEncoder.encode(value, "UTF-8")  // Value
+			);
 
-        }
+		}
 
 		if (params.size()>0) {
 
 			builder.setAudioEncoder(AUDIO_NONE).setVideoEncoder(VIDEO_NONE);
-            Set<String> paramKeys=params.keySet();
+			Set<String> paramKeys=params.keySet();
 			// Those parameters must be parsed first or else they won't necessarily be taken into account
-            for(String paramName: paramKeys) {
-                String paramValue = params.getAsString(paramName);
+			for(String paramName: paramKeys) {
+				String paramValue = params.getAsString(paramName);
 
 				// FLASH ON/OFF
 				if (paramName.equalsIgnoreCase("flash")) {
@@ -197,25 +223,7 @@ public class UriParser {
 			}
 
 		}
-
-		if (builder.getVideoEncoder()==VIDEO_NONE && builder.getAudioEncoder()==AUDIO_NONE) {
-			SessionBuilder b = SessionBuilder.getInstance();
-			builder.setVideoEncoder(b.getVideoEncoder());
-			builder.setAudioEncoder(b.getAudioEncoder());
-		}
-
-		Session session = builder.build();
-		
-		if (videoApi>0 && session.getVideoTrack() != null) {
-			session.getVideoTrack().setStreamingMethod(videoApi);
-		}
-		
-		if (audioApi>0 && session.getAudioTrack() != null) {
-			session.getAudioTrack().setStreamingMethod(audioApi);
-		}
-		
-		return session;
-
+		return builder;
 	}
 
 }
