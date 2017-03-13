@@ -243,6 +243,4 @@ Visit [this github page](https://github.com/fyhertz/spydroid-ipcamera) to see ho
 Further information about Spydroid can be found on the google page of the project [here](https://spydroid-ipcamera.googlecode.com).
 The app. is also available on google play [here](https://play.google.com/store/apps/details?id=net.majorkernelpanic.spydroid).
 
-# Licensing
 
-This streaming stack is available under two licenses, the GPL and a commercial license. *If you are willing to integrate this project into a close source application, please contact me at fyhertz at gmail.com*. Thank you.
