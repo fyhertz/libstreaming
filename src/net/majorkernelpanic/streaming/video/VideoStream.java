@@ -156,7 +156,7 @@ public abstract class VideoStream extends MediaStream {
 		if (mSurfaceHolderCallback != null && mSurfaceView != null && mSurfaceView.getHolder() != null) {
 			mSurfaceView.getHolder().removeCallback(mSurfaceHolderCallback);
 		}
-		if (mSurfaceView.getHolder() != null) {
+		if (mSurfaceView != null && mSurfaceView.getHolder() != null) {
 			mSurfaceHolderCallback = new Callback() {
 				@Override
 				public void surfaceDestroyed(SurfaceHolder holder) {
