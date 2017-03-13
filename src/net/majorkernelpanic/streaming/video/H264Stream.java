@@ -143,11 +143,9 @@ public class H264Stream extends VideoStream {
 	private MP4Config testMediaRecorderAPI() throws RuntimeException, IOException {
 		String key = PREF_PREFIX+"h264-mr-"+mRequestedQuality.framerate+","+mRequestedQuality.resX+","+mRequestedQuality.resY;
 	
-		if (mSettings != null) {
-			if (mSettings.contains(key)) {
-				String[] s = mSettings.getString(key, "").split(",");
-				return new MP4Config(s[0],s[1],s[2]);
-			}
+		if (mSettings != null && mSettings.contains(key) ) {
+			String[] s = mSettings.getString(key, "").split(",");
+			return new MP4Config(s[0],s[1],s[2]);
 		}
 		
 		if (!Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED)) {
