@@ -1,18 +1,18 @@
 /*
  * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
- * 
+ *
  * Spydroid is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation; either version 3 of the License, or
  * (at your option) any later version.
- * 
+ *
  * This source code is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU General Public License
  * along with this source code; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
@@ -65,7 +65,7 @@ public class SessionBuilder {
 	private VideoQuality mVideoQuality = VideoQuality.DEFAULT_VIDEO_QUALITY;
 	private AudioQuality mAudioQuality = AudioQuality.DEFAULT_AUDIO_QUALITY;
 	private Context mContext;
-	private int mVideoEncoder = VIDEO_H263; 
+	private int mVideoEncoder = VIDEO_H263;
 	private int mAudioEncoder = AUDIO_AMRNB;
 	private int mCamera = CameraInfo.CAMERA_FACING_BACK;
 	private int mTimeToLive = 64;
@@ -80,7 +80,7 @@ public class SessionBuilder {
 	private SessionBuilder() {}
 
 	// The SessionManager implements the singleton pattern
-	private static volatile SessionBuilder sInstance = null; 
+	private static volatile SessionBuilder sInstance = null;
 
 	/**
 	 * Returns a reference to the {@link SessionBuilder}.
@@ -95,12 +95,12 @@ public class SessionBuilder {
 			}
 		}
 		return sInstance;
-	}	
+	}
 
 	/**
 	 * Creates a new {@link Session}.
 	 * @return The new Session
-	 * @throws IOException 
+	 * @throws IOException
 	 */
 	public Session build() {
 		Session session;
@@ -115,7 +115,7 @@ public class SessionBuilder {
 		case AUDIO_AAC:
 			AACStream stream = new AACStream();
 			session.addAudioTrack(stream);
-			if (mContext!=null) 
+			if (mContext!=null)
 				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 			break;
 		case AUDIO_AMRNB:
@@ -129,7 +129,7 @@ public class SessionBuilder {
 			break;
 		case VIDEO_H264:
 			H264Stream stream = new H264Stream(mCamera);
-			if (mContext!=null) 
+			if (mContext!=null)
 				stream.setPreferences(PreferenceManager.getDefaultSharedPreferences(mContext));
 			session.addVideoTrack(stream);
 			break;
@@ -141,20 +141,20 @@ public class SessionBuilder {
 			video.setVideoQuality(mVideoQuality);
 			video.setSurfaceView(mSurfaceView);
 			video.setPreviewOrientation(mOrientation);
-			video.setDestinationPorts(5006);
+			video.setDestinationPorts(5000 + (int)(Math.random()*1000));
 		}
 
 		if (session.getAudioTrack()!=null) {
 			AudioStream audio = session.getAudioTrack();
 			audio.setAudioQuality(mAudioQuality);
-			audio.setDestinationPorts(5004);
+			audio.setDestinationPorts(6000 + (int)(Math.random()*1000));
 		}
 
 		return session;
 
 	}
 
-	/** 
+	/**
 	 * Access to the context is needed for the H264Stream class to store some stuff in the SharedPreferences.
 	 * Note that you should pass the Application context, not the context of an Activity.
 	 **/
@@ -166,7 +166,7 @@ public class SessionBuilder {
 	/** Sets the destination of the session. */
 	public SessionBuilder setDestination(String destination) {
 		mDestination = destination;
-		return this; 
+		return this;
 	}
 
 	/** Sets the origin of the session. It appears in the SDP of the session. */
@@ -180,13 +180,13 @@ public class SessionBuilder {
 		mVideoQuality = quality.clone();
 		return this;
 	}
-	
+
 	/** Sets the audio encoder. */
 	public SessionBuilder setAudioEncoder(int encoder) {
 		mAudioEncoder = encoder;
 		return this;
 	}
-	
+
 	/** Sets the audio quality. */
 	public SessionBuilder setAudioQuality(AudioQuality quality) {
 		mAudioQuality = quality.clone();
@@ -214,31 +214,31 @@ public class SessionBuilder {
 		return this;
 	}
 
-	/** 
-	 * Sets the SurfaceView required to preview the video stream. 
+	/**
+	 * Sets the SurfaceView required to preview the video stream.
 	 **/
 	public SessionBuilder setSurfaceView(SurfaceView surfaceView) {
 		mSurfaceView = surfaceView;
 		return this;
 	}
-	
-	/** 
+
+	/**
 	 * Sets the orientation of the preview.
 	 * @param orientation The orientation of the preview
 	 */
 	public SessionBuilder setPreviewOrientation(int orientation) {
 		mOrientation = orientation;
 		return this;
-	}	
-	
+	}
+
 	public SessionBuilder setCallback(Session.Callback callback) {
 		mCallback = callback;
 		return this;
 	}
-	
+
 	/** Returns the context set with {@link #setContext(Context)}*/
 	public Context getContext() {
-		return mContext;	
+		return mContext;
 	}
 
 	/** Returns the destination ip address set with {@link #setDestination(String)}. */
@@ -270,7 +270,7 @@ public class SessionBuilder {
 	public VideoQuality getVideoQuality() {
 		return mVideoQuality;
 	}
-	
+
 	/** Returns the AudioQuality set with {@link #setAudioQuality(AudioQuality)}. */
 	public AudioQuality getAudioQuality() {
 		return mAudioQuality;
@@ -285,8 +285,8 @@ public class SessionBuilder {
 	public SurfaceView getSurfaceView() {
 		return mSurfaceView;
 	}
-	
-	
+
+
 	/** Returns the time to live set with {@link #setTimeToLive(int)}. */
 	public int getTimeToLive() {
 		return mTimeToLive;
