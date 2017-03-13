@@ -354,10 +354,7 @@ public class Session {
 
 	/** Indicates if a track is currently running. */
 	public boolean isStreaming() {
-		if ( (mAudioStream!=null && mAudioStream.isStreaming()) || (mVideoStream!=null && mVideoStream.isStreaming()) )
-			return true;
-		else 
-			return false;
+		return (mAudioStream!=null && mAudioStream.isStreaming()) || (mVideoStream!=null && mVideoStream.isStreaming());
 	}
 
 	/** 

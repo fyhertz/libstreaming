@@ -121,7 +121,7 @@ public class RtspServer extends Service {
 	 */
 	public void addCallbackListener(CallbackListener listener) {
 		synchronized (mListeners) {
-			if (mListeners.size() > 0) {
+			if (!mListeners.isEmpty()) {
 				for (CallbackListener cl : mListeners) {
 					if (cl == listener) return;
 				}
@@ -285,7 +285,7 @@ public class RtspServer extends Service {
 
 	protected void postMessage(int id) {
 		synchronized (mListeners) {
-			if (mListeners.size() > 0) {
+			if (!mListeners.isEmpty()) {
 				for (CallbackListener cl : mListeners) {
 					cl.onMessage(this, id);
 				}
@@ -295,7 +295,7 @@ public class RtspServer extends Service {
 	
 	protected void postError(Exception exception, int id) {
 		synchronized (mListeners) {
-			if (mListeners.size() > 0) {
+			if (!mListeners.isEmpty()) {
 				for (CallbackListener cl : mListeners) {
 					cl.onError(this, exception, id);
 				}
