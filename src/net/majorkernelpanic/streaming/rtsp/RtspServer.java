@@ -681,10 +681,13 @@ public class RtspServer extends Service {
 		public void send(OutputStream output) throws IOException {
 			int seqid = -1;
 
-			try {
-				seqid = Integer.parseInt(mRequest.headers.get("cseq").replace(" ",""));
-			} catch (Exception e) {
-				Log.e(TAG,"Error parsing CSeq: "+(e.getMessage()!=null?e.getMessage():""));
+			if (mRequest != null) {
+				try {
+					seqid = Integer.parseInt(mRequest.headers.get("cseq").replace(" ", ""));
+				} catch (Exception e) {
+					Log.e(TAG, "Error parsing CSeq: " + (e.getMessage() != null ? e.getMessage() : ""));
+					e.printStackTrace();
+				}
 			}
 
 			String response = 	"RTSP/1.0 "+status+"\r\n" +
