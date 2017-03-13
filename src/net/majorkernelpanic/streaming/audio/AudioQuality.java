@@ -46,7 +46,7 @@ public class AudioQuality {
 
 	public boolean equals(AudioQuality quality) {
 		if (quality==null) return false;
-		return (quality.samplingRate == this.samplingRate 				&
+		return (quality.samplingRate == this.samplingRate     &&
 				quality.bitRate == this.bitRate);
 	}
 

@@ -214,7 +214,7 @@ public class RtspClient {
 	}
 	
 	public boolean isStreaming() {
-		return mState==STATE_STARTED|mState==STATE_STARTING;
+		return mState==STATE_STARTED||mState==STATE_STARTING;
 	}
 
 	/**
