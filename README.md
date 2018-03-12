@@ -240,7 +240,4 @@ context.stopService(new Intent(this,RtspServer.class));
 # Spydroid-ipcamera
 
 Visit [this github page](https://github.com/fyhertz/spydroid-ipcamera) to see how this streaming stack can be used and how it performs.
-Further information about Spydroid can be found on the google page of the project [here](https://spydroid-ipcamera.googlecode.com).
-The app. is also available on google play [here](https://play.google.com/store/apps/details?id=net.majorkernelpanic.spydroid).
-
 
