@@ -13,7 +13,7 @@ The first step you will need to achieve to start a streaming session to some pee
 * With the RTSP server: in that case the phone will act as a RTSP server and wait for a RTSP client to request a stream. This use case is illustated in [the example 1](https://github.com/fyhertz/libstreaming-examples#example-1).
 * Or you use libstreaming without using the RTSP protocol at all, and signal the session using SDP over a protocol you like. [The example 2](https://github.com/fyhertz/libstreaming-examples#example-2) illustrates that use case.
 
-The full javadoc documentation of the API is available here: http://majorkernelpanic.com/libstreaming/doc-v4
+The full javadoc documentation of the API is available here: http://guigui.us/libstreaming/doc
 
 ## How does it work? You should really read this, it's important!
 
@@ -42,15 +42,15 @@ The **MediaCodec** API do not present the limitations I just mentionned, but has
 The buffer-to-buffer method uses calls to [**dequeueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#dequeueInputBuffer(long)) and [**queueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#queueInputBuffer(int, int, int, long, int)) to feed the encoder with raw data.
 That seems easy right ? Well it's not, because video encoders that you get access to with this API are using different color formats and you need to support all of them. A list of those color formats is available [here](http://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities.html). Moreover, many encoders claim support for color formats they don't actually support properly or can present little glitches.
 
-All the [**hw**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/hw/package-summary.html) package is dedicated to solving those issues. See in particular [**EncoderDebugger**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/hw/EncoderDebugger.html) class. 
+All the [**hw**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/hw/package-summary.html) package is dedicated to solving those issues. See in particular [**EncoderDebugger**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/hw/EncoderDebugger.html) class. 
 
 If streaming with that API fails, libstreaming fallbacks on streaming with the **MediaRecorder API**.
 
 The surface-to-buffer method uses the [createInputSurface()](http://developer.android.com/reference/android/media/MediaCodec.html#createInputSurface()) method. This method is probably the best way to encode raw video from the camera but it requires android 4.3 and up.
 
-The [**gl**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/gl/package-summary.html) package is dedicated to using the MediaCodec API with a surface.
+The [**gl**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/gl/package-summary.html) package is dedicated to using the MediaCodec API with a surface.
 
-It is not yet enabled by default in libstreaming but you can force it with the [**setStreamingMethod(byte)**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/MediaStream.html#setStreamingMethod(byte)) method.
+It is not yet enabled by default in libstreaming but you can force it with the [**setStreamingMethod(byte)**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/MediaStream.html#setStreamingMethod(byte)) method.
 
 ### Packetization process
 
@@ -65,7 +65,7 @@ If you are looking for a basic implementation of one of the RFC mentionned above
 
 RTCP packets are also sent to the receiver since version 2.0 of libstreaming. Only Sender Reports are implemented. They are actually needed for lip sync.
 
-The [**rtp**](http://majorkernelpanic.com/libstreaming/doc-v4/net/majorkernelpanic/streaming/rtp/package-summary.html) package handles packetization of encoded data in RTP packets.
+The [**rtp**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/rtp/package-summary.html) package handles packetization of encoded data in RTP packets.
 
 # Using libstreaming in your app
 
