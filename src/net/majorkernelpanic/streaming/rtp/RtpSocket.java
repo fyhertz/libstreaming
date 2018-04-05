@@ -65,7 +65,7 @@ public class RtpSocket implements Runnable {
 	private int mSsrc, mSeq = 0, mPort = -1;
 	private int mBufferCount, mBufferIn, mBufferOut;
 	private int mCount = 0;
-	private byte mTcpHeader[];
+	private byte[] mTcpHeader;
 	protected OutputStream mOutputStream = null;
 	
 	private AverageBitrate mAverageBitrate;
