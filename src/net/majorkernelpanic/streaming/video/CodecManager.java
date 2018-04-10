@@ -62,8 +62,8 @@ public class CodecManager {
 	 */
 	static class Selector {
 
-		private static HashMap<String,SparseArray<ArrayList<String>>> sHardwareCodecs = new HashMap<String, SparseArray<ArrayList<String>>>();
-		private static HashMap<String,SparseArray<ArrayList<String>>> sSoftwareCodecs = new HashMap<String, SparseArray<ArrayList<String>>>();
+		private static HashMap<String,SparseArray<ArrayList<String>>> sHardwareCodecs = new HashMap<>();
+		private static HashMap<String,SparseArray<ArrayList<String>>> sSoftwareCodecs = new HashMap<>();
 
 		/**
 		 * Determines the most appropriate encoder to compress the video from the Camera

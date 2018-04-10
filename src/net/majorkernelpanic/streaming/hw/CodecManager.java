@@ -59,7 +59,7 @@ public class CodecManager {
 	public synchronized static Codec[] findEncodersForMimeType(String mimeType) {
 		if (sEncoders != null) return sEncoders;
 
-		ArrayList<Codec> encoders = new ArrayList<Codec>();
+		ArrayList<Codec> encoders = new ArrayList<>();
 
 		// We loop through the encoders, apparently this can take up to a sec (testes on a GS3)
 		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
@@ -71,7 +71,7 @@ public class CodecManager {
 				if (types[i].equalsIgnoreCase(mimeType)) {
 					try {
 						MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
-						Set<Integer> formats = new HashSet<Integer>();
+						Set<Integer> formats = new HashSet<>();
 
 						// And through the color formats supported
 						for (int k = 0; k < capabilities.colorFormats.length; k++) {
@@ -105,7 +105,7 @@ public class CodecManager {
 	@SuppressLint("NewApi")
 	public synchronized static Codec[] findDecodersForMimeType(String mimeType) {
 		if (sDecoders != null) return sDecoders;
-		ArrayList<Codec> decoders = new ArrayList<Codec>();
+		ArrayList<Codec> decoders = new ArrayList<>();
 
 		// We loop through the decoders, apparently this can take up to a sec (testes on a GS3)
 		for(int j = MediaCodecList.getCodecCount() - 1; j >= 0; j--){
@@ -117,7 +117,7 @@ public class CodecManager {
 				if (types[i].equalsIgnoreCase(mimeType)) {
 					try {
 						MediaCodecInfo.CodecCapabilities capabilities = codecInfo.getCapabilitiesForType(mimeType);
-						Set<Integer> formats = new HashSet<Integer>();
+						Set<Integer> formats = new HashSet<>();
 
 						// And through the color formats supported
 						for (int k = 0; k < capabilities.colorFormats.length; k++) {

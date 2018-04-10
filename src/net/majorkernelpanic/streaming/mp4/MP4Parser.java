@@ -36,7 +36,7 @@ public class MP4Parser {
 
 	private static final String TAG = "MP4Parser";
 
-	private HashMap<String, Long> mBoxes = new HashMap<String, Long>();
+	private HashMap<String, Long> mBoxes = new HashMap<>();
 	private final RandomAccessFile mFile;
 	private long mPos = 0;
 

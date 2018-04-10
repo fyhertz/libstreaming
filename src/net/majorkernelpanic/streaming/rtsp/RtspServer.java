@@ -86,12 +86,12 @@ public class RtspServer extends Service {
 	protected SharedPreferences mSharedPreferences;
 	protected boolean mEnabled = true;	
 	protected int mPort = DEFAULT_RTSP_PORT;
-	protected WeakHashMap<Session,Object> mSessions = new WeakHashMap<Session,Object>(2);
+	protected WeakHashMap<Session,Object> mSessions = new WeakHashMap<>(2);
 	
 	private RequestListener mListenerThread;
 	private final IBinder mBinder = new LocalBinder();
 	private boolean mRestart = false;
-	private final LinkedList<CallbackListener> mListeners = new LinkedList<CallbackListener>();
+	private final LinkedList<CallbackListener> mListeners = new LinkedList<>();
 
     /** Credentials for Basic Auth */
     private String mUsername;
@@ -621,7 +621,7 @@ public class RtspServer extends Service {
 
 		public String method;
 		public String uri;
-		public HashMap<String,String> headers = new HashMap<String,String>();
+		public HashMap<String,String> headers = new HashMap<>();
 
 		/** Parse the method, uri & headers of a RTSP request */
 		public static Request parseRequest(BufferedReader input) throws IOException, IllegalStateException, SocketException {
