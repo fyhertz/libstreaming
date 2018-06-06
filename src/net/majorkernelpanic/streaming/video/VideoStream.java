@@ -649,14 +649,22 @@ public abstract class VideoStream extends MediaStream {
 
 		Parameters parameters = mCamera.getParameters();
 		mQuality = VideoQuality.determineClosestSupportedResolution(parameters, mQuality);
-		int[] max = VideoQuality.determineMaximumSupportedFramerate(parameters);
+
+		int[] fr;
+        if (mQuality.framerate == Integer.MAX_VALUE) {
+            fr = VideoQuality.determineMaximumSupportedFramerate(parameters);
+            mQuality.framerate = (fr[0] + fr[1])/2000;
+        } else {
+            fr = VideoQuality.determineClosestSupportedFramerate(parameters, mQuality);
+        }
+		
 		
 		double ratio = (double)mQuality.resX/(double)mQuality.resY;
 		mSurfaceView.requestAspectRatio(ratio);
 		
 		parameters.setPreviewFormat(mCameraImageFormat);
 		parameters.setPreviewSize(mQuality.resX, mQuality.resY);
-		parameters.setPreviewFpsRange(max[0], max[1]);
+		parameters.setPreviewFpsRange(fr[0], fr[1]);
 
 		try {
 			mCamera.setParameters(parameters);
