@@ -505,7 +505,7 @@ public class RtspServer extends Service {
                         return response;
                     }
 
-                    p = Pattern.compile("client_port=(\\d+)-(\\d+)", Pattern.CASE_INSENSITIVE);
+                    p = Pattern.compile("client_port=(\\d+)(?:-(\\d+))?", Pattern.CASE_INSENSITIVE);
                     m = p.matcher(request.headers.get("transport"));
 
                     if (!m.find()) {
@@ -514,7 +514,11 @@ public class RtspServer extends Service {
                         p2 = ports[1];
                     } else {
                         p1 = Integer.parseInt(m.group(1));
-                        p2 = Integer.parseInt(m.group(2));
+                        if (m.group(2) == null) {
+                            p2 = p1+1;
+                        } else {
+                            p2 = Integer.parseInt(m.group(2));
+                        }
                     }
 
                     ssrc = mSession.getTrack(trackId).getSSRC();
