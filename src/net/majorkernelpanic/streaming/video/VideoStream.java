@@ -695,6 +695,133 @@ public abstract class VideoStream extends MediaStream {
 	}
 
 
+
+
+
+public void setCameraPreviewSize(int w, int h) {
+		
+		List<Size> size = getSizes();
+		Size size_to_use  = getOptimalSize(size, w, h);
+		
+		System.out.println("Setting preview to: "+ w + h);
+		
+		if (mCamera != null) {
+
+			if (mStreaming && mMode == MODE_MEDIARECORDER_API) {
+				lockCamera();
+			}
+		
+		Parameters parameters = mCamera.getParameters();
+		
+		parameters.setPreviewSize(size_to_use.width, size_to_use.height);
+		//parameters.setPreviewSize(176, 144);
+        try {
+			mCamera.setParameters(parameters);
+			System.out.println("Setting preview to: "+ size_to_use.width + size_to_use.height + " DONE!!");
+			Size z = parameters.getPreviewSize();
+			int w_temp = z.width;
+			int h_temp = z.height;
+			System.out.println("Saved preview is: "+ w_temp + h_temp);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+         
+		}
+		
+		else {
+		System.out.println("Setting preview to: "+ w + h + " FAILED!!");
+		}
+		
+		
+		
+	}
+	
+	
+	public synchronized List<Size> getSizes() {
+		
+		List<Size> size = null;
+		
+		if (mCamera != null) {
+
+			if (mStreaming && mMode == MODE_MEDIARECORDER_API) {
+				lockCamera();
+			}
+
+	
+        try {
+    		
+    		Parameters parameters = mCamera.getParameters();
+    		size = parameters.getSupportedPreviewSizes();
+    		
+    		System.out.println("Some of the supported preview is " + size.get(0).width + "x" + size.get(0).height);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+       
+        
+    
+        
+       
+		}
+		
+		else {
+		System.out.println("Failed to get preview sizes");
+		}
+		
+		return size;
+	}
+	
+	
+	
+	  private Size getOptimalSize(List<Size> sizes, int w, int h) {
+
+	        final double ASPECT_TOLERANCE = 0.2;        
+	        double targetRatio = (double) w / h;         
+	        if (sizes == null)             
+	            return null;          
+	        Size optimalSize = null;         
+	        double minDiff = Double.MAX_VALUE;          
+	        int targetHeight = h;          
+	        // Try to find an size match aspect ratio and size         
+	        for (Size size : sizes) 
+	        {             
+           
+	            double ratio = (double) size.width / size.height;            
+	            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE)                
+	                continue;             
+	            if (Math.abs(size.height - targetHeight) < minDiff) 
+	            {                 
+	                optimalSize = size;                 
+	                minDiff = Math.abs(size.height - targetHeight);             
+	            }         
+	        }          
+	        // Cannot find the one match the aspect ratio, ignore the requirement     
+
+	        if (optimalSize == null)
+	        {
+	            minDiff = Double.MAX_VALUE;             
+	            for (Size size : sizes) {
+	                if (Math.abs(size.height - targetHeight) < minDiff)
+	                {
+	                    optimalSize = size;
+	                    minDiff = Math.abs(size.height - targetHeight); 
+	                }
+	            }
+	        }
+
+
+          
+	        return optimalSize;     
+	    }
+
+
+
+
+
+
+
 	/**
 	 * Computes the average frame rate at which the preview callback is called.
 	 * We will then use this average frame rate with the MediaCodec.  
