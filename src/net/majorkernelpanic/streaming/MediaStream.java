@@ -326,18 +326,18 @@ public abstract class MediaStream implements Stream {
 
 		if (sPipeApi == PIPE_API_LS) {
 			
-			final String LOCAL_ADDR = "net.majorkernelpanic.streaming-";
+			final String localAddr = "net.majorkernelpanic.streaming-";
 	
 			for (int i=0;i<10;i++) {
 				try {
 					mSocketId = new Random().nextInt();
-					mLss = new LocalServerSocket(LOCAL_ADDR+mSocketId);
+					mLss = new LocalServerSocket(localAddr+mSocketId);
 					break;
 				} catch (IOException e1) {}
 			}
 	
 			mReceiver = new LocalSocket();
-			mReceiver.connect( new LocalSocketAddress(LOCAL_ADDR+mSocketId));
+			mReceiver.connect( new LocalSocketAddress(localAddr+mSocketId));
 			mReceiver.setReceiveBufferSize(500000);
 			mReceiver.setSoTimeout(3000);
 			mSender = mLss.accept();

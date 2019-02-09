@@ -119,15 +119,15 @@ public class SurfaceManager {
 		checkEglError("eglCreateContext RGB888+recordable ES2");
 
 		// Configure context for OpenGL ES 2.0.
-		int[] attrib_list = {
+		int[] attribList2 = {
 				EGL14.EGL_CONTEXT_CLIENT_VERSION, 2,
 				EGL14.EGL_NONE
 		};
 
 		if (mEGLSharedContext == null) {
-			mEGLContext = EGL14.eglCreateContext(mEGLDisplay, configs[0], EGL14.EGL_NO_CONTEXT, attrib_list, 0);
+			mEGLContext = EGL14.eglCreateContext(mEGLDisplay, configs[0], EGL14.EGL_NO_CONTEXT, attribList2, 0);
 		} else {
-			mEGLContext = EGL14.eglCreateContext(mEGLDisplay, configs[0], mEGLSharedContext, attrib_list, 0);
+			mEGLContext = EGL14.eglCreateContext(mEGLDisplay, configs[0], mEGLSharedContext, attribList2, 0);
 		}
 		checkEglError("eglCreateContext");
 
