@@ -1,29 +1,27 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
+ *
+ * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * This file is part of Spydroid (http://code.google.com/p/spydroid-ipcamera/)
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
- * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package net.majorkernelpanic.streaming.hw;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.nio.ByteBuffer;
-
 import net.majorkernelpanic.streaming.hw.CodecManager.Codec;
 import android.annotation.SuppressLint;
 import android.content.Context;
@@ -45,9 +43,9 @@ import android.util.Log;
  * Feeding the encoder with a surface is not tested here.
  * Some bugs you may have encountered:<br />
  * <ul>
- * <il>U and V panes reversed</il>
- * <il>Some padding is needed after the Y pane</il>
- * <il>stride!=width or slice-height!=height</il>
+ * <li>U and V panes reversed</li>
+ * <li>Some padding is needed after the Y pane</li>
+ * <li>stride!=width or slice-height!=height</li>
  * </ul>
  */
 @SuppressLint("NewApi")
@@ -68,12 +66,12 @@ public class EncoderDebugger {
 	private static final boolean VERBOSE = false;
 
 	/** Will be incremented every time this test is modified. */
-	private static final int VERSION = 2;
+	private static final int VERSION = 3;
 
-	/** Bitrate that will be used with the encoder. */
+	/** Bit rate that will be used with the encoder. */
 	private final static int BITRATE = 1000000;
 
-	/** Framerate that will be used to test the encoder. */
+	/** Frame rate that will be used to test the encoder. */
 	private final static int FRAMERATE = 20;
 
 	private final static String MIME_TYPE = "video/avc";
@@ -97,8 +95,10 @@ public class EncoderDebugger {
 		new Thread(new Runnable() {
 			@Override
 			public void run() {
-				SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
-				debug(prefs, width, height);
+				try {
+					SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+					debug(prefs, width, height);
+				} catch (Exception e) {}
 			}
 		}).start();
 	}
@@ -135,7 +135,7 @@ public class EncoderDebugger {
 		return mNV21;
 	}
 
-	/** A log of all the errors that occured during the test. */
+	/** A log of all the errors that occurred during the test. */
 	public String getErrorLog() {
 		return mErrorLog;
 	}
@@ -158,11 +158,11 @@ public class EncoderDebugger {
 	}
 
 	private void debug() {
-
+		
 		// If testing the phone again is not needed, 
 		// we just restore the result from the shared preferences
 		if (!checkTestNeeded()) {
-			String resolution = mWidth+"x"+mHeight+"-";
+			String resolution = mWidth+"x"+mHeight+"-";			
 
 			boolean success = mPreferences.getBoolean(PREF_PREFIX+resolution+"success",false);
 			if (!success) {
@@ -183,18 +183,28 @@ public class EncoderDebugger {
 			return;
 		}
 
+		if (VERBOSE) Log.d(TAG, ">>>> Testing the phone for resolution "+mWidth+"x"+mHeight);
+		
 		// Builds a list of available encoders and decoders we may be able to use
 		// because they support some nice color formats
 		Codec[] encoders = CodecManager.findEncodersForMimeType(MIME_TYPE);
 		Codec[] decoders = CodecManager.findDecodersForMimeType(MIME_TYPE);
 
+		int count = 0, n = 1;
+		for (int i=0;i<encoders.length;i++) {
+			count += encoders[i].formats.length;
+		}
+		
 		// Tries available encoders
 		for (int i=0;i<encoders.length;i++) {
 			for (int j=0;j<encoders[i].formats.length;j++) {
-
+				reset();
+				
 				mEncoderName = encoders[i].name;
 				mEncoderColorFormat = encoders[i].formats[j];
 
+				if (VERBOSE) Log.v(TAG, ">> Test "+(n++)+"/"+count+": "+mEncoderName+" with color format "+mEncoderColorFormat+" at "+mWidth+"x"+mHeight);
+				
 				// Converts from NV21 to YUV420 with the specified parameters
 				mNV21.setSize(mWidth, mHeight);
 				mNV21.setSliceHeigth(mHeight);
@@ -211,8 +221,10 @@ public class EncoderDebugger {
 					// Starts the encoder
 					configureEncoder();
 					searchSPSandPPS();
+					
+					if (VERBOSE) Log.v(TAG, "SPS and PPS in b64: SPS="+mB64SPS+", PPS="+mB64PPS);
 
-					// Feeds the encoder with an image repeatidly to produce some NAL units
+					// Feeds the encoder with an image repeatedly to produce some NAL units
 					encode();
 
 					// We now try to decode the NALs with decoders available on the phone
@@ -223,10 +235,16 @@ public class EncoderDebugger {
 							mDecoderColorFormat = decoders[k].formats[l];
 							try {
 								configureDecoder();
-								decode();
+							} catch (Exception e) {
+								if (VERBOSE) Log.d(TAG, mDecoderName+" can't be used with "+mDecoderColorFormat+" at "+mWidth+"x"+mHeight);
+								releaseDecoder();
+								break;
+							}
+							try {
+								decode(true);
 								if (VERBOSE) Log.d(TAG, mDecoderName+" successfully decoded the NALs (color format "+mDecoderColorFormat+")");
 								decoded = true;
-							} catch (RuntimeException e) {
+							} catch (Exception e) {
 								if (VERBOSE) Log.e(TAG, mDecoderName+" failed to decode the NALs");
 								e.printStackTrace();
 							} finally {
@@ -247,11 +265,11 @@ public class EncoderDebugger {
 					int padding;
 					if ((padding = checkPaddingNeeded())>0) {
 						if (padding<4096) {
+							if (VERBOSE) Log.d(TAG, "Some padding is needed: "+padding);
 							mNV21.setYPadding(padding);
 							createTestImage();
 							mData = mNV21.convert(mInitialImage);
 							encodeDecode();
-							if (VERBOSE) Log.d(TAG, "Some padding is needed: "+padding);
 						} else {
 							// TODO: try again with a different sliceHeight
 							// TODO: try again with the "slice-height" param
@@ -278,7 +296,7 @@ public class EncoderDebugger {
 					PrintWriter pw = new PrintWriter(sw); e.printStackTrace(pw);
 					String stack = sw.toString();
 					String str = "Encoder "+mEncoderName+" cannot be used with color format "+mEncoderColorFormat;
-					if (VERBOSE) Log.e(TAG, str);
+					if (VERBOSE) Log.e(TAG, str, e);
 					mErrorLog += str + "\n" + stack;
 					e.printStackTrace();
 				} finally {
@@ -455,13 +473,11 @@ public class EncoderDebugger {
 					if (sliceHeight<mHeight) sliceHeight = mHeight;
 				}
 				if (format.containsKey("stride")) {
-					stride = format.getInteger("stride");	
+					stride = format.getInteger("stride");
 					if (stride<mWidth) stride = mWidth;
 				}
-				if (format.containsKey(MediaFormat.KEY_COLOR_FORMAT)) {
-					if (format.getInteger(MediaFormat.KEY_COLOR_FORMAT)>0) {
-						colorFormat = format.getInteger(MediaFormat.KEY_COLOR_FORMAT);
-					}
+				if (format.containsKey(MediaFormat.KEY_COLOR_FORMAT) && format.getInteger(MediaFormat.KEY_COLOR_FORMAT)>0) {
+					colorFormat = format.getInteger(MediaFormat.KEY_COLOR_FORMAT);
 				}
 			}
 		}
@@ -503,9 +519,9 @@ public class EncoderDebugger {
 
 	/**
 	 * Instantiates and starts the encoder.
+	 * @throws IOException The encoder cannot be configured
 	 */
-	private void configureEncoder()  {
-		if (VERBOSE) Log.v(TAG, "Testing "+mEncoderName+" with color format "+mEncoderColorFormat+" at "+mWidth+"x"+mHeight);
+	private void configureEncoder() throws IOException  {
 		mEncoder = MediaCodec.createByCodecName(mEncoderName);
 		MediaFormat mediaFormat = MediaFormat.createVideoFormat(MIME_TYPE, mWidth, mHeight);
 		mediaFormat.setInteger(MediaFormat.KEY_BIT_RATE, BITRATE);
@@ -529,8 +545,9 @@ public class EncoderDebugger {
 
 	/**
 	 * Instantiates and starts the decoder.
+	 * @throws IOException The decoder cannot be configured
 	 */	
-	private void configureDecoder() {
+	private void configureDecoder() throws IOException {
 		byte[] prefix = new byte[] {0x00,0x00,0x00,0x01};
 
 		ByteBuffer csd0 = ByteBuffer.allocate(4+mSPS.length+4+mPPS.length);
@@ -658,7 +675,7 @@ public class EncoderDebugger {
 			elapsed = timestamp() - now;
 		}
 
-		check(mPPS != null & mSPS != null, "Could not determine the SPS & PPS.");
+		check(mPPS != null && mSPS != null, "Could not determine the SPS & PPS.");
 		mB64PPS = Base64.encodeToString(mPPS, 0, mPPS.length, Base64.NO_WRAP);
 		mB64SPS = Base64.encodeToString(mSPS, 0, mSPS.length, Base64.NO_WRAP);
 
@@ -707,7 +724,11 @@ public class EncoderDebugger {
 
 	}
 
-	private long decode() {
+	/**
+	 * @param withPrefix If set to true, the decoder will be fed with NALs preceeded with 0x00000001.
+	 * @return How long it took to decode all the NALs
+	 */
+	private long decode(boolean withPrefix) {
 		int n = 0, i = 0, j = 0;
 		long elapsed = 0, now = timestamp();
 		int decInputIndex = 0, decOutputIndex = 0;
@@ -723,9 +744,20 @@ public class EncoderDebugger {
 				if (decInputIndex>=0) {
 					int l1 = decInputBuffers[decInputIndex].capacity();
 					int l2 = mVideo[i].length;
-					check(l1>=l2, "The decoder input buffer is not big enough.");
 					decInputBuffers[decInputIndex].clear();
-					decInputBuffers[decInputIndex].put(mVideo[i],0,mVideo[i].length);
+					
+					if ((withPrefix && hasPrefix(mVideo[i])) || (!withPrefix && !hasPrefix(mVideo[i]))) {
+						check(l1>=l2, "The decoder input buffer is not big enough (nal="+l2+", capacity="+l1+").");
+						decInputBuffers[decInputIndex].put(mVideo[i],0,mVideo[i].length);
+					} else if (withPrefix && !hasPrefix(mVideo[i])) {
+						check(l1>=l2+4, "The decoder input buffer is not big enough (nal="+(l2+4)+", capacity="+l1+").");
+						decInputBuffers[decInputIndex].put(new byte[] {0,0,0,1});
+						decInputBuffers[decInputIndex].put(mVideo[i],0,mVideo[i].length);
+					} else if (!withPrefix && hasPrefix(mVideo[i])) {
+						check(l1>=l2-4, "The decoder input buffer is not big enough (nal="+(l2-4)+", capacity="+l1+").");
+						decInputBuffers[decInputIndex].put(mVideo[i],4,mVideo[i].length-4);
+					}
+					
 					mDecoder.queueInputBuffer(decInputIndex, 0, l2, timestamp(), 0);
 					i++;
 				} else {
@@ -765,11 +797,22 @@ public class EncoderDebugger {
 
 	}
 
-	private void encodeDecode() {
+	/**
+	 * Makes sure the NAL has a header or not.
+	 * @param withPrefix If set to true, the NAL will be preceded with 0x00000001.
+	 */
+	private boolean hasPrefix(byte[] nal) {
+		return nal[0] == 0 && nal[1] == 0 && nal[2] == 0 && nal[3] == 0x01;
+	}
+	
+	/**
+	 * @throws IOException The decoder cannot be configured.
+	 */
+	private void encodeDecode() throws IOException {
 		encode();
 		try {
 			configureDecoder();
-			decode();
+			decode(true);
 		} finally {
 			releaseDecoder();
 		}

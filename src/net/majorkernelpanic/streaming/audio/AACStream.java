@@ -1,21 +1,19 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package net.majorkernelpanic.streaming.audio;
@@ -26,7 +24,6 @@ import java.io.RandomAccessFile;
 import java.lang.reflect.Field;
 import java.net.InetAddress;
 import java.nio.ByteBuffer;
-
 import net.majorkernelpanic.streaming.SessionBuilder;
 import net.majorkernelpanic.streaming.rtp.AACADTSPacketizer;
 import net.majorkernelpanic.streaming.rtp.AACLATMPacketizer;
@@ -123,8 +120,8 @@ public class AACStream extends AudioStream {
 
 	@Override
 	public synchronized void start() throws IllegalStateException, IOException {
-		configure();
 		if (!mStreaming) {
+			configure();
 			super.start();
 		}
 	}
@@ -150,9 +147,10 @@ public class AACStream extends AudioStream {
 				mPacketizer = new AACADTSPacketizer();
 			} else { 
 				mPacketizer = new AACLATMPacketizer();
-			}		
+			}
+			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
+			mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
 		}
-		
 
 		if (mMode == MODE_MEDIARECORDER_API) {
 
@@ -172,7 +170,7 @@ public class AACStream extends AudioStream {
 
 			mProfile = 2; // AAC LC
 			mChannel = 1;
-			mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
+			mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
 
 			mSessionDescription = "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
 					"a=rtpmap:96 mpeg4-generic/"+mQuality.samplingRate+"\r\n"+
@@ -240,7 +238,6 @@ public class AACStream extends AudioStream {
 		mThread.start();
 
 		// The packetizer encapsulates this stream in an RTP stream and send it over the network
-		mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 		mPacketizer.setInputStream(inputStream);
 		mPacketizer.start();
 
@@ -292,14 +289,12 @@ public class AACStream extends AudioStream {
 
 		String key = PREF_PREFIX+"aac-"+mQuality.samplingRate;
 
-		if (mSettings!=null) {
-			if (mSettings.contains(key)) {
-				String[] s = mSettings.getString(key, "").split(",");
-				mQuality.samplingRate = Integer.valueOf(s[0]);
-				mConfig = Integer.valueOf(s[1]);
-				mChannel = Integer.valueOf(s[2]);
-				return;
-			}
+		if (mSettings!=null && mSettings.contains(key)) {
+			String[] s = mSettings.getString(key, "").split(",");
+			mQuality.samplingRate = Integer.valueOf(s[0]);
+			mConfig = Integer.valueOf(s[1]);
+			mChannel = Integer.valueOf(s[2]);
+			return;
 		}
 
 		final String TESTFILE = Environment.getExternalStorageDirectory().getPath()+"/spydroid-test.adts";
@@ -354,7 +349,7 @@ public class AACStream extends AudioStream {
 		mQuality.samplingRate = AUDIO_SAMPLING_RATES[mSamplingRateIndex];
 
 		// 5 bits for the object type / 4 bits for the sampling rate / 4 bits for the channel / padding
-		mConfig = mProfile<<11 | mSamplingRateIndex<<7 | mChannel<<3;
+		mConfig = (mProfile & 0x1F) << 11 | (mSamplingRateIndex & 0x0F) << 7 | (mChannel & 0x0F) << 3;
 
 		Log.i(TAG,"MPEG VERSION: " + ( (buffer[0]&0x08) >> 3 ) );
 		Log.i(TAG,"PROTECTION: " + (buffer[0]&0x01) );

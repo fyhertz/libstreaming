@@ -1,27 +1,25 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package net.majorkernelpanic.streaming.mp4;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
-
 import android.util.Base64;
 import android.util.Log;
 
@@ -54,7 +52,7 @@ public class MP4Config {
 	}
 	
 	/**
-	 * Finds sps & pps parameters inside a .mp4.
+	 * Finds SPS & PPS parameters inside a .mp4.
 	 * @param path Path to the file to analyze
 	 * @throws IOException
 	 * @throws FileNotFoundException
@@ -63,12 +61,9 @@ public class MP4Config {
 
 		StsdBox stsdBox; 
 		
-		// We open the mp4 file
-		mp4Parser = new MP4Parser(path);
-
-		// We parse it
+		// We open the mp4 file and parse it
 		try {
-			mp4Parser.parse();
+			mp4Parser = MP4Parser.parse(path);
 		} catch (IOException ignore) {
 			// Maybe enough of the file has been parsed and we can get the stsd box
 		}
@@ -78,10 +73,9 @@ public class MP4Config {
 		mPPS = stsdBox.getB64PPS();
 		mSPS = stsdBox.getB64SPS();
 		mProfilLevel = stsdBox.getProfileLevel();
-		
-		// We're done !
-		mp4Parser.close();
 
+		mp4Parser.close();
+		
 	}
 
 	public String getProfileLevel() {

@@ -1,31 +1,29 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package net.majorkernelpanic.streaming.mp4;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
-
 import android.util.Base64;
 import android.util.Log;
 
@@ -34,93 +32,97 @@ import android.util.Log;
  * An mp4 file contains a tree where each node has a name and a size.
  * This class is used by H264Stream.java to determine the SPS and PPS parameters of a short video recorded by the phone.
  */
-class MP4Parser {
+public class MP4Parser {
 
 	private static final String TAG = "MP4Parser";
 
-	private HashMap<String, Long> boxes = new HashMap<String, Long>();
-	private final RandomAccessFile file;
-	private long pos = 0;
+	private HashMap<String, Long> mBoxes = new HashMap<>();
+	private final RandomAccessFile mFile;
+	private long mPos = 0;
 
-	public MP4Parser(final String path) throws IOException, FileNotFoundException {
-		this.file = new RandomAccessFile(new File(path), "r");
-	}
 
 	/** Parses the mp4 file. **/
-	public void parse() throws IOException {
-		long length = 0;
+	public static MP4Parser parse(String path) throws IOException {
+		return new MP4Parser(path);
+	}	
+	
+	private MP4Parser(final String path) throws IOException, FileNotFoundException {
+		mFile = new RandomAccessFile(new File(path), "r");
 		try {
-			length = file.length();
-		} catch (IOException e) {
-			throw new IOException("Wrong size");
-		}
-
-		try {
-			parse("",length);
-		} catch (IOException e) {
+			parse("",mFile.length());
+		} catch (Exception e) {
+			e.printStackTrace();
 			throw new IOException("Parse error: malformed mp4 file");
-		}		
+		}
 	}
-
-	/** Close the file opened when creating the MP4Parser. **/
+	
 	public void close() {
 		try {
-			file.close();
-		} catch (IOException ignore) {}
+			mFile.close();
+		} catch (Exception e) {};
 	}
-
+	
 	public long getBoxPos(String box) throws IOException {
-		Long r = boxes.get(box);
+		Long r = mBoxes.get(box);
 
 		if (r==null) throw new IOException("Box not found: "+box);
-		return boxes.get(box);
+		return mBoxes.get(box);
 	}
 
 	public StsdBox getStsdBox() throws IOException {
 		try {
-			return new StsdBox(file,getBoxPos("/moov/trak/mdia/minf/stbl/stsd"));
+			return new StsdBox(mFile,getBoxPos("/moov/trak/mdia/minf/stbl/stsd"));
 		} catch (IOException e) {
 			throw new IOException("stsd box could not be found");
 		}
 	}
 
 	private void parse(String path, long len) throws IOException {
-		byte[] buffer = new byte[8];
-		String name="";
+		ByteBuffer byteBuffer;
 		long sum = 0, newlen = 0;
-		if(!path.equals(""))
-			boxes.put(path, pos-8);
-
+		byte[] buffer = new byte[8];
+		String name = "";
+		
+		if(!path.equals("")) mBoxes.put(path, mPos-8);
 
 		while (sum<len) {
+			mFile.read(buffer,0,8);
+			mPos += 8; sum += 8; 
 
-			file.read(buffer,0,8);
-			sum += 8; 
-			pos += 8;
 			if (validBoxName(buffer)) {
+				name = new String(buffer,4,4);
 
-				ByteBuffer byteBuffer = ByteBuffer.wrap(buffer,0,4);
-				newlen = byteBuffer.getInt()-8;
+				if (buffer[3] == 1) {
+					// 64 bits atom size
+					mFile.read(buffer,0,8);
+					mPos += 8; sum += 8;
+					byteBuffer = ByteBuffer.wrap(buffer,0,8);
+					newlen = byteBuffer.getLong()-16;
+				} else {
+					// 32 bits atom size
+					byteBuffer = ByteBuffer.wrap(buffer,0,4);
+					newlen = byteBuffer.getInt()-8;
+				}
 
 				// 1061109559+8 correspond to "????" in ASCII the HTC Desire S seems to write that sometimes, maybe other phones do
 				// "wide" atom would produce a newlen == 0, and we shouldn't throw an exception because of that
 				if (newlen < 0 || newlen == 1061109559) throw new IOException();
-				name = new String(buffer,4,4);
-				Log.d(TAG,"Atom -> name: "+name+" newlen: "+newlen+" pos: "+pos);
+				
+				Log.d(TAG, "Atom -> name: "+name+" position: "+mPos+", length: "+newlen);
 				sum += newlen;
 				parse(path+'/'+name,newlen);
 
 			}
 			else {
 				if( len < 8){
-					file.seek(file.getFilePointer() - 8 + len);
+					mFile.seek(mFile.getFilePointer() - 8 + len);
 					sum += len-8;
 				} else {
-					int skipped = file.skipBytes((int)(len-8));
+					int skipped = mFile.skipBytes((int)(len-8));
 					if (skipped < ((int)(len-8))) {
 						throw new IOException();
 					}
-					pos += len-8;
+					mPos += len-8;
 					sum += len-8;
 				}
 			}
@@ -189,7 +191,7 @@ class StsdBox {
 		 *  You may find really useful information about this box 
 		 *  in the document ISO-IEC 14496-15, part 5.2.4.1.1
 		 *  The box's structure is described there
-		 *  
+		 *  <pre>
 		 *  aligned(8) class AVCDecoderConfigurationRecord {
 		 *		unsigned int(8) configurationVersion = 1;
 		 *		unsigned int(8) AVCProfileIndication;
@@ -209,9 +211,7 @@ class StsdBox {
 		 *			bit(8*pictureParameterSetLength) pictureParameterSetNALUnit;
 		 *		}
 		 *	}
-		 *
-		 *  
-		 *  
+		 *  </pre>
 		 */
 		try {
 

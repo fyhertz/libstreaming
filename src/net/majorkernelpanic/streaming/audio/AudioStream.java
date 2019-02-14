@@ -1,29 +1,30 @@
 /*
- * Copyright (C) 2011-2014 GUIGUI Simon, fyhertz@gmail.com
- * 
+ * Copyright (C) 2011-2015 GUIGUI Simon, fyhertz@gmail.com
+ *
  * This file is part of libstreaming (https://github.com/fyhertz/libstreaming)
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  * 
- * Spydroid is free software; you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation; either version 3 of the License, or
- * (at your option) any later version.
+ *     http://www.apache.org/licenses/LICENSE-2.0
  * 
- * This source code is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- * 
- * You should have received a copy of the GNU General Public License
- * along with this source code; if not, write to the Free Software
- * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package net.majorkernelpanic.streaming.audio;
 
+import java.io.FileDescriptor;
 import java.io.IOException;
+import java.io.InputStream;
 
 import net.majorkernelpanic.streaming.MediaStream;
 import android.media.MediaRecorder;
+import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 /** 
@@ -80,25 +81,39 @@ public abstract class AudioStream  extends MediaStream {
 		mMediaRecorder.setAudioSamplingRate(mQuality.samplingRate);
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		
-		// We write the ouput of the camera in a local socket instead of a file !			
+		// We write the output of the camera in a local socket instead of a file !			
 		// This one little trick makes streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
-		mMediaRecorder.setOutputFile(mSender.getFileDescriptor());
+		FileDescriptor fd = null;
+		if (sPipeApi == PIPE_API_PFD) {
+			fd = mParcelWrite.getFileDescriptor();
+		} else  {
+			fd = mSender.getFileDescriptor();
+		}
+		mMediaRecorder.setOutputFile(fd);
+		mMediaRecorder.setOutputFile(fd);
 
 		mMediaRecorder.prepare();
 		mMediaRecorder.start();
 
-		try {
-			// mReceiver.getInputStream contains the data from the camera
-			// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
-			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
-			mPacketizer.setInputStream(mReceiver.getInputStream());
-			mPacketizer.start();
-			mStreaming = true;
-		} catch (IOException e) {
-			stop();
-			throw new IOException("Something happened with the local sockets :/ Start failed !");
+		InputStream is = null;
+		
+		if (sPipeApi == PIPE_API_PFD) {
+			is = new ParcelFileDescriptor.AutoCloseInputStream(mParcelRead);
+		} else  {
+			try {
+				// mReceiver.getInputStream contains the data from the camera
+				is = mReceiver.getInputStream();
+			} catch (IOException e) {
+				stop();
+				throw new IOException("Something happened with the local sockets :/ Start failed !");
+			}
 		}
+
+		// the mPacketizer encapsulates this stream in an RTP stream and send it over the network
+		mPacketizer.setInputStream(is);
+		mPacketizer.start();
+		mStreaming = true;
 		
 	}
 	
