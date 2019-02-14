@@ -76,7 +76,7 @@ public class H263Stream extends VideoStream {
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */
 	public String getSessionDescription() {
-		return "m=video "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+		return "m=video "+ getDestinationPorts()[0] +" RTP/AVP 96\r\n" +
 				"a=rtpmap:96 H263-1998/90000\r\n";
 	}
 

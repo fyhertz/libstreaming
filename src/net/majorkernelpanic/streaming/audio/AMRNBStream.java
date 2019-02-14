@@ -73,7 +73,7 @@ public class AMRNBStream extends AudioStream {
 	 * Returns a description of the stream using SDP. It can then be included in an SDP file.
 	 */	
 	public String getSessionDescription() {
-		return "m=audio "+String.valueOf(getDestinationPorts()[0])+" RTP/AVP 96\r\n" +
+		return "m=audio "+ getDestinationPorts()[0] +" RTP/AVP 96\r\n" +
 				"a=rtpmap:96 AMR/8000\r\n" +
 				"a=fmtp:96 octet-align=1;\r\n";
 	}
