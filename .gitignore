@@ -1,15 +1,13 @@
-# built application files
-*.apk
-*.ap_
-*.dex
-*.class
-bin/
-gen/
-*.class
-*.o
-*.so
-*.sh
+*.iml
+.gradle
 local.properties
-custom_rules.xml
-ant.properties
-*~
+
+.idea/*
+!.idea/codeStyles/
+
+.DS_Store
+build
+captures
+
+.externalNativeBuild
+.cxx

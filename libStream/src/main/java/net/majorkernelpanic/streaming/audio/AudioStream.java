@@ -82,7 +82,7 @@ public abstract class AudioStream  extends MediaStream {
 		mMediaRecorder.setAudioEncodingBitRate(mQuality.bitRate);
 		
 		// We write the output of the camera in a local socket instead of a file !			
-		// This one little trick makes streaming feasible quiet simply: data from the camera
+		// This one little trick makes net.majorkernelpanic.streaming feasible quiet simply: data from the camera
 		// can then be manipulated at the other end of the socket
 		FileDescriptor fd = null;
 		if (sPipeApi == PIPE_API_PFD) {

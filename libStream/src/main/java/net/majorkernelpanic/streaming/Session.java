@@ -70,7 +70,7 @@ public class Session {
 	/** Some app is already using a camera (Camera.open() has failed). */
 	public final static int ERROR_CAMERA_ALREADY_IN_USE = 0x00;
 
-	/** The phone may not support some streaming parameters that you are trying to use (bit rate, frame rate, resolution...). */
+	/** The phone may not support some net.majorkernelpanic.streaming parameters that you are trying to use (bit rate, frame rate, resolution...). */
 	public final static int ERROR_CONFIGURATION_NOT_SUPPORTED = 0x01;
 
 	/** 
@@ -112,12 +112,12 @@ public class Session {
 	private Handler mHandler;
 
 	/** 
-	 * Creates a streaming session that can be customized by adding tracks.
+	 * Creates a net.majorkernelpanic.streaming session that can be customized by adding tracks.
 	 */
 	public Session() {
 		long uptime = System.currentTimeMillis();
 
-		HandlerThread thread = new HandlerThread("net.majorkernelpanic.streaming.Session");
+		HandlerThread thread = new HandlerThread("net.majorkernelpanic.net.majorkernelpanic.streaming.Session");
 		thread.start();
 
 		mHandler = new Handler(thread.getLooper());
@@ -134,7 +134,7 @@ public class Session {
 
 		/** 
 		 * Called periodically to inform you on the bandwidth 
-		 * consumption of the streams when streaming. 
+		 * consumption of the streams when net.majorkernelpanic.streaming.
 		 */
 		public void onBitrateUpdate(long bitrate);
 

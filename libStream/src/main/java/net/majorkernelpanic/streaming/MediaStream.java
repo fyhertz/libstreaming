@@ -196,7 +196,7 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/**
-	 * Sets the streaming method that will be used.
+	 * Sets the net.majorkernelpanic.streaming method that will be used.
 	 * 
 	 * If the mode is set to {@link #MODE_MEDIARECORDER_API}, raw audio/video will be encoded 
 	 * using the MediaRecorder API. <br />
@@ -214,7 +214,7 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/**
-	 * Returns the streaming method in use, call this after 
+	 * Returns the net.majorkernelpanic.streaming method in use, call this after
 	 * {@link #configure()} to get an accurate response. 
 	 */
 	public byte getStreamingMethod() {
@@ -237,8 +237,8 @@ public abstract class MediaStream implements Stream {
 	}
 
 	/**
-	 * Indicates if the {@link MediaStream} is streaming.
-	 * @return A boolean indicating if the {@link MediaStream} is streaming
+	 * Indicates if the {@link MediaStream} is net.majorkernelpanic.streaming.
+	 * @return A boolean indicating if the {@link MediaStream} is net.majorkernelpanic.streaming
 	 */
 	public boolean isStreaming() {
 		return mStreaming;
@@ -251,7 +251,7 @@ public abstract class MediaStream implements Stream {
 	 * for a {@link AudioStream}.
 	 */
 	public synchronized void configure() throws IllegalStateException, IOException {
-		if (mStreaming) throw new IllegalStateException("Can't be called while streaming.");
+		if (mStreaming) throw new IllegalStateException("Can't be called while net.majorkernelpanic.streaming.");
 		if (mPacketizer != null) {
 			mPacketizer.setDestination(mDestination, mRtpPort, mRtcpPort);
 			mPacketizer.getRtpSocket().setOutputStream(mOutputStream, mChannelIdentifier);
@@ -326,7 +326,7 @@ public abstract class MediaStream implements Stream {
 
 		if (sPipeApi == PIPE_API_LS) {
 			
-			final String LOCAL_ADDR = "net.majorkernelpanic.streaming-";
+			final String LOCAL_ADDR = "net.majorkernelpanic.net.majorkernelpanic.streaming-";
 	
 			for (int i=0;i<10;i++) {
 				try {

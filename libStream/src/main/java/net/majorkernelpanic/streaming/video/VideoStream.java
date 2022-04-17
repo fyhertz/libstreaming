@@ -119,7 +119,7 @@ public abstract class VideoStream extends MediaStream {
 	/**	Switch between the front facing and the back facing camera of the phone. 
 	 * If {@link #startPreview()} has been called, the preview will be  briefly interrupted. 
 	 * If {@link #start()} has been called, the stream will be  briefly interrupted.
-	 * You should not call this method from the main thread if you are already streaming. 
+	 * You should not call this method from the main thread if you are already net.majorkernelpanic.streaming.
 	 * @throws IOException 
 	 * @throws RuntimeException 
 	 **/
@@ -352,7 +352,7 @@ public abstract class VideoStream extends MediaStream {
 			mMediaRecorder.setVideoEncodingBitRate((int)(mRequestedQuality.bitrate*0.8));
 
 			// We write the output of the camera in a local socket instead of a file !			
-			// This one little trick makes streaming feasible quiet simply: data from the camera
+			// This one little trick makes net.majorkernelpanic.streaming feasible quiet simply: data from the camera
 			// can then be manipulated at the other end of the socket
 			FileDescriptor fd = null;
 			if (sPipeApi == PIPE_API_PFD) {

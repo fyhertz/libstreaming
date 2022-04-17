@@ -26,7 +26,7 @@ import android.util.Log;
  * 
  *   RFC 3984.
  *   
- *   H.264 streaming over RTP.
+ *   H.264 net.majorkernelpanic.streaming over RTP.
  *   
  *   Must be fed with an InputStream containing H.264 NAL units preceded by their length (4 bytes).
  *   The stream must start with mpeg4 or 3gpp header, it will be skipped.

@@ -140,7 +140,7 @@ public class RtspClient {
 		mState = STATE_STOPPED;
 
 		final Semaphore signal = new Semaphore(0);
-		new HandlerThread("net.majorkernelpanic.streaming.RtspClient"){
+		new HandlerThread("net.majorkernelpanic.net.majorkernelpanic.streaming.RtspClient"){
 			@Override
 			protected void onLooperPrepared() {
 				mHandler = new Handler();
@@ -215,7 +215,7 @@ public class RtspClient {
 	}
 
 	/**
-	 * Connects to the RTSP server to publish the stream, and the effectively starts streaming.
+	 * Connects to the RTSP server to publish the stream, and the effectively starts net.majorkernelpanic.streaming.
 	 * You need to call {@link #setServerAddress(String, int)} and optionally {@link #setSession(Session)} 
 	 * and {@link #setCredentials(String, String)} before calling this.
 	 * Should be called of the main thread !

@@ -48,11 +48,11 @@ var activeTableTab = "activeTableTab";
 </div>
 <div class="subNav">
 <ul class="navList">
-<li><a href="../../../net/majorkernelpanic/streaming/MediaStream.html" title="class in net.majorkernelpanic.streaming"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
-<li><a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming"><span class="typeNameLink">Next&nbsp;Class</span></a></li>
+<li><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/MediaStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
+<li><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming"><span class="typeNameLink">Next&nbsp;Class</span></a></li>
 </ul>
 <ul class="navList">
-<li><a href="../../../index.html?net/majorkernelpanic/streaming/Session.html" target="_top">Frames</a></li>
+<li><a href="../../../index.html?net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" target="_top">Frames</a></li>
 <li><a href="Session.html" target="_top">No&nbsp;Frames</a></li>
 </ul>
 <ul class="navList" id="allclasses_navbar_top">
@@ -91,7 +91,7 @@ var activeTableTab = "activeTableTab";
 <!-- ========= END OF TOP NAVBAR ========= -->
 <!-- ======== START OF CLASS DATA ======== -->
 <div class="header">
-<div class="subTitle">net.majorkernelpanic.streaming</div>
+<div class="subTitle">net.majorkernelpanic.net.majorkernelpanic.streaming</div>
 <h2 title="Class Session" class="title">Class Session</h2>
 </div>
 <div class="contentContainer">
@@ -99,7 +99,7 @@ var activeTableTab = "activeTableTab";
 <li>java.lang.Object</li>
 <li>
 <ul class="inheritance">
-<li>net.majorkernelpanic.streaming.Session</li>
+<li>net.majorkernelpanic.net.majorkernelpanic.streaming.Session</li>
 </ul>
 </li>
 </ul>
@@ -110,19 +110,19 @@ var activeTableTab = "activeTableTab";
 <br>
 <pre>public class <span class="typeNameLabel">Session</span>
 extends java.lang.Object</pre>
-<div class="block">You should instantiate this class with the <a href="../../../net/majorkernelpanic/streaming/SessionBuilder.html" title="class in net.majorkernelpanic.streaming"><code>SessionBuilder</code></a>.<br />
+<div class="block">You should instantiate this class with the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/SessionBuilder.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>SessionBuilder</code></a>.<br />
  This is the class you will want to use to stream audio and or video to some peer using RTP.<br />
  
- It holds a <a href="../../../net/majorkernelpanic/streaming/video/VideoStream.html" title="class in net.majorkernelpanic.streaming.video"><code>VideoStream</code></a> and a <a href="../../../net/majorkernelpanic/streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.streaming.audio"><code>AudioStream</code></a> together and provides 
+ It holds a <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video"><code>VideoStream</code></a> and a <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio"><code>AudioStream</code></a> together and provides
  synchronous and asynchronous functions to start and stop those steams.
- You should implement a callback interface <a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming"><code>Session.Callback</code></a> to receive notifications and error reports.<br />
+ You should implement a callback interface <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session.Callback</code></a> to receive notifications and error reports.<br />
  
- If you want to stream to a RTSP server, you will need an instance of this class and hand it to a <a href="../../../net/majorkernelpanic/streaming/rtsp/RtspClient.html" title="class in net.majorkernelpanic.streaming.rtsp"><code>RtspClient</code></a>.
+ If you want to stream to a RTSP server, you will need an instance of this class and hand it to a <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/rtsp/RtspClient.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.rtsp"><code>RtspClient</code></a>.
  
  If you don't use the RTSP protocol, you will still need to send a session description to the receiver 
  for him to be able to decode your audio/video streams. You can obtain this session description by calling 
- <a href="../../../net/majorkernelpanic/streaming/Session.html#configure--"><code>configure()</code></a> or <a href="../../../net/majorkernelpanic/streaming/Session.html#syncConfigure--"><code>syncConfigure()</code></a> to configure the session with its parameters 
- (audio samplingrate, video resolution) and then <a href="../../../net/majorkernelpanic/streaming/Session.html#getSessionDescription--"><code>getSessionDescription()</code></a>.<br />
+ <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--"><code>configure()</code></a> or <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#syncConfigure--"><code>syncConfigure()</code></a> to configure the session with its parameters
+ (audio samplingrate, video resolution) and then <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getSessionDescription--"><code>getSessionDescription()</code></a>.<br />
  
  See the example 2 here: https://github.com/fyhertz/libstreaming-examples to 
  see an example of how to get a SDP.<br />
@@ -149,7 +149,7 @@ extends java.lang.Object</pre>
 </tr>
 <tr class="altColor">
 <td class="colFirst"><code>static interface&nbsp;</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming">Session.Callback</a></span></code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Session.Callback</a></span></code>
 <div class="block">The callback interface you need to implement to get some feedback
  Those will be called from the UI thread.</div>
 </td>
@@ -171,57 +171,57 @@ extends java.lang.Object</pre>
 </tr>
 <tr class="altColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_CAMERA_ALREADY_IN_USE">ERROR_CAMERA_ALREADY_IN_USE</a></span></code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_CAMERA_ALREADY_IN_USE">ERROR_CAMERA_ALREADY_IN_USE</a></span></code>
 <div class="block">Some app is already using a camera (Camera.open() has failed).</div>
 </td>
 </tr>
 <tr class="rowColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_CAMERA_HAS_NO_FLASH">ERROR_CAMERA_HAS_NO_FLASH</a></span></code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_CAMERA_HAS_NO_FLASH">ERROR_CAMERA_HAS_NO_FLASH</a></span></code>
 <div class="block">The phone has no flash.</div>
 </td>
 </tr>
 <tr class="altColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_CONFIGURATION_NOT_SUPPORTED">ERROR_CONFIGURATION_NOT_SUPPORTED</a></span></code>
-<div class="block">The phone may not support some streaming parameters that you are trying to use (bit rate, frame rate, resolution...).</div>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_CONFIGURATION_NOT_SUPPORTED">ERROR_CONFIGURATION_NOT_SUPPORTED</a></span></code>
+<div class="block">The phone may not support some net.majorkernelpanic.streaming parameters that you are trying to use (bit rate, frame rate, resolution...).</div>
 </td>
 </tr>
 <tr class="rowColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_INVALID_SURFACE">ERROR_INVALID_SURFACE</a></span></code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_INVALID_SURFACE">ERROR_INVALID_SURFACE</a></span></code>
 <div class="block">The supplied SurfaceView is not a valid surface, or has not been created yet.</div>
 </td>
 </tr>
 <tr class="altColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_OTHER">ERROR_OTHER</a></span></code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_OTHER">ERROR_OTHER</a></span></code>
 <div class="block">Some other error occurred !</div>
 </td>
 </tr>
 <tr class="rowColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_STORAGE_NOT_READY">ERROR_STORAGE_NOT_READY</a></span></code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_STORAGE_NOT_READY">ERROR_STORAGE_NOT_READY</a></span></code>
 <div class="block">The internal storage of the phone is not ready.</div>
 </td>
 </tr>
 <tr class="altColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_UNKNOWN_HOST">ERROR_UNKNOWN_HOST</a></span></code>
-<div class="block">The destination set with <a href="../../../net/majorkernelpanic/streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a> could not be resolved.</div>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_UNKNOWN_HOST">ERROR_UNKNOWN_HOST</a></span></code>
+<div class="block">The destination set with <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a> could not be resolved.</div>
 </td>
 </tr>
 <tr class="rowColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#STREAM_AUDIO">STREAM_AUDIO</a></span></code>&nbsp;</td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#STREAM_AUDIO">STREAM_AUDIO</a></span></code>&nbsp;</td>
 </tr>
 <tr class="altColor">
 <td class="colFirst"><code>static int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#STREAM_VIDEO">STREAM_VIDEO</a></span></code>&nbsp;</td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#STREAM_VIDEO">STREAM_VIDEO</a></span></code>&nbsp;</td>
 </tr>
 <tr class="rowColor">
 <td class="colFirst"><code>static java.lang.String</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#TAG">TAG</a></span></code>&nbsp;</td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#TAG">TAG</a></span></code>&nbsp;</td>
 </tr>
 </table>
 </li>
@@ -238,8 +238,8 @@ extends java.lang.Object</pre>
 <th class="colOne" scope="col">Constructor and Description</th>
 </tr>
 <tr class="altColor">
-<td class="colOne"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#Session--">Session</a></span>()</code>
-<div class="block">Creates a streaming session that can be customized by adding tracks.</div>
+<td class="colOne"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#Session--">Session</a></span>()</code>
+<div class="block">Creates a net.majorkernelpanic.streaming session that can be customized by adding tracks.</div>
 </td>
 </tr>
 </table>
@@ -259,180 +259,180 @@ extends java.lang.Object</pre>
 </tr>
 <tr id="i0" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#configure--">configure</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--">configure</a></span>()</code>
 <div class="block">Configures all streams of the session.</div>
 </td>
 </tr>
 <tr id="i1" class="rowColor">
-<td class="colFirst"><code><a href="../../../net/majorkernelpanic/streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.streaming.audio">AudioStream</a></code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getAudioTrack--">getAudioTrack</a></span>()</code>
-<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.streaming.audio"><code>AudioStream</code></a> used by the <a href="../../../net/majorkernelpanic/streaming/Session.html" title="class in net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
+<td class="colFirst"><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio">AudioStream</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getAudioTrack--">getAudioTrack</a></span>()</code>
+<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio"><code>AudioStream</code></a> used by the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
 </td>
 </tr>
 <tr id="i2" class="altColor">
 <td class="colFirst"><code>long</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getBitrate--">getBitrate</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getBitrate--">getBitrate</a></span>()</code>
 <div class="block">Returns an approximation of the bandwidth consumed by the session in bit per second.</div>
 </td>
 </tr>
 <tr id="i3" class="rowColor">
-<td class="colFirst"><code><a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming">Session.Callback</a></code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getCallback--">getCallback</a></span>()</code>
-<div class="block">Returns the <a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming"><code>Session.Callback</code></a> interface that was set with 
- <a href="../../../net/majorkernelpanic/streaming/Session.html#setCallback-net.majorkernelpanic.streaming.Session.Callback-"><code>setCallback(Callback)</code></a> or null if none was set.</div>
+<td class="colFirst"><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Session.Callback</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getCallback--">getCallback</a></span>()</code>
+<div class="block">Returns the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session.Callback</code></a> interface that was set with
+ <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setCallback-net.majorkernelpanic.net.majorkernelpanic.streaming.Session.Callback-"><code>setCallback(Callback)</code></a> or null if none was set.</div>
 </td>
 </tr>
 <tr id="i4" class="altColor">
 <td class="colFirst"><code>int</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getCamera--">getCamera</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getCamera--">getCamera</a></span>()</code>
 <div class="block">Returns the id of the camera currently selected.</div>
 </td>
 </tr>
 <tr id="i5" class="rowColor">
 <td class="colFirst"><code>java.lang.String</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getDestination--">getDestination</a></span>()</code>
-<div class="block">Returns the destination set with <a href="../../../net/majorkernelpanic/streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a>.</div>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getDestination--">getDestination</a></span>()</code>
+<div class="block">Returns the destination set with <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a>.</div>
 </td>
 </tr>
 <tr id="i6" class="altColor">
 <td class="colFirst"><code>java.lang.String</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getSessionDescription--">getSessionDescription</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getSessionDescription--">getSessionDescription</a></span>()</code>
 <div class="block">Returns a Session Description that can be stored in a file or sent to a client with RTSP.</div>
 </td>
 </tr>
 <tr id="i7" class="rowColor">
-<td class="colFirst"><code><a href="../../../net/majorkernelpanic/streaming/Stream.html" title="interface in net.majorkernelpanic.streaming">Stream</a></code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getTrack-int-">getTrack</a></span>(int&nbsp;id)</code>&nbsp;</td>
+<td class="colFirst"><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Stream.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Stream</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getTrack-int-">getTrack</a></span>(int&nbsp;id)</code>&nbsp;</td>
 </tr>
 <tr id="i8" class="altColor">
-<td class="colFirst"><code><a href="../../../net/majorkernelpanic/streaming/video/VideoStream.html" title="class in net.majorkernelpanic.streaming.video">VideoStream</a></code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#getVideoTrack--">getVideoTrack</a></span>()</code>
-<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/streaming/video/VideoStream.html" title="class in net.majorkernelpanic.streaming.video"><code>VideoStream</code></a> used by the <a href="../../../net/majorkernelpanic/streaming/Session.html" title="class in net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
+<td class="colFirst"><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video">VideoStream</a></code></td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getVideoTrack--">getVideoTrack</a></span>()</code>
+<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video"><code>VideoStream</code></a> used by the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
 </td>
 </tr>
 <tr id="i9" class="rowColor">
 <td class="colFirst"><code>boolean</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#isStreaming--">isStreaming</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#isStreaming--">isStreaming</a></span>()</code>
 <div class="block">Indicates if a track is currently running.</div>
 </td>
 </tr>
 <tr id="i10" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#release--">release</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#release--">release</a></span>()</code>
 <div class="block">Deletes all existing tracks & release associated resources.</div>
 </td>
 </tr>
 <tr id="i11" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setAudioQuality-net.majorkernelpanic.streaming.audio.AudioQuality-">setAudioQuality</a></span>(<a href="../../../net/majorkernelpanic/streaming/audio/AudioQuality.html" title="class in net.majorkernelpanic.streaming.audio">AudioQuality</a>&nbsp;quality)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setAudioQuality-net.majorkernelpanic.net.majorkernelpanic.streaming.audio.AudioQuality-">setAudioQuality</a></span>(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioQuality.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio">AudioQuality</a>&nbsp;quality)</code>
 <div class="block">Sets the configuration of the stream.</div>
 </td>
 </tr>
 <tr id="i12" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setCallback-net.majorkernelpanic.streaming.Session.Callback-">setCallback</a></span>(<a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming">Session.Callback</a>&nbsp;callback)</code>
-<div class="block">Sets the callback interface that will be called by the <a href="../../../net/majorkernelpanic/streaming/Session.html" title="class in net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setCallback-net.majorkernelpanic.net.majorkernelpanic.streaming.Session.Callback-">setCallback</a></span>(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Session.Callback</a>&nbsp;callback)</code>
+<div class="block">Sets the callback interface that will be called by the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
 </td>
 </tr>
 <tr id="i13" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setDestination-java.lang.String-">setDestination</a></span>(java.lang.String&nbsp;destination)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setDestination-java.lang.String-">setDestination</a></span>(java.lang.String&nbsp;destination)</code>
 <div class="block">The destination address for all the streams of the session.</div>
 </td>
 </tr>
 <tr id="i14" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setOrigin-java.lang.String-">setOrigin</a></span>(java.lang.String&nbsp;origin)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setOrigin-java.lang.String-">setOrigin</a></span>(java.lang.String&nbsp;origin)</code>
 <div class="block">The origin address of the session.</div>
 </td>
 </tr>
 <tr id="i15" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setPreviewOrientation-int-">setPreviewOrientation</a></span>(int&nbsp;orientation)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setPreviewOrientation-int-">setPreviewOrientation</a></span>(int&nbsp;orientation)</code>
 <div class="block">Sets the orientation of the preview.</div>
 </td>
 </tr>
 <tr id="i16" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setSurfaceView-net.majorkernelpanic.streaming.gl.SurfaceView-">setSurfaceView</a></span>(<a href="../../../net/majorkernelpanic/streaming/gl/SurfaceView.html" title="class in net.majorkernelpanic.streaming.gl">SurfaceView</a>&nbsp;view)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setSurfaceView-net.majorkernelpanic.net.majorkernelpanic.streaming.gl.SurfaceView-">setSurfaceView</a></span>(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/gl/SurfaceView.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.gl">SurfaceView</a>&nbsp;view)</code>
 <div class="block">Sets a Surface to show a preview of recorded media (video).</div>
 </td>
 </tr>
 <tr id="i17" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setTimeToLive-int-">setTimeToLive</a></span>(int&nbsp;ttl)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setTimeToLive-int-">setTimeToLive</a></span>(int&nbsp;ttl)</code>
 <div class="block">Set the TTL of all packets sent during the session.</div>
 </td>
 </tr>
 <tr id="i18" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#setVideoQuality-net.majorkernelpanic.streaming.video.VideoQuality-">setVideoQuality</a></span>(<a href="../../../net/majorkernelpanic/streaming/video/VideoQuality.html" title="class in net.majorkernelpanic.streaming.video">VideoQuality</a>&nbsp;quality)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setVideoQuality-net.majorkernelpanic.net.majorkernelpanic.streaming.video.VideoQuality-">setVideoQuality</a></span>(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoQuality.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video">VideoQuality</a>&nbsp;quality)</code>
 <div class="block">Sets the configuration of the stream.</div>
 </td>
 </tr>
 <tr id="i19" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#start--">start</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#start--">start</a></span>()</code>
 <div class="block">Asynchronously starts all streams of the session.</div>
 </td>
 </tr>
 <tr id="i20" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#startPreview--">startPreview</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#startPreview--">startPreview</a></span>()</code>
 <div class="block">Asynchronously starts the camera preview.</div>
 </td>
 </tr>
 <tr id="i21" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#stop--">stop</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#stop--">stop</a></span>()</code>
 <div class="block">Stops all existing streams.</div>
 </td>
 </tr>
 <tr id="i22" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#stopPreview--">stopPreview</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#stopPreview--">stopPreview</a></span>()</code>
 <div class="block">Asynchronously stops the camera preview.</div>
 </td>
 </tr>
 <tr id="i23" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#switchCamera--">switchCamera</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#switchCamera--">switchCamera</a></span>()</code>
 <div class="block">Switch between the front facing and the back facing camera of the phone.</div>
 </td>
 </tr>
 <tr id="i24" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#syncConfigure--">syncConfigure</a></span>()</code>
-<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/streaming/Session.html#configure--"><code>configure()</code></a>, but in a synchronous manner.</div>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#syncConfigure--">syncConfigure</a></span>()</code>
+<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--"><code>configure()</code></a>, but in a synchronous manner.</div>
 </td>
 </tr>
 <tr id="i25" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#syncStart--">syncStart</a></span>()</code>
-<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/streaming/Session.html#start--"><code>start()</code></a>, but in a synchronous manner.</div>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#syncStart--">syncStart</a></span>()</code>
+<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#start--"><code>start()</code></a>, but in a synchronous manner.</div>
 </td>
 </tr>
 <tr id="i26" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#syncStart-int-">syncStart</a></span>(int&nbsp;id)</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#syncStart-int-">syncStart</a></span>(int&nbsp;id)</code>
 <div class="block">Starts a stream in a synchronous manner.</div>
 </td>
 </tr>
 <tr id="i27" class="rowColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#syncStop--">syncStop</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#syncStop--">syncStop</a></span>()</code>
 <div class="block">Stops all existing streams in a synchronous manner.</div>
 </td>
 </tr>
 <tr id="i28" class="altColor">
 <td class="colFirst"><code>void</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#toggleFlash--">toggleFlash</a></span>()</code>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#toggleFlash--">toggleFlash</a></span>()</code>
 <div class="block">Toggles the LED of the phone if it has one.</div>
 </td>
 </tr>
 <tr id="i29" class="rowColor">
 <td class="colFirst"><code>boolean</code></td>
-<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/streaming/Session.html#trackExists-int-">trackExists</a></span>(int&nbsp;id)</code>&nbsp;</td>
+<td class="colLast"><code><span class="memberNameLink"><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#trackExists-int-">trackExists</a></span>(int&nbsp;id)</code>&nbsp;</td>
 </tr>
 </table>
 <ul class="blockList">
@@ -465,7 +465,7 @@ extends java.lang.Object</pre>
 <pre>public static final&nbsp;java.lang.String TAG</pre>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.TAG">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.TAG">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -478,7 +478,7 @@ extends java.lang.Object</pre>
 <pre>public static final&nbsp;int STREAM_VIDEO</pre>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.STREAM_VIDEO">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.STREAM_VIDEO">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -491,7 +491,7 @@ extends java.lang.Object</pre>
 <pre>public static final&nbsp;int STREAM_AUDIO</pre>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.STREAM_AUDIO">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.STREAM_AUDIO">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -505,7 +505,7 @@ extends java.lang.Object</pre>
 <div class="block">Some app is already using a camera (Camera.open() has failed).</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_CAMERA_ALREADY_IN_USE">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_CAMERA_ALREADY_IN_USE">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -516,10 +516,10 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>ERROR_CONFIGURATION_NOT_SUPPORTED</h4>
 <pre>public static final&nbsp;int ERROR_CONFIGURATION_NOT_SUPPORTED</pre>
-<div class="block">The phone may not support some streaming parameters that you are trying to use (bit rate, frame rate, resolution...).</div>
+<div class="block">The phone may not support some net.majorkernelpanic.streaming parameters that you are trying to use (bit rate, frame rate, resolution...).</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_CONFIGURATION_NOT_SUPPORTED">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_CONFIGURATION_NOT_SUPPORTED">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -535,7 +535,7 @@ extends java.lang.Object</pre>
  See H264Stream and AACStream to find out why libstreaming would want to something like that.</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_STORAGE_NOT_READY">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_STORAGE_NOT_READY">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -549,7 +549,7 @@ extends java.lang.Object</pre>
 <div class="block">The phone has no flash.</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_CAMERA_HAS_NO_FLASH">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_CAMERA_HAS_NO_FLASH">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -563,7 +563,7 @@ extends java.lang.Object</pre>
 <div class="block">The supplied SurfaceView is not a valid surface, or has not been created yet.</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_INVALID_SURFACE">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_INVALID_SURFACE">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -574,12 +574,12 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>ERROR_UNKNOWN_HOST</h4>
 <pre>public static final&nbsp;int ERROR_UNKNOWN_HOST</pre>
-<div class="block">The destination set with <a href="../../../net/majorkernelpanic/streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a> could not be resolved. 
+<div class="block">The destination set with <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a> could not be resolved.
  May mean that the phone has no access to the internet, or that the DNS server could not
  resolved the host name.</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_UNKNOWN_HOST">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_UNKNOWN_HOST">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -593,7 +593,7 @@ extends java.lang.Object</pre>
 <div class="block">Some other error occurred !</div>
 <dl>
 <dt><span class="seeLabel">See Also:</span></dt>
-<dd><a href="../../../constant-values.html#net.majorkernelpanic.streaming.Session.ERROR_OTHER">Constant Field Values</a></dd>
+<dd><a href="../../../constant-values.html#net.majorkernelpanic.net.majorkernelpanic.streaming.Session.ERROR_OTHER">Constant Field Values</a></dd>
 </dl>
 </li>
 </ul>
@@ -612,7 +612,7 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>Session</h4>
 <pre>public&nbsp;Session()</pre>
-<div class="block">Creates a streaming session that can be customized by adding tracks.</div>
+<div class="block">Creates a net.majorkernelpanic.streaming session that can be customized by adding tracks.</div>
 </li>
 </ul>
 </li>
@@ -629,8 +629,8 @@ extends java.lang.Object</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>getAudioTrack</h4>
-<pre>public&nbsp;<a href="../../../net/majorkernelpanic/streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.streaming.audio">AudioStream</a>&nbsp;getAudioTrack()</pre>
-<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.streaming.audio"><code>AudioStream</code></a> used by the <a href="../../../net/majorkernelpanic/streaming/Session.html" title="class in net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
+<pre>public&nbsp;<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio">AudioStream</a>&nbsp;getAudioTrack()</pre>
+<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio"><code>AudioStream</code></a> used by the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
 </li>
 </ul>
 <a name="getVideoTrack--">
@@ -639,21 +639,21 @@ extends java.lang.Object</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>getVideoTrack</h4>
-<pre>public&nbsp;<a href="../../../net/majorkernelpanic/streaming/video/VideoStream.html" title="class in net.majorkernelpanic.streaming.video">VideoStream</a>&nbsp;getVideoTrack()</pre>
-<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/streaming/video/VideoStream.html" title="class in net.majorkernelpanic.streaming.video"><code>VideoStream</code></a> used by the <a href="../../../net/majorkernelpanic/streaming/Session.html" title="class in net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
+<pre>public&nbsp;<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video">VideoStream</a>&nbsp;getVideoTrack()</pre>
+<div class="block">Returns the underlying <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video"><code>VideoStream</code></a> used by the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
 </li>
 </ul>
-<a name="setCallback-net.majorkernelpanic.streaming.Session.Callback-">
+<a name="setCallback-net.majorkernelpanic.net.majorkernelpanic.streaming.Session.Callback-">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>setCallback</h4>
-<pre>public&nbsp;void&nbsp;setCallback(<a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming">Session.Callback</a>&nbsp;callback)</pre>
-<div class="block">Sets the callback interface that will be called by the <a href="../../../net/majorkernelpanic/streaming/Session.html" title="class in net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
+<pre>public&nbsp;void&nbsp;setCallback(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Session.Callback</a>&nbsp;callback)</pre>
+<div class="block">Sets the callback interface that will be called by the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session</code></a>.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
-<dd><code>callback</code> - The implementation of the <a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming"><code>Session.Callback</code></a> interface</dd>
+<dd><code>callback</code> - The implementation of the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session.Callback</code></a> interface</dd>
 </dl>
 </li>
 </ul>
@@ -702,32 +702,32 @@ extends java.lang.Object</pre>
 </dl>
 </li>
 </ul>
-<a name="setVideoQuality-net.majorkernelpanic.streaming.video.VideoQuality-">
+<a name="setVideoQuality-net.majorkernelpanic.net.majorkernelpanic.streaming.video.VideoQuality-">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>setVideoQuality</h4>
-<pre>public&nbsp;void&nbsp;setVideoQuality(<a href="../../../net/majorkernelpanic/streaming/video/VideoQuality.html" title="class in net.majorkernelpanic.streaming.video">VideoQuality</a>&nbsp;quality)</pre>
+<pre>public&nbsp;void&nbsp;setVideoQuality(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoQuality.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.video">VideoQuality</a>&nbsp;quality)</pre>
 <div class="block">Sets the configuration of the stream. <br />
  You can call this method at any time and changes will take 
- effect next time you call <a href="../../../net/majorkernelpanic/streaming/Session.html#configure--"><code>configure()</code></a>.</div>
+ effect next time you call <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--"><code>configure()</code></a>.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>quality</code> - Quality of the stream</dd>
 </dl>
 </li>
 </ul>
-<a name="setSurfaceView-net.majorkernelpanic.streaming.gl.SurfaceView-">
+<a name="setSurfaceView-net.majorkernelpanic.net.majorkernelpanic.streaming.gl.SurfaceView-">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>setSurfaceView</h4>
-<pre>public&nbsp;void&nbsp;setSurfaceView(<a href="../../../net/majorkernelpanic/streaming/gl/SurfaceView.html" title="class in net.majorkernelpanic.streaming.gl">SurfaceView</a>&nbsp;view)</pre>
+<pre>public&nbsp;void&nbsp;setSurfaceView(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/gl/SurfaceView.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.gl">SurfaceView</a>&nbsp;view)</pre>
 <div class="block">Sets a Surface to show a preview of recorded media (video). <br />
  You can call this method at any time and changes will take 
- effect next time you call <a href="../../../net/majorkernelpanic/streaming/Session.html#start--"><code>start()</code></a> or <a href="../../../net/majorkernelpanic/streaming/Session.html#startPreview--"><code>startPreview()</code></a>.</div>
+ effect next time you call <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#start--"><code>start()</code></a> or <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#startPreview--"><code>startPreview()</code></a>.</div>
 </li>
 </ul>
 <a name="setPreviewOrientation-int-">
@@ -739,23 +739,23 @@ extends java.lang.Object</pre>
 <pre>public&nbsp;void&nbsp;setPreviewOrientation(int&nbsp;orientation)</pre>
 <div class="block">Sets the orientation of the preview. <br />
  You can call this method at any time and changes will take 
- effect next time you call <a href="../../../net/majorkernelpanic/streaming/Session.html#configure--"><code>configure()</code></a>.</div>
+ effect next time you call <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--"><code>configure()</code></a>.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>orientation</code> - The orientation of the preview</dd>
 </dl>
 </li>
 </ul>
-<a name="setAudioQuality-net.majorkernelpanic.streaming.audio.AudioQuality-">
+<a name="setAudioQuality-net.majorkernelpanic.net.majorkernelpanic.streaming.audio.AudioQuality-">
 <!--   -->
 </a>
 <ul class="blockList">
 <li class="blockList">
 <h4>setAudioQuality</h4>
-<pre>public&nbsp;void&nbsp;setAudioQuality(<a href="../../../net/majorkernelpanic/streaming/audio/AudioQuality.html" title="class in net.majorkernelpanic.streaming.audio">AudioQuality</a>&nbsp;quality)</pre>
+<pre>public&nbsp;void&nbsp;setAudioQuality(<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/audio/AudioQuality.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.audio">AudioQuality</a>&nbsp;quality)</pre>
 <div class="block">Sets the configuration of the stream. <br />
  You can call this method at any time and changes will take 
- effect next time you call <a href="../../../net/majorkernelpanic/streaming/Session.html#configure--"><code>configure()</code></a>.</div>
+ effect next time you call <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--"><code>configure()</code></a>.</div>
 <dl>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>quality</code> - Quality of the stream</dd>
@@ -768,9 +768,9 @@ extends java.lang.Object</pre>
 <ul class="blockList">
 <li class="blockList">
 <h4>getCallback</h4>
-<pre>public&nbsp;<a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming">Session.Callback</a>&nbsp;getCallback()</pre>
-<div class="block">Returns the <a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming"><code>Session.Callback</code></a> interface that was set with 
- <a href="../../../net/majorkernelpanic/streaming/Session.html#setCallback-net.majorkernelpanic.streaming.Session.Callback-"><code>setCallback(Callback)</code></a> or null if none was set.</div>
+<pre>public&nbsp;<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Session.Callback</a>&nbsp;getCallback()</pre>
+<div class="block">Returns the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming"><code>Session.Callback</code></a> interface that was set with
+ <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setCallback-net.majorkernelpanic.net.majorkernelpanic.streaming.Session.Callback-"><code>setCallback(Callback)</code></a> or null if none was set.</div>
 </li>
 </ul>
 <a name="getSessionDescription--">
@@ -785,7 +785,7 @@ extends java.lang.Object</pre>
 <dt><span class="returnLabel">Returns:</span></dt>
 <dd>The Session Description.</dd>
 <dt><span class="throwsLabel">Throws:</span></dt>
-<dd><code>java.lang.IllegalStateException</code> - Thrown when <a href="../../../net/majorkernelpanic/streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a> has never been called.</dd>
+<dd><code>java.lang.IllegalStateException</code> - Thrown when <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a> has never been called.</dd>
 </dl>
 </li>
 </ul>
@@ -796,7 +796,7 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>getDestination</h4>
 <pre>public&nbsp;java.lang.String&nbsp;getDestination()</pre>
-<div class="block">Returns the destination set with <a href="../../../net/majorkernelpanic/streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a>.</div>
+<div class="block">Returns the destination set with <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setDestination-java.lang.String-"><code>setDestination(String)</code></a>.</div>
 </li>
 </ul>
 <a name="getBitrate--">
@@ -836,22 +836,22 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>syncConfigure</h4>
 <pre>public&nbsp;void&nbsp;syncConfigure()
-                   throws <a href="../../../net/majorkernelpanic/streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.streaming.exceptions">CameraInUseException</a>,
-                          <a href="../../../net/majorkernelpanic/streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a>,
-                          <a href="../../../net/majorkernelpanic/streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a>,
-                          <a href="../../../net/majorkernelpanic/streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a>,
+                   throws <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">CameraInUseException</a>,
+                          <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a>,
+                          <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a>,
+                          <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a>,
                           java.lang.RuntimeException,
                           java.io.IOException</pre>
-<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/streaming/Session.html#configure--"><code>configure()</code></a>, but in a synchronous manner. <br />
+<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#configure--"><code>configure()</code></a>, but in a synchronous manner. <br />
  Throws exceptions in addition to calling a callback 
- <a href="../../../net/majorkernelpanic/streaming/Session.Callback.html#onSessionError-int-int-java.lang.Exception-"><code>Session.Callback.onSessionError(int, int, Exception)</code></a> when
+ <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html#onSessionError-int-int-java.lang.Exception-"><code>Session.Callback.onSessionError(int, int, Exception)</code></a> when
  an error occurs.</div>
 <dl>
 <dt><span class="throwsLabel">Throws:</span></dt>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.streaming.exceptions">CameraInUseException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">CameraInUseException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a></code></dd>
 <dd><code>java.lang.RuntimeException</code></dd>
 <dd><code>java.io.IOException</code></dd>
 </dl>
@@ -874,10 +874,10 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>syncStart</h4>
 <pre>public&nbsp;void&nbsp;syncStart(int&nbsp;id)
-               throws <a href="../../../net/majorkernelpanic/streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.streaming.exceptions">CameraInUseException</a>,
-                      <a href="../../../net/majorkernelpanic/streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a>,
-                      <a href="../../../net/majorkernelpanic/streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a>,
-                      <a href="../../../net/majorkernelpanic/streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a>,
+               throws <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">CameraInUseException</a>,
+                      <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a>,
+                      <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a>,
+                      <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a>,
                       java.net.UnknownHostException,
                       java.io.IOException</pre>
 <div class="block">Starts a stream in a synchronous manner. <br />
@@ -886,10 +886,10 @@ extends java.lang.Object</pre>
 <dt><span class="paramLabel">Parameters:</span></dt>
 <dd><code>id</code> - The id of the stream to start</dd>
 <dt><span class="throwsLabel">Throws:</span></dt>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.streaming.exceptions">CameraInUseException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">CameraInUseException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a></code></dd>
 <dd><code>java.net.UnknownHostException</code></dd>
 <dd><code>java.io.IOException</code></dd>
 </dl>
@@ -902,20 +902,20 @@ extends java.lang.Object</pre>
 <li class="blockList">
 <h4>syncStart</h4>
 <pre>public&nbsp;void&nbsp;syncStart()
-               throws <a href="../../../net/majorkernelpanic/streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.streaming.exceptions">CameraInUseException</a>,
-                      <a href="../../../net/majorkernelpanic/streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a>,
-                      <a href="../../../net/majorkernelpanic/streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a>,
-                      <a href="../../../net/majorkernelpanic/streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a>,
+               throws <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">CameraInUseException</a>,
+                      <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a>,
+                      <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a>,
+                      <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a>,
                       java.net.UnknownHostException,
                       java.io.IOException</pre>
-<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/streaming/Session.html#start--"><code>start()</code></a>, but in a synchronous manner. <br /> 
+<div class="block">Does the same thing as <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#start--"><code>start()</code></a>, but in a synchronous manner. <br />
  Throws exceptions in addition to calling a callback.</div>
 <dl>
 <dt><span class="throwsLabel">Throws:</span></dt>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.streaming.exceptions">CameraInUseException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a></code></dd>
-<dd><code><a href="../../../net/majorkernelpanic/streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/CameraInUseException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">CameraInUseException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/StorageUnavailableException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">StorageUnavailableException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/ConfNotSupportedException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">ConfNotSupportedException</a></code></dd>
+<dd><code><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/exceptions/InvalidSurfaceException.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.exceptions">InvalidSurfaceException</a></code></dd>
 <dd><code>java.net.UnknownHostException</code></dd>
 <dd><code>java.io.IOException</code></dd>
 </dl>
@@ -949,9 +949,9 @@ extends java.lang.Object</pre>
 <h4>startPreview</h4>
 <pre>public&nbsp;void&nbsp;startPreview()</pre>
 <div class="block">Asynchronously starts the camera preview. <br />
- You should of course pass a <a href="../../../net/majorkernelpanic/streaming/gl/SurfaceView.html" title="class in net.majorkernelpanic.streaming.gl"><code>SurfaceView</code></a> to <a href="../../../net/majorkernelpanic/streaming/Session.html#setSurfaceView-net.majorkernelpanic.streaming.gl.SurfaceView-"><code>setSurfaceView(SurfaceView)</code></a>
- before calling this method. Otherwise, the <a href="../../../net/majorkernelpanic/streaming/Session.Callback.html#onSessionError-int-int-java.lang.Exception-"><code>Session.Callback.onSessionError(int, int, Exception)</code></a>
- callback will be called with <a href="../../../net/majorkernelpanic/streaming/Session.html#ERROR_INVALID_SURFACE"><code>ERROR_INVALID_SURFACE</code></a>.</div>
+ You should of course pass a <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/gl/SurfaceView.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming.gl"><code>SurfaceView</code></a> to <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#setSurfaceView-net.majorkernelpanic.net.majorkernelpanic.streaming.gl.SurfaceView-"><code>setSurfaceView(SurfaceView)</code></a>
+ before calling this method. Otherwise, the <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html#onSessionError-int-int-java.lang.Exception-"><code>Session.Callback.onSessionError(int, int, Exception)</code></a>
+ callback will be called with <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#ERROR_INVALID_SURFACE"><code>ERROR_INVALID_SURFACE</code></a>.</div>
 </li>
 </ul>
 <a name="stopPreview--">
@@ -972,9 +972,9 @@ extends java.lang.Object</pre>
 <h4>switchCamera</h4>
 <pre>public&nbsp;void&nbsp;switchCamera()</pre>
 <div class="block">Switch between the front facing and the back facing camera of the phone. <br />
- If <a href="../../../net/majorkernelpanic/streaming/Session.html#startPreview--"><code>startPreview()</code></a> has been called, the preview will be  briefly interrupted. <br />
- If <a href="../../../net/majorkernelpanic/streaming/Session.html#start--"><code>start()</code></a> has been called, the stream will be  briefly interrupted.<br />
- To find out which camera is currently selected, use <a href="../../../net/majorkernelpanic/streaming/Session.html#getCamera--"><code>getCamera()</code></a></div>
+ If <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#startPreview--"><code>startPreview()</code></a> has been called, the preview will be  briefly interrupted. <br />
+ If <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#start--"><code>start()</code></a> has been called, the stream will be  briefly interrupted.<br />
+ To find out which camera is currently selected, use <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getCamera--"><code>getCamera()</code></a></div>
 </li>
 </ul>
 <a name="getCamera--">
@@ -998,7 +998,7 @@ extends java.lang.Object</pre>
 <pre>public&nbsp;void&nbsp;toggleFlash()</pre>
 <div class="block">Toggles the LED of the phone if it has one.
  You can get the current state of the flash with 
- <a href="../../../net/majorkernelpanic/streaming/Session.html#getVideoTrack--"><code>getVideoTrack()</code></a> and <a href="../../../net/majorkernelpanic/streaming/video/VideoStream.html#getFlashState--"><code>VideoStream.getFlashState()</code></a>.</div>
+ <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html#getVideoTrack--"><code>getVideoTrack()</code></a> and <a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/video/VideoStream.html#getFlashState--"><code>VideoStream.getFlashState()</code></a>.</div>
 </li>
 </ul>
 <a name="release--">
@@ -1026,7 +1026,7 @@ extends java.lang.Object</pre>
 <ul class="blockListLast">
 <li class="blockList">
 <h4>getTrack</h4>
-<pre>public&nbsp;<a href="../../../net/majorkernelpanic/streaming/Stream.html" title="interface in net.majorkernelpanic.streaming">Stream</a>&nbsp;getTrack(int&nbsp;id)</pre>
+<pre>public&nbsp;<a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Stream.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming">Stream</a>&nbsp;getTrack(int&nbsp;id)</pre>
 </li>
 </ul>
 </li>
@@ -1056,11 +1056,11 @@ extends java.lang.Object</pre>
 </div>
 <div class="subNav">
 <ul class="navList">
-<li><a href="../../../net/majorkernelpanic/streaming/MediaStream.html" title="class in net.majorkernelpanic.streaming"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
-<li><a href="../../../net/majorkernelpanic/streaming/Session.Callback.html" title="interface in net.majorkernelpanic.streaming"><span class="typeNameLink">Next&nbsp;Class</span></a></li>
+<li><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/MediaStream.html" title="class in net.majorkernelpanic.net.majorkernelpanic.streaming"><span class="typeNameLink">Prev&nbsp;Class</span></a></li>
+<li><a href="../../../net/majorkernelpanic/net.majorkernelpanic.streaming/Session.Callback.html" title="interface in net.majorkernelpanic.net.majorkernelpanic.streaming"><span class="typeNameLink">Next&nbsp;Class</span></a></li>
 </ul>
 <ul class="navList">
-<li><a href="../../../index.html?net/majorkernelpanic/streaming/Session.html" target="_top">Frames</a></li>
+<li><a href="../../../index.html?net/majorkernelpanic/net.majorkernelpanic.streaming/Session.html" target="_top">Frames</a></li>
 <li><a href="Session.html" target="_top">No&nbsp;Frames</a></li>
 </ul>
 <ul class="navList" id="allclasses_navbar_bottom">

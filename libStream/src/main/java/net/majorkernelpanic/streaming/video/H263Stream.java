@@ -27,7 +27,7 @@ import android.media.MediaRecorder;
 import android.service.textservice.SpellCheckerService.Session;
 
 /**
- * A class for streaming H.263 from the camera of an android device using RTP.
+ * A class for net.majorkernelpanic.streaming H.263 from the camera of an android device using RTP.
  * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
  * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
  * to configure the stream. You can then call {@link #start()} to start the RTP stream.

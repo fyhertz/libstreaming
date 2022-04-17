@@ -39,7 +39,7 @@ import android.util.Base64;
 import android.util.Log;
 
 /**
- * A class for streaming H.264 from the camera of an android device using RTP.
+ * A class for net.majorkernelpanic.streaming H.264 from the camera of an android device using RTP.
  * You should use a {@link Session} instantiated with {@link SessionBuilder} instead of using this class directly.
  * Call {@link #setDestinationAddress(InetAddress)}, {@link #setDestinationPorts(int)} and {@link #setVideoQuality(VideoQuality)}
  * to configure the stream. You can then call {@link #start()} to start the RTP stream.
@@ -109,7 +109,7 @@ public class H264Stream extends VideoStream {
 	}
 	
 	/** 
-	 * Tests if streaming with the given configuration (bit rate, frame rate, resolution) is possible 
+	 * Tests if net.majorkernelpanic.streaming with the given configuration (bit rate, frame rate, resolution) is possible
 	 * and determines the pps and sps. Should not be called by the UI thread.
 	 **/
 	private MP4Config testH264() throws IllegalStateException, IOException {
@@ -129,7 +129,7 @@ public class H264Stream extends VideoStream {
 			EncoderDebugger debugger = EncoderDebugger.debug(mSettings, mQuality.resX, mQuality.resY);
 			return new MP4Config(debugger.getB64SPS(), debugger.getB64PPS());
 		} catch (Exception e) {
-			// Fallback on the old streaming method using the MediaRecorder API
+			// Fallback on the old net.majorkernelpanic.streaming method using the MediaRecorder API
 			Log.e(TAG,"Resolution not supported with the MediaCodec API, we fallback on the old streamign method.");
 			mMode = MODE_MEDIARECORDER_API;
 			return testH264();

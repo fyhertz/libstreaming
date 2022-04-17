@@ -107,7 +107,7 @@ public class RtspServer extends Service {
 		/** Called when an error occurs. */
 		void onError(RtspServer server, Exception e, int error);
 
-		/** Called when streaming starts/stops. */
+		/** Called when net.majorkernelpanic.streaming starts/stops. */
 		void onMessage(RtspServer server, int message);
 		
 	}
@@ -199,7 +199,7 @@ public class RtspServer extends Service {
 		}
 	}
 
-	/** Returns whether or not the RTSP server is streaming to some client(s). */
+	/** Returns whether or not the RTSP server is net.majorkernelpanic.streaming to some client(s). */
 	public boolean isStreaming() {
 		for ( Session session : mSessions.keySet() ) {
 		    if ( session != null && session.isStreaming() ) {
