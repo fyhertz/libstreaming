@@ -7,7 +7,7 @@
 * Android 4.0 or more recent is required.
 * Supported encoders include H.264, H.263, AAC and AMR.
 
-The first step you will need to achieve to start a streaming session to some peer is called 'signaling'. During this step you will contact the receiver and send a description of the incomming streams. You have three ways to do that with libstreaming.
+The first step you will need to achieve to start a net.majorkernelpanic.streaming session to some peer is called 'signaling'. During this step you will contact the receiver and send a description of the incomming streams. You have three ways to do that with libstreaming.
 
 * With the RTSP client: if you want to stream to a Wowza Media Server, it's the way to go. [The example 3](https://github.com/fyhertz/libstreaming-examples#example-3) illustrates that use case.
 * With the RTSP server: in that case the phone will act as a RTSP server and wait for a RTSP client to request a stream. This use case is illustated in [the example 1](https://github.com/fyhertz/libstreaming-examples#example-1).
@@ -25,7 +25,7 @@ There are three ways on Android to get encoded data from the peripherals:
 
 ### Encoding with the MediaRecorder API
 
-The **MediaRecorder** API was not intended for streaming applications but can be used to retrieve encoded data from the peripherals of the phone.  The trick is to configure a MediaRecorder instance to write to a **LocalSocket** instead of a regular file (see **MediaStream.java**).
+The **MediaRecorder** API was not intended for net.majorkernelpanic.streaming applications but can be used to retrieve encoded data from the peripherals of the phone.  The trick is to configure a MediaRecorder instance to write to a **LocalSocket** instead of a regular file (see **MediaStream.java**).
 
 Edit: as of Android Lollipop using a **LocalSocket** is not possible anymore for security reasons. But using a [**ParcelFileDescriptor**](http://developer.android.com/reference/android/os/ParcelFileDescriptor.html) does the trick. More details in the file **MediaStream.java**! ([Thanks to those guys for the insight](http://stackoverflow.com/questions/26990816/mediarecorder-issue-on-android-lollipop))
 
@@ -42,15 +42,15 @@ The **MediaCodec** API do not present the limitations I just mentionned, but has
 The buffer-to-buffer method uses calls to [**dequeueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#dequeueInputBuffer(long)) and [**queueInputBuffer**](http://developer.android.com/reference/android/media/MediaCodec.html#queueInputBuffer(int, int, int, long, int)) to feed the encoder with raw data.
 That seems easy right ? Well it's not, because video encoders that you get access to with this API are using different color formats and you need to support all of them. A list of those color formats is available [here](http://developer.android.com/reference/android/media/MediaCodecInfo.CodecCapabilities.html). Moreover, many encoders claim support for color formats they don't actually support properly or can present little glitches.
 
-All the [**hw**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/hw/package-summary.html) package is dedicated to solving those issues. See in particular [**EncoderDebugger**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/hw/EncoderDebugger.html) class. 
+All the [**hw**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/net.majorkernelpanic.streaming/hw/package-summary.html) package is dedicated to solving those issues. See in particular [**EncoderDebugger**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/net.majorkernelpanic.streaming/hw/EncoderDebugger.html) class. 
 
-If streaming with that API fails, libstreaming fallbacks on streaming with the **MediaRecorder API**.
+If net.majorkernelpanic.streaming with that API fails, libstreaming fallbacks on net.majorkernelpanic.streaming with the **MediaRecorder API**.
 
 The surface-to-buffer method uses the [createInputSurface()](http://developer.android.com/reference/android/media/MediaCodec.html#createInputSurface()) method. This method is probably the best way to encode raw video from the camera but it requires android 4.3 and up.
 
-The [**gl**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/gl/package-summary.html) package is dedicated to using the MediaCodec API with a surface.
+The [**gl**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/net.majorkernelpanic.streaming/gl/package-summary.html) package is dedicated to using the MediaCodec API with a surface.
 
-It is not yet enabled by default in libstreaming but you can force it with the [**setStreamingMethod(byte)**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/MediaStream.html#setStreamingMethod(byte)) method.
+It is not yet enabled by default in libstreaming but you can force it with the [**setStreamingMethod(byte)**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/net.majorkernelpanic.streaming/MediaStream.html#setStreamingMethod(byte)) method.
 
 ### Packetization process
 
@@ -65,7 +65,7 @@ If you are looking for a basic implementation of one of the RFC mentionned above
 
 RTCP packets are also sent to the receiver since version 2.0 of libstreaming. Only Sender Reports are implemented. They are actually needed for lip sync.
 
-The [**rtp**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/streaming/rtp/package-summary.html) package handles packetization of encoded data in RTP packets.
+The [**rtp**](http://guigui.us/libstreaming/doc/net/majorkernelpanic/net.majorkernelpanic.streaming/rtp/package-summary.html) package handles packetization of encoded data in RTP packets.
 
 # Using libstreaming in your app
 
@@ -139,7 +139,7 @@ This example is extracted from [this simple android app](https://github.com/fyhe
 
 	@Override
 	public void onSessionError(int message, int streamType, Exception e) {
-        // Might happen if the streaming at the requested resolution is not supported
+        // Might happen if the net.majorkernelpanic.streaming at the requested resolution is not supported
         // or if the preview surface is not ready...
         // Check the Session class for a list of the possible errors.
 		Log.e(TAG, "An error occured", e);
@@ -159,15 +159,15 @@ This example is extracted from [this simple android app](https://github.com/fyhe
 
 	@Override
 	public void surfaceDestroyed(SurfaceHolder holder) {
-        // Stops the streaming session
+        // Stops the net.majorkernelpanic.streaming session
 		mSession.stop();
 	}
 
 ```
 
-The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceView** is needed for video streaming, that should not come up as a surprise since Android requires a valid surface for recording video (it's an annoying limitation of the **MediaRecorder** API). On Android 4.3, streaming with no **SurfaceView** is possible but not yet implemented. The call to **setContext(Context)** is necessary, it allows **H264Stream** objects and **AACStream** objects to store and recover data using **SharedPreferences**.
+The **SessionBuilder** simply facilitates the creation of **Session** objects. The call to **setSurfaceView** is needed for video net.majorkernelpanic.streaming, that should not come up as a surprise since Android requires a valid surface for recording video (it's an annoying limitation of the **MediaRecorder** API). On Android 4.3, net.majorkernelpanic.streaming with no **SurfaceView** is possible but not yet implemented. The call to **setContext(Context)** is necessary, it allows **H264Stream** objects and **AACStream** objects to store and recover data using **SharedPreferences**.
 
-A **Session** object represents a streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the **start()** (resp. **stop()**) method is invoked.
+A **Session** object represents a net.majorkernelpanic.streaming session to some peer. It contains one or more **Stream** objects that are started (resp. stopped) when the **start()** (resp. **stop()**) method is invoked.
 
 The method **getSessionDescription()** will return a SDP of the session in the form of a String. Before calling it, you must make sure that the **Session** has been configured. After calling **configure()** or **startPreview()** on you Session instance, the callback **onSessionConfigured()** will be called.
 
@@ -184,7 +184,7 @@ The method **getSessionDescription()** will return a SDP of the session in the f
     }
     Strinf sdp = mSession.getSessionDescription();
     ...
-    // Blocks until streaming actually starts.
+    // Blocks until net.majorkernelpanic.streaming actually starts.
     try {
          mSession.syncStart();
     } catch (Exception e) {
@@ -203,7 +203,8 @@ Check out [this page of the wiki](https://github.com/fyhertz/libstreaming/wiki/U
 #### Add this to your manifest:
 
 ```xml
-<service android:name="net.majorkernelpanic.streaming.rtsp.RtspServer"/>
+
+<service android:name="net.majorkernelpanic.net.majorkernelpanic.streaming.rtsp.RtspServer" />
 ```
 
 If you decide to override **RtspServer** change the line above accordingly.
@@ -239,5 +240,5 @@ context.stopService(new Intent(this,RtspServer.class));
 
 # Spydroid-ipcamera
 
-Visit [this github page](https://github.com/fyhertz/spydroid-ipcamera) to see how this streaming stack can be used and how it performs.
+Visit [this github page](https://github.com/fyhertz/spydroid-ipcamera) to see how this net.majorkernelpanic.streaming stack can be used and how it performs.
 
